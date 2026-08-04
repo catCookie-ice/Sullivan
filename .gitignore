@@ -1,0 +1,61 @@
+# 环境与密钥
+.env
+*.pem
+*.key
+*.jks
+*.keystore
+local.properties
+
+# Java
+target/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+.gradle/
+HELP.md
+server-java/server-java/.mvn/wrapper/maven-wrapper.jar
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# 模型产物（体积大，不入库；用 MinIO 或 Release 分发）
+*.onnx
+*.engine
+*.pt
+*.pth
+model-training/runs/
+model-training/datasets/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Android
+client-android/.idea/
+client-android/app/release/
+*.apk
+*.aab
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# 运行时数据
+deploy/data/
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 本地个人记录
+个人日记(AI工具排除此文件夹)/

@@ -1,0 +1,259 @@
+# SullivanMINI OpenAPI 契约
+# 文档版本: v0.1 (骨架草案)
+# 当前状态: Java 业务 API 与 Python 导航 API 的契约骨架，按阶段增量补充。
+
+openapi: "3.1.0"
+info:
+  title: SullivanMINI API
+  version: "0.1.0"
+  description: Java 业务应用 REST API；导航路径由 Python 应用直接提供 (docs/final/06)
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Java 业务应用
+
+paths:
+  # ============ 身份与账号 (FR-01~FR-03) ============
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: 监护人或志愿者注册
+  /auth/register/organization:
+    post:
+      tags: [Auth]
+      summary: 公益机构注册
+  /auth/register/admin:
+    post:
+      tags: [Auth]
+      summary: 使用注册码注册管理员
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: 用户登录
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: 刷新令牌
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: 退出登录
+
+  /users/profile:
+    get:
+      tags: [Profile]
+      summary: 获取个人资料
+    put:
+      tags: [Profile]
+      summary: 修改个人资料
+
+  # ============ 监护绑定 (FR-04~FR-05) ============
+  /guardians/protectees:
+    post:
+      tags: [Binding]
+      summary: 监护人创建受护人并建立永久初始绑定
+  /guardians/bindings:
+    post:
+      tags: [Binding]
+      summary: 发起绑定
+    get:
+      tags: [Binding]
+      summary: 查询自己的绑定关系
+  /guardians/bindings/{id}/accept:
+    post:
+      tags: [Binding]
+      summary: 确认绑定
+  /users/me/roles/volunteer:
+    post:
+      tags: [Auth]
+      summary: 监护人兼任志愿者
+  /guardians/bindings/{id}/reject:
+    post:
+      tags: [Binding]
+      summary: 拒绝绑定
+  /guardians/bindings/{id}/cancel:
+    post:
+      tags: [Binding]
+      summary: 取消绑定
+  /guardians/bindings/{id}/terminate:
+    post:
+      tags: [Binding]
+      summary: 解除绑定
+
+  # ============ 位置 (FR-06) ============
+  /guardians/locations/{protecteeUid}:
+    get:
+      tags: [Location]
+      summary: 查询已绑定受护人位置
+
+  # ============ 导航 (FR-07~FR-08) ============
+  /navigation/sessions:
+    post:
+      tags: [Navigation]
+      summary: 创建导航会话
+      servers:
+        - url: http://localhost:8000/api/v1
+          description: Python 导航应用
+  /navigation/sessions/{id}/stop:
+    post:
+      tags: [Navigation]
+      summary: 停止导航会话
+      servers:
+        - url: http://localhost:8000/api/v1
+          description: Python 导航应用
+
+  # ============ 报警 (FR-11~FR-13) ============
+  /alerts:
+    post:
+      tags: [Alert]
+      summary: 创建报警
+    get:
+      tags: [Alert]
+      summary: 查询我的报警
+  /alerts/{id}:
+    get:
+      tags: [Alert]
+      summary: 报警详情
+  /alerts/{id}/acknowledge:
+    post:
+      tags: [Alert]
+      summary: 确认收到报警
+  /alerts/{id}/resolve:
+    post:
+      tags: [Alert]
+      summary: 解决报警
+
+  # ============ 通知 (FR-14) ============
+  /notifications:
+    get:
+      tags: [Notification]
+      summary: 通知列表
+  /notifications/unread-count:
+    get:
+      tags: [Notification]
+      summary: 未读数
+  /notifications/{id}/read:
+    post:
+      tags: [Notification]
+      summary: 标记已读
+
+  # ============ 公益机构 (FR-15) ============
+  /organizations/register:
+    post:
+      tags: [Organization]
+      summary: 机构注册
+  /organizations/profile:
+    get:
+      tags: [Organization]
+      summary: 机构资料
+    put:
+      tags: [Organization]
+      summary: 修改资料
+
+  # ============ 公益服务 (FR-16~FR-18) ============
+  /services:
+    post:
+      tags: [Service]
+      summary: 创建服务项目
+  /services/public:
+    get:
+      tags: [Service]
+      summary: 公开项目列表
+  /services/my:
+    get:
+      tags: [Service]
+      summary: 我的服务项目
+  /services/{id}/pause:
+    post:
+      tags: [Service]
+      summary: 暂停项目
+  /services/{id}/open:
+    post:
+      tags: [Service]
+      summary: 重新开放项目
+  /services/{id}/close:
+    post:
+      tags: [Service]
+      summary: 永久关闭项目
+
+  /applications:
+    post:
+      tags: [Application]
+      summary: 提交服务申请
+  /applications/{id}/approve:
+    post:
+      tags: [Application]
+      summary: 批准申请
+  /applications/{id}/reject:
+    post:
+      tags: [Application]
+      summary: 拒绝申请
+  /applications/{id}/complete:
+    post:
+      tags: [Application]
+      summary: 完成服务
+  /applications/{id}/cancel:
+    post:
+      tags: [Application]
+      summary: 取消申请
+
+  # ============ 志愿活动 (FR-19~FR-20) ============
+  /activities:
+    post:
+      tags: [Activity]
+      summary: 创建活动
+  /activities/public:
+    get:
+      tags: [Activity]
+      summary: 公开活动列表
+  /activities/{id}/cancel:
+    post:
+      tags: [Activity]
+      summary: 取消活动
+
+  /enrollments/{activityId}:
+    post:
+      tags: [Enrollment]
+      summary: 报名活动
+  /enrollments/{id}/approve:
+    post:
+      tags: [Enrollment]
+      summary: 审核通过
+  /enrollments/{id}/reject:
+    post:
+      tags: [Enrollment]
+      summary: 审核拒绝
+  /enrollments/{id}/cancel:
+    post:
+      tags: [Enrollment]
+      summary: 取消报名
+
+  # ============ 管理员 (FR-22~FR-24) ============
+  /admin/registration-codes:
+    post:
+      tags: [Admin]
+      summary: 最高管理员或 HR 管理员创建注册码
+  /admin/accounts:
+    post:
+      tags: [Admin]
+      summary: 创建管理员
+  /admin/organizations/pending:
+    get:
+      tags: [Admin]
+      summary: 待审核机构列表
+  /admin/organizations/{id}/review:
+    post:
+      tags: [Admin]
+      summary: 审核机构
+  /admin/users/{id}/disable:
+    post:
+      tags: [Admin]
+      summary: 禁用用户
+  /admin/users/{id}/enable:
+    post:
+      tags: [Admin]
+      summary: 启用用户
+  /admin/stats/overview:
+    get:
+      tags: [Admin]
+      summary: 运营概览

@@ -1,0 +1,41 @@
+# 引导文本规则表 (docs/final/13 §3.5)
+# 格式: obstacle_class → 风险级别 + 引导文本模板
+
+obstacles:
+  person:
+    risk: CAUTION
+    templates:
+      - "前方 {distance} 米处有行人"
+      - "左侧有行人靠近"
+
+  vehicle:
+    risk: DANGER
+    templates:
+      - "注意！右侧有车辆"
+
+  step:
+    risk: CAUTION
+    templates:
+      - "前方 {distance} 米有台阶，请减速"
+
+  roadblock:
+    risk: DANGER
+    templates:
+      - "前方 {distance} 米有路障，请绕行"
+
+  ramp:
+    risk: CAUTION
+    templates:
+      - "前方 {distance} 米有坡道"
+
+  pillar:
+    risk: CAUTION
+    templates:
+      - "右侧 {distance} 米有柱子"
+
+default:
+  risk: UNKNOWN
+  text: "无法确认前方情况，请停下并确认环境"
+
+# 重复抑制：相同风险级别、相同位置、相同障碍物类型
+repeat_suppression_ms: 2000

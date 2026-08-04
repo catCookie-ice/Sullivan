@@ -1,0 +1,81 @@
+# 本地开发依赖。Java/Python 应用进程可在 IDE 中运行，这里只起基础设施。
+# 生产编排另见 docs/final/10（按新架构补齐）。
+
+services:
+  mysql:
+    image: mysql:8.0.36
+    container_name: sullivan-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_APP_USER}
+      MYSQL_PASSWORD: ${MYSQL_APP_PASSWORD}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+08:00
+      - --lower-case-table-names=0
+    ports:
+      - "${MYSQL_PORT}:3306"
+    volumes:
+      - ./deploy/data/mysql:/var/lib/mysql
+      # 建统一数据库并授权。DDL 由 Java 应用 Flyway 负责，此处不建表。
+      - ./deploy/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: sullivan-redis
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - ./deploy/data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:RELEASE.2024-06-13T22-53-53Z
+    container_name: sullivan-minio
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "${MINIO_API_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
+    volumes:
+      - ./deploy/data/minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+# ---------------------------------------------------------------------------
+# Python 导航应用需要 GPU（性能目标见 docs/final/13 §6）。
+# 骨架阶段建议在宿主机直接跑 uvicorn，容器化在 M7 验收前完成。
+# 若要容器化，取消注释并确认已装 NVIDIA Container Toolkit：
+#
+#   server-python:
+#     build: ./server-python
+#     runtime: nvidia          # 或用下面的 deploy.resources
+#     environment:
+#       NAV_DEVICE: cuda
+#     deploy:
+#       resources:
+#         reservations:
+#           devices:
+#             - driver: nvidia
+#               count: 1
+#               capabilities: [gpu]
+# ---------------------------------------------------------------------------
