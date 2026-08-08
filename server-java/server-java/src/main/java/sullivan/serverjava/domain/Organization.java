@@ -1,8 +1,11 @@
 package sullivan.serverjava.domain;
 
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+
+import java.time.LocalDateTime;
 
 @Data
 @TableName("organization")
@@ -14,4 +17,7 @@ public class Organization {
     private String passwordHash;
     private String legalName;
     private String publicName;
+    private LocalDateTime createdAt;
+    @TableLogic
+    private LocalDateTime deletedAt;
 }

@@ -46,6 +46,30 @@ paths:
     put:
       tags: [Profile]
       summary: 修改个人资料
+  /users/{userId}:
+    get:
+      tags: [Lookup]
+      summary: 按唯一标识查找自然人（志愿者/监护人/受护人）
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+  /organizations/{organizationId}:
+    get:
+      tags: [Lookup]
+      summary: 按唯一标识查找公益机构
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+  /admins/{adminId}:
+    get:
+      tags: [Lookup]
+      summary: 按唯一标识查找管理员（需 ADMIN_MANAGE 权限）
 
   # ============ 监护绑定 (FR-04~FR-05) ============
   /guardians/protectees:
@@ -229,6 +253,22 @@ paths:
       summary: 取消报名
 
   # ============ 管理员 (FR-22~FR-24) ============
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: 用户列表（监护人/受护人/志愿者；志愿者列表含兼任志愿者的监护人）
+  /admin/users/{userId}:
+    delete:
+      tags: [Admin]
+      summary: 删除用户（逻辑删除；兼任志愿者仅取消其志愿者兼任）
+  /admin/organizations:
+    get:
+      tags: [Admin]
+      summary: 机构列表（按状态过滤）
+  /admin/organizations/{organizationId}:
+    delete:
+      tags: [Admin]
+      summary: 删除机构（逻辑删除）
   /admin/registration-codes:
     post:
       tags: [Admin]

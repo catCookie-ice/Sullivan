@@ -1,0 +1,7 @@
+<template>
+  <div class="page-card">
+    <el-card>
+      <el-empty description="可服务状态（后端接口开发中，敬请期待）" />
+    </el-card>
+  </div>
+</template>

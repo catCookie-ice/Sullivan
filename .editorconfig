@@ -1,0 +1,23 @@
+# SullivanMINI 统一编码与换行约定
+# IntelliJ IDEA 等主流编辑器会自动读取本文件。
+# 仓库内全部文件一律使用 UTF-8（曾出现 .properties 中文被 IDE 按 GBK 打开而显示乱码）。
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Windows 批处理保持 CRLF（与 server-java/.gitattributes 的 *.cmd 约定一致）
+[*.cmd]
+end_of_line = crlf
+
+[*.java]
+indent_style = space
+indent_size = 4
+
+[*.{yml,yaml,json,properties}]
+indent_style = space
+indent_size = 2

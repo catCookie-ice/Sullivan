@@ -13,7 +13,7 @@
 | `server-python/` | 导航推理与空间分析 | Python 3.11 + FastAPI |
 | `sullivan-vision/` | 离线模型评测与 ONNX 导出 | PyTorch + Ultralytics |
 | `client-android/` | 受护人/监护人/志愿者 App | Kotlin + Compose |
-| `client-web/` | 四角色管理端 | Vue 3 + TypeScript |
+| `client-web/` | 三个前端项目：机构端 / 监护与志愿者端 / 管理端 | Vue 3 + TypeScript |
 | `deploy/` | 容器编排与初始化脚本 | Docker Compose |
 
 整体架构见 `docs/final/06-系统架构设计.md`，技术取舍见 `docs/final/13-技术栈选型与架构决策.md`。
@@ -24,7 +24,9 @@
 |---|---|---|
 | server-java | 8080 | `sullivan` |
 | server-python | 8000 | `sullivan` |
-| client-web (dev) | 5173 | — |
+| client-web/org-web (机构端, dev) | 5174 | — |
+| client-web/user-web (监护/志愿者端, dev) | 5175 | — |
+| client-web/admin-web (管理端, dev) | 5176 | — |
 
 Java 是业务数据唯一写入方，Python 只读写导航域数据；两端使用同一 `sullivan` 数据库，不再拆分服务 schema。
 

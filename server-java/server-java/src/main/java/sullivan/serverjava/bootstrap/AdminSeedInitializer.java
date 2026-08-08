@@ -24,8 +24,10 @@ public class AdminSeedInitializer implements ApplicationRunner {
             new PermissionSeed("ADMIN_REGISTRATION_CODE_CREATE", "创建管理员注册码"),
             new PermissionSeed("USER_READ", "查看用户资料"),
             new PermissionSeed("USER_GOVERN", "用户治理"),
+            new PermissionSeed("USER_MANAGE", "用户管理（监护/受护/志愿者：查询与删除）"),
             new PermissionSeed("ORG_REVIEW", "机构审核"),
             new PermissionSeed("ORG_GOVERN", "机构治理"),
+            new PermissionSeed("ORG_MANAGE", "机构管理（查询与删除）"),
             new PermissionSeed("BUSINESS_AUDIT", "业务审计"),
             new PermissionSeed("OPERATION_STATS", "运营统计"),
             new PermissionSeed("SYSTEM_NOTICE", "发布系统通知"));
@@ -51,10 +53,15 @@ public class AdminSeedInitializer implements ApplicationRunner {
         for (PermissionSeed seed : PERMISSIONS) {
             AdminPermission permission = ensurePermission(seed.code(), seed.name());
             ensureGrant(superAdmin.getId(), permission.getId());
-            if ("ADMIN_REGISTRATION_CODE_CREATE".equals(seed.code())) {
+            // HR 管理员：注册码创建 + 管理员账号查看（ADMIN_MANAGE，仅读）。
+            if ("ADMIN_REGISTRATION_CODE_CREATE".equals(seed.code())
+                    || "ADMIN_MANAGE".equals(seed.code())) {
                 ensureGrant(hrAdmin.getId(), permission.getId());
             }
-            if ("OPERATION_STATS".equals(seed.code())) {
+            // 运营管理员：运营统计 + 用户管理 + 机构管理。
+            if ("OPERATION_STATS".equals(seed.code())
+                    || "USER_MANAGE".equals(seed.code())
+                    || "ORG_MANAGE".equals(seed.code())) {
                 ensureGrant(operations.getId(), permission.getId());
             }
         }
