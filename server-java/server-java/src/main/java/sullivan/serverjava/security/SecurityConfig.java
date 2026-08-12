@@ -27,6 +27,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/register/user", "/api/v1/auth/register/organization",
                                 "/api/v1/auth/register/admin", "/api/v1/auth/login", "/actuator/health").permitAll()
+                        // 找回密码 start/verify 公开；me/recovery 系列需登录（anyRequest 统一拦截）
+                        .requestMatchers("/api/v1/auth/password-recovery/start",
+                                "/api/v1/auth/password-recovery/verify").permitAll()
                         // OpenAPI 接口文档（Swagger UI / JSON 契约）免认证访问
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**",
                                 "/api-docs", "/api-docs/**").permitAll()

@@ -13,17 +13,52 @@
           <el-button type="primary" :loading="loading" @click="handleLogin">登录</el-button>
         </el-form-item>
         <el-alert v-if="error" type="error" :closable="false" :title="error" />
+        <div class="auth-links">
+          <router-link to="/register">注册账号</router-link>
+          <router-link to="/forgot-password">忘记密码？</router-link>
+        </div>
       </el-form>
     </el-card>
+
+    <!-- 未设置找回联系方式：登录后提醒 -->
+    <el-dialog v-model="reminderVisible" title="设置找回联系方式" width="440px"
+      :close-on-click-modal="false" :show-close="false">
+      <template v-if="reminderMode === 'prompt'">
+        <p>你尚未设置找回手机号或邮箱，忘记密码时将无法找回。建议立即设置。</p>
+      </template>
+      <template v-else>
+        <el-form label-width="90px">
+          <el-form-item label="找回手机号">
+            <el-input v-model="setForm.recoveryPhone" placeholder="可选：11 位手机号" maxlength="11" />
+          </el-form-item>
+          <el-form-item label="找回邮箱">
+            <el-input v-model="setForm.recoveryEmail" placeholder="可选：邮箱地址" maxlength="128" />
+          </el-form-item>
+          <el-alert type="info" :closable="false" title="手机号与邮箱至少填写一个" />
+        </el-form>
+      </template>
+      <template #footer>
+        <template v-if="reminderMode === 'prompt'">
+          <el-button @click="onDismiss">不再提醒</el-button>
+          <el-button @click="onRemindLater">下次再说</el-button>
+          <el-button type="primary" @click="reminderMode = 'set'">去设置</el-button>
+        </template>
+        <template v-else>
+          <el-button @click="reminderMode = 'prompt'">返回</el-button>
+          <el-button type="primary" :loading="setting" @click="onSaveSet">保存</el-button>
+        </template>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { loginUser } from '@/api/auth'
+import { loginUser, recoveryDismiss, recoveryRemindLater, setRecoveryContact } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
+import type { TokenResponse } from '@/types/api'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -31,6 +66,12 @@ const loginName = ref('')
 const password = ref('')
 const loading = ref(false)
 const error = ref('')
+
+const reminderVisible = ref(false)
+const reminderMode = ref<'prompt' | 'set'>('prompt')
+const pendingToken = ref<TokenResponse | null>(null)
+const setting = ref(false)
+const setForm = reactive({ recoveryPhone: '', recoveryEmail: '' })
 
 async function handleLogin() {
   if (!loginName.value || !password.value) {
@@ -43,14 +84,67 @@ async function handleLogin() {
     const token = await loginUser(loginName.value, password.value)
     auth.setLogin(token)
     ElMessage.success('登录成功')
-    // 按角色跳转：仅有志愿者角色去志愿者端，否则去监护人端
-    const isVolunteer = token.roles.includes('VOLUNTEER')
-    const isGuardian = token.roles.includes('GUARDIAN')
-    router.push(isVolunteer && !isGuardian ? '/volunteer' : '/guardian')
+    if (token.recoveryReminder) {
+      pendingToken.value = token
+      reminderMode.value = 'prompt'
+      setForm.recoveryPhone = ''
+      setForm.recoveryEmail = ''
+      reminderVisible.value = true
+    } else {
+      goHome(token)
+    }
   } catch (e: any) {
     error.value = e.response?.data?.error || '登录失败，请检查账号密码'
   } finally {
     loading.value = false
+  }
+}
+
+function goHome(token: TokenResponse) {
+  // 按角色跳转：仅有志愿者角色去志愿者端，否则去监护人端
+  const isVolunteer = token.roles.includes('VOLUNTEER')
+  const isGuardian = token.roles.includes('GUARDIAN')
+  router.push(isVolunteer && !isGuardian ? '/volunteer' : '/guardian')
+}
+
+async function onRemindLater() {
+  try {
+    await recoveryRemindLater()
+  } catch {
+    // 忽略失败，仍进入首页
+  }
+  reminderVisible.value = false
+  if (pendingToken.value) goHome(pendingToken.value)
+}
+
+async function onDismiss() {
+  try {
+    await recoveryDismiss()
+  } catch {
+    // 忽略失败，仍进入首页
+  }
+  reminderVisible.value = false
+  if (pendingToken.value) goHome(pendingToken.value)
+}
+
+async function onSaveSet() {
+  if (!setForm.recoveryPhone.trim() && !setForm.recoveryEmail.trim()) {
+    ElMessage.warning('请至少填写手机号或邮箱')
+    return
+  }
+  setting.value = true
+  try {
+    await setRecoveryContact({
+      recoveryPhone: setForm.recoveryPhone.trim() || undefined,
+      recoveryEmail: setForm.recoveryEmail.trim() || undefined,
+    })
+    ElMessage.success('已设置找回联系方式')
+    reminderVisible.value = false
+    if (pendingToken.value) goHome(pendingToken.value)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.error || '设置失败')
+  } finally {
+    setting.value = false
   }
 }
 </script>
@@ -65,5 +159,11 @@ async function handleLogin() {
 }
 .login-card {
   width: 400px;
+}
+.auth-links {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  font-size: 13px;
 }
 </style>

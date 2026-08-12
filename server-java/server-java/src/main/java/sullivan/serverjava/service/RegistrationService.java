@@ -34,16 +34,19 @@ public class RegistrationService {
     private final UserRoleMapper userRoleMapper;
     private final GuardianBindingMapper guardianBindingMapper;
     private final OrganizationMapper organizationMapper;
+    private final RecoveryService recoveryService;
     private final PasswordEncoder passwordEncoder;
 
     public RegistrationService(UserAccountMapper userAccountMapper, UserProfileMapper userProfileMapper,
                                UserRoleMapper userRoleMapper, GuardianBindingMapper guardianBindingMapper,
-                               OrganizationMapper organizationMapper, PasswordEncoder passwordEncoder) {
+                               OrganizationMapper organizationMapper, RecoveryService recoveryService,
+                               PasswordEncoder passwordEncoder) {
         this.userAccountMapper = userAccountMapper;
         this.userProfileMapper = userProfileMapper;
         this.userRoleMapper = userRoleMapper;
         this.guardianBindingMapper = guardianBindingMapper;
         this.organizationMapper = organizationMapper;
+        this.recoveryService = recoveryService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -56,6 +59,7 @@ public class RegistrationService {
         UserAccount account = createUserAccount(request.loginName(), request.password(), request.role());
         createProfile(account.getId(), request.displayName(), null);
         createUserRole(account.getId(), request.role(), account.getId());
+        recoveryService.setContacts("USER", account.getId(), request.recoveryPhone(), request.recoveryEmail());
         return new RegistrationResponse(account.getId(), "USER", "ENABLED", Set.of(request.role()));
     }
 
@@ -162,6 +166,8 @@ public class RegistrationService {
         } catch (DuplicateKeyException exception) {
             throw new ApiException(HttpStatus.CONFLICT, "机构登录名已存在");
         }
+        recoveryService.setContacts("ORGANIZATION", organization.getId(),
+                request.recoveryPhone(), request.recoveryEmail());
         return new RegistrationResponse(organization.getId(), "ORGANIZATION", "PENDING", Set.of("ORGANIZATION"));
     }
 

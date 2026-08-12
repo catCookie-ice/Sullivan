@@ -10,6 +10,16 @@ const router = createRouter({
       component: () => import('@/views/auth/LoginView.vue'),
     },
     {
+      path: '/register',
+      name: 'Register',
+      component: () => import('@/views/auth/RegisterView.vue'),
+    },
+    {
+      path: '/forgot-password',
+      name: 'ForgotPassword',
+      component: () => import('@/views/auth/ForgotPasswordView.vue'),
+    },
+    {
       path: '/',
       component: () => import('@/layouts/HomeRedirect.vue'),
     },
@@ -46,9 +56,12 @@ const router = createRouter({
   ],
 })
 
+// 免登录即可访问的公开页面
+const PUBLIC_NAMES = ['Login', 'Register', 'ForgotPassword']
+
 router.beforeEach((to) => {
   const auth = useAuthStore()
-  if (to.name !== 'Login' && !auth.accessToken) {
+  if (!PUBLIC_NAMES.includes(to.name as string) && !auth.accessToken) {
     return { name: 'Login' }
   }
   if (to.name === 'Login' && auth.accessToken) {

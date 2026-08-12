@@ -6,6 +6,8 @@ export interface TokenResponse {
   principalType: string
   roles: string[]
   permissions: string[]
+  // 未设置找回手机号/邮箱时登录返回 true，前端据此弹出设置提醒
+  recoveryReminder?: boolean
 }
 
 // 注册 / 操作通用返回
@@ -44,4 +46,24 @@ export interface OrganizationLookupResponse {
   loginName: string
   legalName: string
   publicName: string
+}
+
+// 找回联系方式与找回密码
+export interface RecoveryMethod {
+  type: string // PHONE / EMAIL
+  maskedPrefix: string
+}
+
+export interface RecoveryStartResponse {
+  methods: RecoveryMethod[]
+}
+
+export interface RecoveryVerifyResponse {
+  verified: boolean
+}
+
+export interface RecoveryStatusResponse {
+  hasRecovery: boolean
+  remindRequired: boolean
+  methods: RecoveryMethod[]
 }

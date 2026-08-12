@@ -28,18 +28,20 @@ public class AuthService {
     private final OrganizationMapper organizationMapper;
     private final AdminAccountMapper adminAccountMapper;
     private final AdminAccessService adminAccessService;
+    private final RecoveryService recoveryService;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
     public AuthService(UserAccountMapper userAccountMapper, UserRoleMapper userRoleMapper,
                        OrganizationMapper organizationMapper, AdminAccountMapper adminAccountMapper,
-                       AdminAccessService adminAccessService, PasswordEncoder passwordEncoder,
-                       JwtService jwtService) {
+                       AdminAccessService adminAccessService, RecoveryService recoveryService,
+                       PasswordEncoder passwordEncoder, JwtService jwtService) {
         this.userAccountMapper = userAccountMapper;
         this.userRoleMapper = userRoleMapper;
         this.organizationMapper = organizationMapper;
         this.adminAccountMapper = adminAccountMapper;
         this.adminAccessService = adminAccessService;
+        this.recoveryService = recoveryService;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
     }
@@ -66,7 +68,8 @@ public class AuthService {
         if (roles.isEmpty()) {
             roles = Set.of(account.getRoleCode());
         }
-        return token(new AuthPrincipal(account.getId(), "USER", roles, Set.of()));
+        return token(new AuthPrincipal(account.getId(), "USER", roles, Set.of()),
+                recoveryService.reminderRequired("USER", account.getId()));
     }
 
     private TokenResponse loginOrganization(LoginRequest request) {
@@ -76,7 +79,8 @@ public class AuthService {
                 !passwordEncoder.matches(request.password(), organization.getPasswordHash())) {
             throw unauthorized();
         }
-        return token(new AuthPrincipal(organization.getId(), "ORGANIZATION", Set.of("ORGANIZATION"), Set.of()));
+        return token(new AuthPrincipal(organization.getId(), "ORGANIZATION", Set.of("ORGANIZATION"), Set.of()),
+                recoveryService.reminderRequired("ORGANIZATION", organization.getId()));
     }
 
     private TokenResponse loginAdmin(LoginRequest request) {
@@ -87,12 +91,13 @@ public class AuthService {
             throw unauthorized();
         }
         return token(new AuthPrincipal(account.getId(), "ADMIN",
-                adminAccessService.roles(account.getId()), adminAccessService.permissions(account.getId())));
+                adminAccessService.roles(account.getId()), adminAccessService.permissions(account.getId())),
+                false);
     }
 
-    private TokenResponse token(AuthPrincipal principal) {
+    private TokenResponse token(AuthPrincipal principal, boolean recoveryReminder) {
         return new TokenResponse(jwtService.issue(principal), principal.id(), principal.principalType(),
-                principal.roles(), principal.permissions());
+                principal.roles(), principal.permissions(), recoveryReminder);
     }
 
     private ApiException unauthorized() {

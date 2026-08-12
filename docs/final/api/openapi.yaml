@@ -14,14 +14,16 @@ servers:
 
 paths:
   # ============ 身份与账号 (FR-01~FR-03) ============
+  # 注册请求体均支持可选字段 recoveryPhone / recoveryEmail（找回联系方式，半加密存储）；
+  # 留空不影响注册，但密码将无法通过手机号/邮箱找回。
   /auth/register:
     post:
       tags: [Auth]
-      summary: 监护人或志愿者注册
+      summary: 监护人或志愿者注册（可选 recoveryPhone/recoveryEmail）
   /auth/register/organization:
     post:
       tags: [Auth]
-      summary: 公益机构注册
+      summary: 公益机构注册（可选 recoveryPhone/recoveryEmail）
   /auth/register/admin:
     post:
       tags: [Auth]
@@ -29,7 +31,30 @@ paths:
   /auth/login:
     post:
       tags: [Auth]
-      summary: 用户登录
+      summary: 用户登录（响应 TokenResponse 含 recoveryReminder：未设置找回联系方式时提醒设置）
+  /auth/password-recovery/start:
+    post:
+      tags: [Auth]
+      summary: 开始找回密码：返回可用找回方式与不加密前缀（公开）
+  /auth/password-recovery/verify:
+    post:
+      tags: [Auth]
+      summary: 补全联系方式并验证（公开；发送验证码与后续重置留空）
+  /auth/me/recovery:
+    get:
+      tags: [Auth]
+      summary: 查看我的找回联系方式状态（已登录）
+    put:
+      tags: [Auth]
+      summary: 设置或更新我的找回联系方式（recoveryPhone/recoveryEmail 至少一个）
+  /auth/me/recovery/remind-later:
+    post:
+      tags: [Auth]
+      summary: 提醒“下次再说”：一周后再提醒（已登录）
+  /auth/me/recovery/dismiss:
+    post:
+      tags: [Auth]
+      summary: 不再提醒（已登录）
   /auth/refresh:
     post:
       tags: [Auth]

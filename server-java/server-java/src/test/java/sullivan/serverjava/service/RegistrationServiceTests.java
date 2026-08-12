@@ -5,12 +5,14 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import sullivan.serverjava.domain.GuardianBinding;
+import sullivan.serverjava.domain.UserAccount;
 import sullivan.serverjava.mapper.GuardianBindingMapper;
 import sullivan.serverjava.mapper.OrganizationMapper;
 import sullivan.serverjava.mapper.UserAccountMapper;
 import sullivan.serverjava.mapper.UserProfileMapper;
 import sullivan.serverjava.mapper.UserRoleMapper;
 import sullivan.serverjava.web.RegistrationDtos.ProtecteeRegisterRequest;
+import sullivan.serverjava.web.RegistrationDtos.UserRegisterRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -22,6 +24,7 @@ class RegistrationServiceTests {
     private UserAccountMapper userAccountMapper;
     private UserRoleMapper userRoleMapper;
     private GuardianBindingMapper bindingMapper;
+    private RecoveryService recoveryService;
     private RegistrationService service;
 
     @BeforeEach
@@ -29,8 +32,33 @@ class RegistrationServiceTests {
         userAccountMapper = mock(UserAccountMapper.class);
         userRoleMapper = mock(UserRoleMapper.class);
         bindingMapper = mock(GuardianBindingMapper.class);
+        recoveryService = mock(RecoveryService.class);
         service = new RegistrationService(userAccountMapper, mock(UserProfileMapper.class), userRoleMapper,
-                bindingMapper, mock(OrganizationMapper.class), new BCryptPasswordEncoder());
+                bindingMapper, mock(OrganizationMapper.class), recoveryService, new BCryptPasswordEncoder());
+    }
+
+    @Test
+    void userRegistrationPersistsRecoveryContacts() {
+        when(userAccountMapper.selectCount(any())).thenReturn(0L);
+
+        var result = service.registerUser(new UserRegisterRequest("zhangsan", "password123", "张三",
+                "GUARDIAN", "13800138000", "zhangsan@example.com"));
+
+        // 账号 ID 由 IdGenerator 生成，取出后校验 setContacts 使用的是同一 ID
+        ArgumentCaptor<UserAccount> accountCaptor = ArgumentCaptor.forClass(UserAccount.class);
+        verify(userAccountMapper).insert(accountCaptor.capture());
+        String accountId = accountCaptor.getValue().getId();
+        assertThat(result.id()).isEqualTo(accountId);
+
+        ArgumentCaptor<String> type = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> id = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> phone = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> email = ArgumentCaptor.forClass(String.class);
+        verify(recoveryService).setContacts(type.capture(), id.capture(), phone.capture(), email.capture());
+        assertThat(type.getValue()).isEqualTo("USER");
+        assertThat(id.getValue()).isEqualTo(accountId);
+        assertThat(phone.getValue()).isEqualTo("13800138000");
+        assertThat(email.getValue()).isEqualTo("zhangsan@example.com");
     }
 
     @Test

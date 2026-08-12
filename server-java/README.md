@@ -77,6 +77,21 @@ OpenAPI JSON: http://localhost:8080/v3/api-docs
 
 注册码只保存 SHA-256 哈希，成功注册后立即核销。注册码携带的 `initialRoleCode` 决定新管理员的初始权限。
 
+自然人（受护人除外）与机构注册时支持可选字段 `recoveryPhone` / `recoveryEmail`（找回联系方式，半加密两段存储：手机号后四位 / 邮箱 local 前 1/4 段明文，其余 HMAC-SHA256 单向加密，不加密段即密钥）。留空不影响注册，但密码将无法通过手机号/邮箱找回。
+
+## 找回联系方式与找回密码
+
+| 接口 | 说明 | 认证 |
+|---|---|---|
+| `POST /api/v1/auth/password-recovery/start` | 开始找回：返回可用找回方式与不加密前缀 | 公开 |
+| `POST /api/v1/auth/password-recovery/verify` | 补全联系方式并验证（发送验证码与后续重置留空） | 公开 |
+| `GET /api/v1/auth/me/recovery` | 查看我的找回联系方式状态与提醒标志 | 已登录 |
+| `PUT /api/v1/auth/me/recovery` | 设置/更新找回联系方式（至少填手机号或邮箱一个） | 已登录 |
+| `POST /api/v1/auth/me/recovery/remind-later` | “下次再说”：一周后再提醒 | 已登录 |
+| `POST /api/v1/auth/me/recovery/dismiss` | “不再提醒” | 已登录 |
+
+登录响应 `TokenResponse` 含 `recoveryReminder`：未设置任何找回联系方式且未关闭提醒（或距上次“下次再说”满一周）时为 `true`，前端据此弹出设置提醒。
+
 ## 对象查找接口
 
 | 接口 | 说明 | 权限 |

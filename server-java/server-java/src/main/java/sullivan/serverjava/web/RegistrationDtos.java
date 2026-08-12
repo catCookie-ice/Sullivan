@@ -24,7 +24,15 @@ public final class RegistrationDtos {
             @NotBlank @Size(max = 80) String displayName,
             @Schema(description = "注册角色：GUARDIAN（监护人）或 VOLUNTEER（志愿者）",
                     example = "GUARDIAN", allowableValues = {"GUARDIAN", "VOLUNTEER"})
-            @Pattern(regexp = "GUARDIAN|VOLUNTEER") String role) {
+            @Pattern(regexp = "GUARDIAN|VOLUNTEER") String role,
+            @Schema(description = "找回手机号（可选；填写后可用于找回密码，留空将导致密码无法找回）",
+                    example = "13800138000", maxLength = 16)
+            @Size(max = 16) @Pattern(regexp = "^$|^1[3-9]\\d{9}$",
+                    message = "手机号格式不正确") String recoveryPhone,
+            @Schema(description = "找回邮箱（可选；填写后可用于找回密码，留空将导致密码无法找回）",
+                    example = "zhangsan@example.com", maxLength = 128)
+            @Size(max = 128) @Pattern(regexp = "^$|^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",
+                    message = "邮箱格式不正确") String recoveryEmail) {
     }
 
     public record ProtecteeRegisterRequest(
@@ -68,7 +76,15 @@ public final class RegistrationDtos {
                     maxLength = 160)
             @NotBlank @Size(max = 160) String legalName,
             @Schema(description = "机构对外展示名称", example = "朝阳盲协", maxLength = 160)
-            @NotBlank @Size(max = 160) String publicName) {
+            @NotBlank @Size(max = 160) String publicName,
+            @Schema(description = "找回手机号（可选；填写后可用于找回密码，留空将导致密码无法找回）",
+                    example = "13800138000", maxLength = 16)
+            @Size(max = 16) @Pattern(regexp = "^$|^1[3-9]\\d{9}$",
+                    message = "手机号格式不正确") String recoveryPhone,
+            @Schema(description = "找回邮箱（可选；填写后可用于找回密码，留空将导致密码无法找回）",
+                    example = "contact@example.com", maxLength = 128)
+            @Size(max = 128) @Pattern(regexp = "^$|^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",
+                    message = "邮箱格式不正确") String recoveryEmail) {
     }
 
     public record AdminRegisterRequest(
@@ -129,6 +145,9 @@ public final class RegistrationDtos {
                     example = "USER", allowableValues = {"USER", "ORGANIZATION", "ADMIN"}) String principalType,
             @Schema(description = "角色集合", example = "[\"GUARDIAN\"]") Set<String> roles,
             @Schema(description = "权限集合（管理员登录时非空）",
-                    example = "[\"ADMIN_REGISTRATION_CODE_CREATE\"]") Set<String> permissions) {
+                    example = "[\"ADMIN_REGISTRATION_CODE_CREATE\"]") Set<String> permissions,
+            @Schema(description = "本次登录后是否需要提醒设置找回手机号/邮箱（USER/ORGANIZATION 未设置"
+                    + "且未到下次提醒间隔时为 true；已设置或已关闭提醒时为 false；管理员恒为 false）",
+                    example = "false") boolean recoveryReminder) {
     }
 }
