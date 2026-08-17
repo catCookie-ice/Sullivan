@@ -26,6 +26,27 @@ export interface BindingResponse {
   protecteeId: string
   permanent: boolean
   primary: boolean
+  // 发起方账号 ID：等于 guardianId 表示监护人发起，等于 protecteeId 表示受护人发起
+  requestedBy: string
+}
+
+// 志愿者兼任申请
+export interface VolunteerApplicationResponse {
+  id: string
+  status: string // PENDING / APPROVED / REJECTED / CANCELLED
+  applicantUid: string
+  reason?: string
+  createdAt: string
+}
+
+// 实时会话
+export interface RealtimeSessionResponse {
+  id: string
+  status: string // REQUESTED / ACTIVE / REJECTED / ENDED
+  initiatorUid: string
+  targetUid: string
+  sessionType: string
+  createdAt: string
 }
 
 // 自然人（GET /users/{id}）

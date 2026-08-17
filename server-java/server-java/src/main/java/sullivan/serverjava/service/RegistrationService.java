@@ -19,8 +19,6 @@ import sullivan.serverjava.mapper.UserAccountMapper;
 import sullivan.serverjava.mapper.UserProfileMapper;
 import sullivan.serverjava.mapper.UserRoleMapper;
 import sullivan.serverjava.web.RegistrationDtos.OrganizationRegisterRequest;
-import sullivan.serverjava.web.RegistrationDtos.BindingRequest;
-import sullivan.serverjava.web.RegistrationDtos.BindingResponse;
 import sullivan.serverjava.web.RegistrationDtos.ProtecteeRegisterRequest;
 import sullivan.serverjava.web.RegistrationDtos.RegistrationResponse;
 import sullivan.serverjava.web.RegistrationDtos.UserRegisterRequest;
@@ -79,72 +77,10 @@ public class RegistrationService {
         binding.setProtecteeUid(protectee.getId());
         binding.setIsPrimary(true);
         binding.setPermanentFlag(true);
+        binding.setRequestedBy(guardianId);
         guardianBindingMapper.insert(binding);
 
         return new RegistrationResponse(protectee.getId(), "USER", "ENABLED", Set.of("PROTECTEE"));
-    }
-
-    @Transactional
-    public RegistrationResponse addVolunteerRole(String userId) {
-        requireActiveRole(userId, "GUARDIAN");
-        UserRole existing = userRoleMapper.selectOne(Wrappers.<UserRole>lambdaQuery()
-                .eq(UserRole::getUserId, userId)
-                .eq(UserRole::getRoleCode, "VOLUNTEER"));
-        if (existing == null) {
-            createUserRole(userId, "VOLUNTEER", userId);
-        } else if (!"ACTIVE".equals(existing.getStatus())) {
-            existing.setStatus("ACTIVE");
-            userRoleMapper.updateById(existing);
-        }
-        return new RegistrationResponse(userId, "USER", "ENABLED", Set.of("GUARDIAN", "VOLUNTEER"));
-    }
-
-    @Transactional
-    public BindingResponse requestBinding(String guardianId, BindingRequest request) {
-        requireActiveRole(guardianId, "GUARDIAN");
-        UserAccount protectee = userAccountMapper.selectById(request.protecteeId());
-        if (protectee == null || !hasRole(protectee.getId(), "PROTECTEE")) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "受护人不存在");
-        }
-        Long duplicate = guardianBindingMapper.selectCount(Wrappers.<GuardianBinding>lambdaQuery()
-                .eq(GuardianBinding::getGuardianUid, guardianId)
-                .eq(GuardianBinding::getProtecteeUid, request.protecteeId())
-                .in(GuardianBinding::getStatus, "PENDING", "ACTIVE"));
-        if (duplicate > 0) {
-            throw new ApiException(HttpStatus.CONFLICT, "该监护关系已存在或正在等待确认");
-        }
-        GuardianBinding binding = new GuardianBinding();
-        binding.setId(IdGenerator.next());
-        binding.setStatus("PENDING");
-        binding.setGuardianUid(guardianId);
-        binding.setProtecteeUid(request.protecteeId());
-        binding.setIsPrimary(false);
-        binding.setPermanentFlag(false);
-        guardianBindingMapper.insert(binding);
-        return toBindingResponse(binding);
-    }
-
-    @Transactional
-    public BindingResponse acceptBinding(String protecteeId, String bindingId) {
-        requireActiveRole(protecteeId, "PROTECTEE");
-        GuardianBinding binding = guardianBindingMapper.selectById(bindingId);
-        if (binding == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "绑定请求不存在");
-        }
-        if (!protecteeId.equals(binding.getProtecteeUid())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "只有目标受护人可以确认绑定");
-        }
-        if (!"PENDING".equals(binding.getStatus())) {
-            throw new ApiException(HttpStatus.CONFLICT, "绑定请求已处理");
-        }
-        boolean hasPrimary = guardianBindingMapper.selectCount(Wrappers.<GuardianBinding>lambdaQuery()
-                .eq(GuardianBinding::getProtecteeUid, protecteeId)
-                .eq(GuardianBinding::getStatus, "ACTIVE")
-                .eq(GuardianBinding::getIsPrimary, true)) > 0;
-        binding.setStatus("ACTIVE");
-        binding.setIsPrimary(!hasPrimary);
-        guardianBindingMapper.updateById(binding);
-        return toBindingResponse(binding);
     }
 
     @Transactional
@@ -183,20 +119,6 @@ public class RegistrationService {
             }
             throw new ApiException(HttpStatus.FORBIDDEN, "当前用户不具备" + roleCode + "角色");
         }
-    }
-
-    private boolean hasRole(String userId, String roleCode) {
-        return userRoleMapper.selectCount(Wrappers.<UserRole>lambdaQuery()
-                .eq(UserRole::getUserId, userId)
-                .eq(UserRole::getRoleCode, roleCode)
-                .eq(UserRole::getStatus, "ACTIVE")) > 0
-                || roleCode.equals(userAccountMapper.selectById(userId).getRoleCode());
-    }
-
-    private BindingResponse toBindingResponse(GuardianBinding binding) {
-        return new BindingResponse(binding.getId(), binding.getStatus(), binding.getGuardianUid(),
-                binding.getProtecteeUid(), Boolean.TRUE.equals(binding.getPermanentFlag()),
-                Boolean.TRUE.equals(binding.getIsPrimary()));
     }
 
     private UserAccount createUserAccount(String loginName, String password, String primaryRole) {

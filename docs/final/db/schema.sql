@@ -77,10 +77,13 @@ CREATE TABLE guardian_binding (
   guardian_uid CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   protectee_uid CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+  permanent_flag BOOLEAN NOT NULL DEFAULT FALSE,
   requested_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   confirmed_at DATETIME(3) NULL,
+  expires_at DATETIME(3) NULL,
   revoked_at DATETIME(3) NULL,
   decision_note VARCHAR(500) NULL,
+  requested_by CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NULL COMMENT '发起方账号ID（监护人=guardian_uid，受护人=protectee_uid）',
   active_pair_key VARCHAR(53) GENERATED ALWAYS AS (CASE WHEN deleted_at IS NULL AND status IN ('PENDING','ACTIVE') THEN CONCAT(guardian_uid, ':', protectee_uid) ELSE NULL END) STORED,
   primary_protectee_key CHAR(26) CHARACTER SET ascii COLLATE ascii_bin GENERATED ALWAYS AS (CASE WHEN deleted_at IS NULL AND status = 'ACTIVE' AND is_primary THEN protectee_uid ELSE NULL END) STORED,
   CONSTRAINT pk_guardian_binding PRIMARY KEY (id),
@@ -291,7 +294,7 @@ CREATE TABLE welfare_service (
   CONSTRAINT pk_welfare_service PRIMARY KEY (id),
   CONSTRAINT fk_welfare_service_org FOREIGN KEY (organization_id) REFERENCES organization(id),
   CONSTRAINT ck_welfare_service_status CHECK (status IN ('OPEN', 'PAUSED', 'CLOSED')),
-  CONSTRAINT ck_welfare_service_free CHECK (is_free),
+  CONSTRAINT ck_welfare_service_free CHECK (is_free = TRUE),
   CONSTRAINT ck_welfare_service_extension CHECK (extension IS NULL OR JSON_TYPE(extension) = 'OBJECT')
 ) ENGINE=InnoDB COMMENT='免费公益服务；禁止添加金额、币种、订单或支付字段';
 CREATE INDEX ix_welfare_service_org_status ON welfare_service (organization_id, status, created_at);
@@ -353,8 +356,12 @@ CREATE TABLE volunteer_activity (
   title VARCHAR(160) NOT NULL,
   description TEXT NOT NULL,
   location_text VARCHAR(300) NOT NULL,
+  location_lng DECIMAL(10,6) NULL COMMENT '高德经度',
+  location_lat DECIMAL(10,6) NULL COMMENT '高德纬度',
   starts_at DATETIME(3) NOT NULL,
   ends_at DATETIME(3) NOT NULL,
+  registration_starts_at DATETIME(3) NOT NULL,
+  registration_ends_at DATETIME(3) NOT NULL,
   max_volunteers INT UNSIGNED NOT NULL,
   approved_count INT UNSIGNED NOT NULL DEFAULT 0,
   is_free BOOLEAN NOT NULL DEFAULT TRUE,
@@ -362,10 +369,11 @@ CREATE TABLE volunteer_activity (
   CONSTRAINT fk_volunteer_activity_org FOREIGN KEY (organization_id) REFERENCES organization(id),
   CONSTRAINT ck_volunteer_activity_status CHECK (status IN ('RECRUITING', 'IN_PROGRESS', 'ENDED', 'CANCELLED')),
   CONSTRAINT ck_volunteer_activity_time CHECK (starts_at < ends_at),
+  CONSTRAINT ck_volunteer_activity_reg CHECK (registration_starts_at <= registration_ends_at AND registration_ends_at <= starts_at),
   CONSTRAINT ck_volunteer_activity_quota CHECK (approved_count <= max_volunteers AND max_volunteers > 0),
-  CONSTRAINT ck_volunteer_activity_free CHECK (is_free),
+  CONSTRAINT ck_volunteer_activity_free CHECK (is_free = TRUE),
   CONSTRAINT ck_volunteer_activity_extension CHECK (extension IS NULL OR JSON_TYPE(extension) = 'OBJECT')
-) ENGINE=InnoDB COMMENT='免费志愿活动；活动行是报名并发审批锁点';
+) ENGINE=InnoDB COMMENT='免费志愿活动；含报名窗口与高德经纬度；活动行是报名并发审批锁点';
 CREATE INDEX ix_volunteer_activity_org_status ON volunteer_activity (organization_id, status, starts_at);
 CREATE INDEX ix_volunteer_activity_public ON volunteer_activity (status, starts_at);
 
@@ -388,6 +396,28 @@ CREATE TABLE activity_enrollment (
 ) ENGINE=InnoDB COMMENT='活动报名；Java 事务校验志愿者角色与活动归属';
 CREATE INDEX ix_activity_enrollment_activity_status ON activity_enrollment (activity_id, status, created_at);
 CREATE INDEX ix_activity_enrollment_volunteer ON activity_enrollment (volunteer_uid, created_at);
+
+CREATE TABLE volunteer_application (
+  id CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'PENDING',
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  deleted_at DATETIME(3) NULL,
+  version BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  applicant_uid CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '申请人（监护人）账号ID',
+  reason VARCHAR(1000) NULL COMMENT '申请理由',
+  decided_by_admin_id CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NULL COMMENT '审核管理员ID',
+  decided_at DATETIME(3) NULL,
+  decision_note VARCHAR(1000) NULL COMMENT '审核意见/拒绝原因',
+  effective_key VARCHAR(40) GENERATED ALWAYS AS (CASE WHEN deleted_at IS NULL AND status = 'PENDING' THEN CONCAT('V', applicant_uid) ELSE NULL END) STORED,
+  CONSTRAINT pk_volunteer_application PRIMARY KEY (id),
+  CONSTRAINT uq_volunteer_app_effective UNIQUE (effective_key),
+  CONSTRAINT fk_vol_app_user FOREIGN KEY (applicant_uid) REFERENCES user_account(id),
+  CONSTRAINT fk_vol_app_admin FOREIGN KEY (decided_by_admin_id) REFERENCES admin_account(id),
+  CONSTRAINT ck_vol_app_status CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'))
+) ENGINE=InnoDB COMMENT='监护人兼任志愿者申请（提交→管理员审核）';
+CREATE INDEX ix_vol_app_user_status ON volunteer_application (applicant_uid, status, created_at);
+CREATE INDEX ix_vol_app_admin_status ON volunteer_application (decided_by_admin_id, status, created_at);
 
 CREATE TABLE alert (
   id CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
@@ -691,3 +721,27 @@ CREATE TABLE account_recovery_reminder (
   CONSTRAINT uq_account_recovery_reminder_principal UNIQUE (principal_type, principal_id),
   CONSTRAINT ck_account_recovery_reminder_status CHECK (status IN ('ACTIVE', 'DISABLED'))
 ) ENGINE=InnoDB COMMENT='找回联系方式提醒状态（下次再说 / 不再提醒）';
+
+CREATE TABLE realtime_session (
+  id CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'REQUESTED',
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  deleted_at DATETIME(3) NULL,
+  version BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  initiator_uid CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '发起方（监护人或受护人）',
+  target_uid CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '接收方',
+  session_type VARCHAR(16) NOT NULL DEFAULT 'BASIC' COMMENT '会话类型：BASIC；VOICE/CAMERA/LOCATION 为 FULL-RESERVED',
+  accepted_at DATETIME(3) NULL,
+  ended_at DATETIME(3) NULL,
+  ended_by_uid CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  end_reason VARCHAR(500) NULL,
+  CONSTRAINT pk_realtime_session PRIMARY KEY (id),
+  CONSTRAINT fk_realtime_initiator FOREIGN KEY (initiator_uid) REFERENCES user_account(id),
+  CONSTRAINT fk_realtime_target FOREIGN KEY (target_uid) REFERENCES user_account(id),
+  CONSTRAINT ck_realtime_distinct CHECK (initiator_uid <> target_uid),
+  CONSTRAINT ck_realtime_status CHECK (status IN ('REQUESTED', 'ACTIVE', 'REJECTED', 'ENDED')),
+  CONSTRAINT ck_realtime_type CHECK (session_type IN ('BASIC'))
+) ENGINE=InnoDB COMMENT='监护-受护实时会话（长连接消息中继）';
+CREATE INDEX ix_realtime_initiator ON realtime_session (initiator_uid, status, created_at);
+CREATE INDEX ix_realtime_target ON realtime_session (target_uid, status, created_at);

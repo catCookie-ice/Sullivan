@@ -19,6 +19,7 @@ const router = createRouter({
         { path: 'organizations', name: 'OrgManage', component: () => import('@/views/admin/OrgManage.vue') },
         { path: 'codes', name: 'RegistrationCodes', component: () => import('@/views/admin/RegistrationCode.vue') },
         { path: 'stats', name: 'Stats', component: () => import('@/views/admin/StatsDashboard.vue') },
+        { path: 'volunteer-review', name: 'VolunteerReview', component: () => import('@/views/admin/VolunteerReview.vue') },
       ],
     },
     {

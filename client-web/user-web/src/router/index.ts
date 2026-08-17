@@ -34,6 +34,8 @@ const router = createRouter({
         { path: 'locations', name: 'Locations', component: () => import('@/views/guardian/LocationView.vue') },
         { path: 'alerts', name: 'GuardianAlerts', component: () => import('@/views/guardian/AlertList.vue') },
         { path: 'services', name: 'GuardianServices', component: () => import('@/views/guardian/ServiceList.vue') },
+        { path: 'volunteer-apply', name: 'VolunteerApply', component: () => import('@/views/guardian/VolunteerApply.vue') },
+        { path: 'realtime', name: 'RealtimeDemo', component: () => import('@/views/guardian/RealtimeDemo.vue') },
       ],
     },
     {

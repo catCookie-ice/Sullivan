@@ -57,12 +57,15 @@ public final class RegistrationDtos {
     public record BindingResponse(
             @Schema(description = "绑定关系唯一标识", example = "b_1234567890") String id,
             @Schema(description = "绑定状态：PENDING（待确认）/ ACTIVE（已生效）",
-                    example = "ACTIVE", allowableValues = {"PENDING", "ACTIVE"}) String status,
+                    example = "ACTIVE", allowableValues = {"PENDING", "ACTIVE", "REJECTED",
+                            "CANCELLED", "EXPIRED", "TERMINATED"}) String status,
             @Schema(description = "监护人账号 ID", example = "u_1111111111") String guardianId,
             @Schema(description = "受护人账号 ID", example = "u_9876543210") String protecteeId,
             @Schema(description = "是否永久绑定（创建受护人时建立的主绑定为 true）",
                     example = "true") boolean permanent,
-            @Schema(description = "是否主绑定：受护人的第一监护关系", example = "true") boolean primary) {
+            @Schema(description = "是否主绑定：受护人的第一监护关系", example = "true") boolean primary,
+            @Schema(description = "发起方账号 ID：等于 guardianId 表示监护人发起，等于 protecteeId 表示受护人发起",
+                    example = "u_1111111111") String requestedBy) {
     }
 
     public record OrganizationRegisterRequest(

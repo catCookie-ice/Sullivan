@@ -96,7 +96,42 @@ paths:
       tags: [Lookup]
       summary: 按唯一标识查找管理员（需 ADMIN_MANAGE 权限）
 
-  # ============ 监护绑定 (FR-04~FR-05) ============
+  # ============ 监护绑定 (FR-04~FR-05)，双向（发起方+接收方同意） ============
+  # 发起方 recorded in requested_by；接收方（非发起方）确认/拒绝，发起方取消，任一方解除（永久绑定除外）。
+  /bindings:
+    get:
+      tags: [Binding]
+      summary: 我的绑定与请求列表（作为监护人或受护人参与的全部关系）
+    post:
+      tags: [Binding]
+      summary: 发起绑定（targetRole=PROTECTEE 需调用者 GUARDIAN；targetRole=GUARDIAN 需调用者 PROTECTEE）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetId, targetRole]
+              properties:
+                targetId: { type: string, description: 目标账号 ID }
+                targetRole: { type: string, enum: [GUARDIAN, PROTECTEE] }
+  /bindings/{id}/accept:
+    post:
+      tags: [Binding]
+      summary: 接收方确认绑定
+  /bindings/{id}/reject:
+    post:
+      tags: [Binding]
+      summary: 接收方拒绝绑定（reason 可选）
+  /bindings/{id}/cancel:
+    post:
+      tags: [Binding]
+      summary: 发起方取消 PENDING 请求
+  /bindings/{id}/terminate:
+    post:
+      tags: [Binding]
+      summary: 任一方解除生效绑定（permanent=true 返回 403）
+  # 旧路径兼容别名（新前端请使用 /bindings）
   /guardians/protectees:
     post:
       tags: [Binding]
@@ -104,30 +139,40 @@ paths:
   /guardians/bindings:
     post:
       tags: [Binding]
-      summary: 发起绑定
-    get:
-      tags: [Binding]
-      summary: 查询自己的绑定关系
+      summary: '[DEPRECATED] 监护人发起绑定（等效 POST /bindings {targetRole=PROTECTEE}）'
+      deprecated: true
   /guardians/bindings/{id}/accept:
     post:
       tags: [Binding]
-      summary: 确认绑定
+      summary: '[DEPRECATED] 确认绑定（等效 POST /bindings/{id}/accept）'
+      deprecated: true
+
+  # ============ 志愿者兼任申请 (FR-02B) ============
   /users/me/roles/volunteer:
     post:
       tags: [Auth]
-      summary: 监护人兼任志愿者
-  /guardians/bindings/{id}/reject:
+      summary: 提交志愿者兼任申请（需管理员审核，注册满配置天数，返回 PENDING 申请）
+    get:
+      tags: [Auth]
+      summary: 我的志愿者兼任申请列表
+  /users/me/roles/volunteer/cancel/{applicationId}:
     post:
-      tags: [Binding]
-      summary: 拒绝绑定
-  /guardians/bindings/{id}/cancel:
+      tags: [Auth]
+      summary: 撤销我的 PENDING 申请
+
+  # ============ 志愿者兼任审核 (FR-22 补充) ============
+  /admin/volunteer-applications:
+    get:
+      tags: [Admin]
+      summary: 志愿者兼任申请列表（需 VOLUNTEER_REVIEW；含申请人注册时间）
+  /admin/volunteer-applications/{id}/approve:
     post:
-      tags: [Binding]
-      summary: 取消绑定
-  /guardians/bindings/{id}/terminate:
+      tags: [Admin]
+      summary: 审核通过（事务内追加 VOLUNTEER 角色，二次校验注册时长）
+  /admin/volunteer-applications/{id}/reject:
     post:
-      tags: [Binding]
-      summary: 解除绑定
+      tags: [Admin]
+      summary: 审核拒绝（拒绝原因必填）
 
   # ============ 位置 (FR-06) ============
   /guardians/locations/{protecteeUid}:
@@ -250,15 +295,51 @@ paths:
   /activities:
     post:
       tags: [Activity]
-      summary: 创建活动
-  /activities/public:
+      summary: 机构创建活动（活动名/地点含经纬度/开始结束/报名窗口/人数；机构须 APPROVED）
     get:
       tags: [Activity]
-      summary: 公开活动列表
+      summary: 公开活动列表（默认只出 RECRUITING，不含报名者清单）
+  /activities/mine:
+    get:
+      tags: [Activity]
+      summary: 我的活动列表（机构归属强制为令牌主体）
   /activities/{id}/cancel:
     post:
       tags: [Activity]
       summary: 取消活动
+
+  # ============ 实时会话 / 长连接 (FR-25) ============
+  # 长连接本体在 WebSocket 端点 /ws/realtime（握手带 ?token=<jwt>&sessionId=<id>），
+  # 会话创建与消息中继都要求双方存在 ACTIVE 绑定；sessionType 当前仅 BASIC。
+  /realtime/sessions:
+    post:
+      tags: [Realtime]
+      summary: 发起实时会话（REQUESTED；双方须有 ACTIVE 绑定）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetUid, sessionType]
+              properties:
+                targetUid: { type: string, description: 已绑定受护人/监护人 ID }
+                sessionType: { type: string, enum: [BASIC] }
+    get:
+      tags: [Realtime]
+      summary: 我的会话列表（发起或接收）
+  /realtime/sessions/{id}/accept:
+    post:
+      tags: [Realtime]
+      summary: 接收方接受会话（REQUESTED → ACTIVE）
+  /realtime/sessions/{id}/reject:
+    post:
+      tags: [Realtime]
+      summary: 接收方拒绝会话（reason 可选）
+  /realtime/sessions/{id}/end:
+    post:
+      tags: [Realtime]
+      summary: 任一方结束会话
 
   /enrollments/{activityId}:
     post:

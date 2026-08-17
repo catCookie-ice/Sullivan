@@ -27,6 +27,12 @@ export default defineConfig({
         target: apiTarget,
         changeOrigin: true,
       },
+      // 实时长连接 WebSocket（握手带 ?token= 与 ?sessionId=）
+      '/ws': {
+        target: apiTarget,
+        changeOrigin: true,
+        ws: true,
+      },
     },
   },
 })

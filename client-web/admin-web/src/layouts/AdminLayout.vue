@@ -5,6 +5,7 @@
       <el-menu-item index="/organizations">机构管理</el-menu-item>
       <el-menu-item index="/codes">注册码</el-menu-item>
       <el-menu-item index="/stats">运营统计</el-menu-item>
+      <el-menu-item v-if="canReview" index="/volunteer-review">志愿者审核</el-menu-item>
       <el-menu-item style="float: right" @click="handleLogout">退出登录</el-menu-item>
     </el-menu>
     <main class="content">
@@ -14,11 +15,13 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
+const canReview = computed(() => auth.permissions.includes('VOLUNTEER_REVIEW'))
 
 function handleLogout() {
   auth.logout()

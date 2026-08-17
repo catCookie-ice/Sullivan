@@ -29,6 +29,7 @@ const router = createRouter({
         { path: 'services', name: 'OrgServices', component: () => import('@/views/org/ServiceManage.vue') },
         { path: 'applications', name: 'OrgApplications', component: () => import('@/views/org/ApplicationManage.vue') },
         { path: 'activities', name: 'OrgActivities', component: () => import('@/views/org/ActivityManage.vue') },
+        { path: 'activities/create', name: 'OrgActivityCreate', component: () => import('@/views/org/ActivityCreate.vue') },
         { path: 'enrollments', name: 'OrgEnrollments', component: () => import('@/views/org/EnrollmentManage.vue') },
       ],
     },

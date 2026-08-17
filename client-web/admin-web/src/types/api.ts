@@ -66,3 +66,17 @@ export interface AdminCodeResponse {
   initialRoleCode: string
   expiresAt: string
 }
+
+// 志愿者兼任申请（管理端审核）
+export interface VolunteerApplicationAdminResponse {
+  id: string
+  status: string // PENDING / APPROVED / REJECTED / CANCELLED
+  applicantUid: string
+  loginName: string
+  displayName: string
+  applicantCreatedAt: string
+  reason?: string
+  decidedByAdminId?: string
+  decidedAt?: string
+  decisionNote?: string
+}

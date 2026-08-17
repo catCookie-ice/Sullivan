@@ -6,7 +6,8 @@
       <el-menu-item index="/guardian/locations">位置查看</el-menu-item>
       <el-menu-item index="/guardian/alerts">报警</el-menu-item>
       <el-menu-item index="/guardian/services">公益服务</el-menu-item>
-      <el-menu-item v-if="!isVolunteer" @click="handleBecomeVolunteer">兼任志愿者</el-menu-item>
+      <el-menu-item v-if="!isVolunteer" index="/guardian/volunteer-apply">志愿者申请</el-menu-item>
+      <el-menu-item index="/guardian/realtime">实时会话</el-menu-item>
       <el-menu-item style="float: right" @click="handleLogout">退出登录</el-menu-item>
     </el-menu>
     <main class="content">
@@ -18,24 +19,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { addVolunteerRole } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
 const isVolunteer = computed(() => auth.roles.includes('VOLUNTEER'))
-
-async function handleBecomeVolunteer() {
-  try {
-    const res = await addVolunteerRole()
-    ElMessage.success('已兼任志愿者，当前角色：' + res.roles.join(' / '))
-    auth.roles = res.roles
-    localStorage.setItem('roles', JSON.stringify(res.roles))
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '操作失败')
-  }
-}
 
 function handleLogout() {
   auth.logout()

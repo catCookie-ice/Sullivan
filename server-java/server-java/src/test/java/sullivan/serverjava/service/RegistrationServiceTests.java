@@ -77,6 +77,7 @@ class RegistrationServiceTests {
         assertThat(binding.getStatus()).isEqualTo("ACTIVE");
         assertThat(binding.getPermanentFlag()).isTrue();
         assertThat(binding.getIsPrimary()).isTrue();
+        assertThat(binding.getRequestedBy()).isEqualTo("guardian-1");
         assertThat(result.roles()).containsExactly("PROTECTEE");
     }
 }

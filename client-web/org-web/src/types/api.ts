@@ -56,3 +56,37 @@ export interface RecoveryStatusResponse {
   remindRequired: boolean
   methods: RecoveryMethod[]
 }
+
+// 公益活动创建请求（报名窗口 + 高德经纬度）
+export interface ActivityCreateRequest {
+  title: string
+  description: string
+  locationText: string
+  locationLng?: number
+  locationLat?: number
+  startsAt: string
+  endsAt: string
+  registrationStartsAt: string
+  registrationEndsAt: string
+  maxVolunteers: number
+}
+
+// 公益活动
+export interface ActivityResponse {
+  id: string
+  status: string
+  organizationId: string
+  organizationPublicName?: string
+  title: string
+  description: string
+  locationText: string
+  locationLng?: number
+  locationLat?: number
+  startsAt: string
+  endsAt: string
+  registrationStartsAt: string
+  registrationEndsAt: string
+  maxVolunteers: number
+  approvedCount: number
+  createdAt: string
+}

@@ -1,0 +1,124 @@
+<template>
+  <div>
+    <div v-if="error" class="amap-error">
+      <el-alert type="warning" :closable="false" show-icon :title="error" />
+    </div>
+    <div v-else ref="containerRef" :style="{ height: height || '320px', width: '100%' }" />
+    <div class="amap-tip" v-if="!error">
+      在地图上点击或拖拽红色标记选择地点；当前：{{ pickedLabel }}
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { loadAmap } from '@/composables/useAmap'
+
+interface AmapLocation {
+  lng?: number
+  lat?: number
+  address?: string
+}
+
+const props = defineProps<{
+  modelValue?: AmapLocation
+  height?: string
+}>()
+
+const emit = defineEmits<{ (e: 'update:modelValue', value: AmapLocation): void }>()
+
+const containerRef = ref<HTMLDivElement | null>(null)
+const error = ref('')
+
+let map: any = null
+let marker: any = null
+let geocoder: any = null
+
+const pickedLabel = computed(() => {
+  const v = props.modelValue
+  if (!v || v.lng == null || v.lat == null) return '未选择'
+  return v.address || `${v.lng.toFixed(6)}, ${v.lat.toFixed(6)}`
+})
+
+onMounted(async () => {
+  try {
+    await loadAmap()
+  } catch (e: any) {
+    error.value = e.message || '地图加载失败'
+    return
+  }
+  if (!containerRef.value) return
+  const AMap = window.AMap
+  const initial = props.modelValue
+  const lng = initial?.lng ?? 116.397428
+  const lat = initial?.lat ?? 39.90923
+  map = new AMap.Map(containerRef.value, { zoom: 14, center: [lng, lat] })
+  geocoder = new AMap.Geocoder({ city: '全国' })
+
+  if (initial?.lng != null && initial?.lat != null) {
+    placeMarker(initial.lng, initial.lat)
+  }
+  map.on('click', (e: any) => {
+    placeMarker(e.lnglat.getLng(), e.lnglat.getLat())
+  })
+  map.on('complete', () => {
+    map.setFitView()
+  })
+})
+
+watch(
+  () => props.modelValue,
+  (next) => {
+    if (map && next?.lng != null && next?.lat != null) {
+      map.setCenter([next.lng, next.lat])
+      placeMarker(next.lng, next.lat)
+    }
+  },
+)
+
+function placeMarker(lng: number, lat: number) {
+  const AMap = window.AMap
+  if (!marker) {
+    marker = new AMap.Marker({
+      position: [lng, lat],
+      draggable: true,
+    })
+    marker.on('dragend', (e: any) => {
+      const pos = e.target.getPosition()
+      resolveAddress(pos.getLng(), pos.getLat())
+    })
+    map.add(marker)
+  } else {
+    marker.setPosition([lng, lat])
+  }
+  map.setCenter([lng, lat])
+  resolveAddress(lng, lat)
+}
+
+function resolveAddress(lng: number, lat: number) {
+  geocoder?.getAddress([lng, lat], (status: string, result: any) => {
+    const address = status === 'complete' && result?.regeocode?.formattedAddress
+      ? result.regeocode.formattedAddress
+      : undefined
+    emit('update:modelValue', { lng, lat, address })
+  })
+}
+
+onBeforeUnmount(() => {
+  map?.destroy()
+  map = null
+  marker = null
+  geocoder = null
+})
+</script>
+
+<style scoped>
+.amap-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 6px;
+}
+.amap-error {
+  padding: 12px 0;
+}
+</style>

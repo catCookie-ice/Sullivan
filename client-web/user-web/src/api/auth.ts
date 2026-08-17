@@ -5,6 +5,7 @@ import type {
   RecoveryVerifyResponse,
   RegistrationResponse,
   TokenResponse,
+  VolunteerApplicationResponse,
 } from '@/types/api'
 
 // 自然人端固定以 USER 主体登录
@@ -28,9 +29,21 @@ export function registerUser(payload: {
   return request.post<never, RegistrationResponse>('/auth/register/user', payload)
 }
 
-// 监护人兼任志愿者
-export function addVolunteerRole() {
-  return request.post<never, RegistrationResponse>('/users/me/roles/volunteer')
+// 监护人提交志愿者兼任申请（需管理员审核）
+export function submitVolunteerApplication(reason?: string) {
+  return request.post<never, VolunteerApplicationResponse>('/users/me/roles/volunteer', { reason })
+}
+
+// 我的志愿者兼任申请列表
+export function getMyVolunteerApplications() {
+  return request.get<never, VolunteerApplicationResponse[]>('/users/me/roles/volunteer')
+}
+
+// 撤销我的 PENDING 申请
+export function cancelVolunteerApplication(applicationId: string) {
+  return request.post<never, VolunteerApplicationResponse>(
+    `/users/me/roles/volunteer/cancel/${applicationId}`,
+  )
 }
 
 // 找回密码：开始（返回可用方式与不加密前缀）

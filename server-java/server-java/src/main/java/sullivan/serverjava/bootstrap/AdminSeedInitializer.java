@@ -30,6 +30,7 @@ public class AdminSeedInitializer implements ApplicationRunner {
             new PermissionSeed("ORG_MANAGE", "机构管理（查询与删除）"),
             new PermissionSeed("BUSINESS_AUDIT", "业务审计"),
             new PermissionSeed("OPERATION_STATS", "运营统计"),
+            new PermissionSeed("VOLUNTEER_REVIEW", "志愿者兼任审核"),
             new PermissionSeed("SYSTEM_NOTICE", "发布系统通知"));
 
     private final AdminRoleMapper roleMapper;

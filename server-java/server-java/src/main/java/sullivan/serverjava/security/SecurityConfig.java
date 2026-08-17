@@ -35,6 +35,8 @@ public class SecurityConfig {
                                 "/api-docs", "/api-docs/**").permitAll()
                         // 开发调试路由接口（仅 dev 环境注册了处理器；prod 下该路径无处理器返回 404）
                         .requestMatchers("/dev/routes").permitAll()
+                        // 实时长连接 WebSocket 端点：握手鉴权由 RealtimeHandshakeInterceptor 完成
+                        .requestMatchers("/ws/**").permitAll()
                         // 错误页渲染不拦截，避免未知路径在授权后转发 /error 时再被拦截
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
