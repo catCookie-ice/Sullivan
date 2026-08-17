@@ -1,6 +1,10 @@
 HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
+
+# 本地环境配置（含数据库口令、JWT 密钥、bootstrap 管理员口令），严禁提交
+.env
+.env.local
 !**/src/main/**/target/
 !**/src/test/**/target/
 
