@@ -140,7 +140,7 @@ async function handleVerify() {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: #f5f7fa;
+  background: transparent;
   padding: 24px;
 }
 .forgot-card {

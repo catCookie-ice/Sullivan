@@ -78,7 +78,7 @@
         </el-form-item>
       </el-form>
 
-      <el-card shadow="never" style="background: #0d1117; color: #c9d1d9; margin-top: 12px">
+      <el-card shadow="never" class="log-card">
         <pre class="log">{{ logText || '暂无消息…' }}</pre>
       </el-card>
     </el-card>
@@ -255,6 +255,17 @@ function statusText(status: string) {
 </script>
 
 <style scoped>
+.log-card {
+  margin-top: 12px;
+  background: var(--ink);
+  border: none;
+  border-radius: 10px 4px 12px 5px / 5px 11px 4px 12px;
+  box-shadow: 2px 2px 0 rgba(63, 58, 50, 0.2);
+  color: #f0e9d8;
+}
+.log-card :deep(.el-card__body) {
+  padding: 12px;
+}
 .log {
   margin: 0;
   font-size: 12px;
@@ -263,5 +274,7 @@ function statusText(status: string) {
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-all;
+  color: #f0e9d8;
+  font-family: var(--font-code);
 }
 </style>

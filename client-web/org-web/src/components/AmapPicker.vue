@@ -3,7 +3,7 @@
     <div v-if="error" class="amap-error">
       <el-alert type="warning" :closable="false" show-icon :title="error" />
     </div>
-    <div v-else ref="containerRef" :style="{ height: height || '320px', width: '100%' }" />
+    <div v-else ref="containerRef" class="amap-box" :style="{ height: height || '320px', width: '100%' }" />
     <div class="amap-tip" v-if="!error">
       在地图上点击或拖拽红色标记选择地点；当前：{{ pickedLabel }}
     </div>
@@ -113,9 +113,15 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.amap-box {
+  border: 1px solid var(--line-strong);
+  border-radius: 10px 4px 12px 5px / 5px 11px 4px 12px;
+  overflow: hidden;
+  background: var(--paper-card);
+}
 .amap-tip {
   font-size: 12px;
-  color: #909399;
+  color: var(--ink-3);
   margin-top: 6px;
 }
 .amap-error {
