@@ -3,7 +3,7 @@
     <el-card>
       <template #header>创建志愿活动</template>
 
-      <el-form :model="form" label-width="120px" style="max-width: 760px">
+      <KeepAutoForm ref="keepFormRef" keep-auto :model="form" label-width="120px" style="max-width: 760px">
         <el-form-item label="活动名" required>
           <el-input v-model="form.title" maxlength="160" show-word-limit placeholder="如：朝阳区视障人士徒步陪伴" />
         </el-form-item>
@@ -56,7 +56,7 @@
           <el-button type="primary" :loading="loading" @click="submit">发布活动</el-button>
           <el-button @click="$router.back()">返回</el-button>
         </el-form-item>
-      </el-form>
+      </KeepAutoForm>
     </el-card>
   </div>
 </template>
@@ -67,10 +67,12 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createActivity } from '@/api/org'
 import AmapPicker from '@/components/AmapPicker.vue'
+import KeepAutoForm from '@shared/keep-auto/KeepAutoForm.vue'
 import type { ActivityCreateRequest } from '@/types/api'
 
 const router = useRouter()
 const loading = ref(false)
+const keepFormRef = ref<{ clearCache: () => void } | null>(null)
 
 const form = reactive({
   title: '',
@@ -117,6 +119,7 @@ async function submit() {
   try {
     const res = await createActivity(payload)
     ElMessage.success(`活动已发布：${res.title}`)
+    keepFormRef.value?.clearCache()
     router.push('/activities')
   } catch (e: any) {
     ElMessage.error(e.response?.data?.error || '发布失败')

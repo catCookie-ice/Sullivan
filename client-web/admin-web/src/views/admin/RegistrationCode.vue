@@ -3,7 +3,7 @@
     <el-card style="max-width: 640px">
       <template #header>创建管理员注册码</template>
 
-      <el-form :model="form" label-width="120px">
+      <KeepAutoForm ref="keepFormRef" keep-auto :model="form" label-width="120px">
         <el-form-item label="初始角色" required>
           <el-select v-model="form.initialRoleCode" style="width: 100%" placeholder="选择注册码对应角色">
             <el-option label="SUPER_ADMIN（最高管理员）" value="SUPER_ADMIN" />
@@ -23,7 +23,7 @@
         <el-form-item>
           <el-button type="primary" :loading="loading" @click="handleCreate">生成注册码</el-button>
         </el-form-item>
-      </el-form>
+      </KeepAutoForm>
 
       <el-alert
         v-if="result"
@@ -44,6 +44,7 @@
 import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { createRegistrationCode } from '@/api/admin'
+import KeepAutoForm from '@shared/keep-auto/KeepAutoForm.vue'
 import type { AdminCodeResponse } from '@/types/api'
 
 const form = reactive<{ initialRoleCode: string; expiresAt: string }>({
@@ -52,6 +53,7 @@ const form = reactive<{ initialRoleCode: string; expiresAt: string }>({
 })
 const loading = ref(false)
 const result = ref<AdminCodeResponse | null>(null)
+const keepFormRef = ref<{ clearCache: () => void } | null>(null)
 
 async function handleCreate() {
   if (!form.initialRoleCode || !form.expiresAt) {
@@ -65,6 +67,7 @@ async function handleCreate() {
       expiresAt: form.expiresAt,
     })
     ElMessage.success('注册码已生成')
+    keepFormRef.value?.clearCache()
   } catch (e: any) {
     ElMessage.error(e.response?.data?.error || '生成失败')
   } finally {

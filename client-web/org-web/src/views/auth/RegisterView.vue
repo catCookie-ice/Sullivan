@@ -4,7 +4,8 @@
       <h2>Sullivan 公益机构端 · 注册</h2>
       <el-alert type="info" :closable="false" style="margin-bottom: 16px"
         title="机构注册后需管理员审核，审核通过前无法登录。" />
-      <el-form :model="form" label-width="110px" @submit.prevent>
+      <KeepAutoForm ref="keepFormRef" keep-auto :model="form" label-width="110px"
+        :exclude="['password', 'confirmPassword']" @submit.prevent>
         <el-form-item label="登录名" required>
           <el-input v-model="form.loginName" placeholder="4-64 位，全局唯一" maxlength="64" />
         </el-form-item>
@@ -34,7 +35,7 @@
           <el-button @click="router.push('/login')">返回登录</el-button>
         </el-form-item>
         <el-alert v-if="error" type="error" :closable="false" :title="error" />
-      </el-form>
+      </KeepAutoForm>
     </el-card>
   </div>
 </template>
@@ -44,8 +45,10 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { registerOrganization } from '@/api/auth'
+import KeepAutoForm from '@shared/keep-auto/KeepAutoForm.vue'
 
 const router = useRouter()
+const keepFormRef = ref<{ clearCache: () => void } | null>(null)
 const form = reactive({
   loginName: '',
   password: '',
@@ -83,6 +86,7 @@ async function handleRegister() {
       recoveryEmail: form.recoveryEmail.trim() || undefined,
     })
     ElMessage.success('注册成功，待管理员审核后即可登录')
+    keepFormRef.value?.clearCache()
     router.push('/login')
   } catch (e: any) {
     error.value = e.response?.data?.error || '注册失败'

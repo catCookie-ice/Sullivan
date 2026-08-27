@@ -10,15 +10,15 @@
         style="margin-bottom: 16px"
       />
 
-      <el-form label-width="100px" style="max-width: 520px">
-        <el-form-item label="申请理由">
-          <el-input v-model="reason" type="textarea" :rows="3" maxlength="1000" show-word-limit
+      <KeepAutoForm ref="keepFormRef" :model="form" label-width="100px" style="max-width: 520px">
+        <KeepAutoFormItem keep-auto prop="reason" label="申请理由">
+          <el-input v-model="form.reason" type="textarea" :rows="3" maxlength="1000" show-word-limit
                     placeholder="选填，说明你希望参与志愿活动的原因" />
-        </el-form-item>
+        </KeepAutoFormItem>
         <el-form-item>
           <el-button type="primary" :loading="loading" @click="submit">提交申请</el-button>
         </el-form-item>
-      </el-form>
+      </KeepAutoForm>
 
       <el-divider>我的申请记录</el-divider>
       <el-table :data="applications" v-loading="loading" border>
@@ -43,18 +43,21 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   submitVolunteerApplication,
   getMyVolunteerApplications,
   cancelVolunteerApplication,
 } from '@/api/auth'
+import KeepAutoForm from '@shared/keep-auto/KeepAutoForm.vue'
+import KeepAutoFormItem from '@shared/keep-auto/KeepAutoFormItem.vue'
 import type { VolunteerApplicationResponse } from '@/types/api'
 
-const reason = ref('')
+const form = reactive({ reason: '' })
 const applications = ref<VolunteerApplicationResponse[]>([])
 const loading = ref(false)
+const keepFormRef = ref<{ clearCache: () => void } | null>(null)
 
 onMounted(load)
 
@@ -72,9 +75,10 @@ async function load() {
 async function submit() {
   loading.value = true
   try {
-    const res = await submitVolunteerApplication(reason.value)
+    const res = await submitVolunteerApplication(form.reason)
     ElMessage.success(`申请已提交，状态：${res.status}`)
-    reason.value = ''
+    keepFormRef.value?.clearCache()
+    form.reason = ''
     await load()
   } catch (e: any) {
     ElMessage.error(e.response?.data?.error || '提交失败')

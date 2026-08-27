@@ -18,6 +18,13 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // 跨应用共享包（keep_auto 表单草稿自动保存等）。
+      '@shared': fileURLToPath(new URL('../shared', import.meta.url)),
+      // 共享包中的 bare import 无法沿目录向上解析到本应用 node_modules，此处显式映射到本应用的依赖。
+      // 注意：必须指向包目录（而非具体文件），否则 element-plus/es/... 等子路径会被错误替换成文件+子路径。
+      'vue': fileURLToPath(new URL('./node_modules/vue', import.meta.url)),
+      'vue-router': fileURLToPath(new URL('./node_modules/vue-router', import.meta.url)),
+      'element-plus': fileURLToPath(new URL('./node_modules/element-plus', import.meta.url)),
     },
   },
   server: {

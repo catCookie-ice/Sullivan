@@ -18,6 +18,20 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@shared/*": [
+        "../shared/*"
+      ],
+      // 共享包（../shared）位于本应用 node_modules 之外，bare import 无法向上解析，
+      // 此处显式映射到本应用的依赖类型入口。
+      "vue": [
+        "./node_modules/vue/dist/vue.d.ts"
+      ],
+      "vue-router": [
+        "./node_modules/vue-router/dist/vue-router.d.mts"
+      ],
+      "element-plus": [
+        "./node_modules/element-plus/es/index.d.ts"
       ]
     },
     "noEmit": true
@@ -25,7 +39,9 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.d.ts",
-    "src/**/*.vue"
+    "src/**/*.vue",
+    "../shared/**/*.ts",
+    "../shared/**/*.vue"
   ],
   "references": [
     {
