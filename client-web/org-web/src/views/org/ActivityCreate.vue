@@ -78,6 +78,8 @@ const amapPickerRef = ref<{ map: any; setLocation: (lng: number, lat: number, ad
 
 // 输入框 → 地图：防抖 300ms，避免每次按键都地理编码。
 const locationInputTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+// 程序回填输入框时置位，抑制随后的 @input 触发（防止"地图→输入框"再编码死循环）。
+let suppressLocationInput = false
 
 const form = reactive({
   title: '',
@@ -96,9 +98,13 @@ const location = ref<{ lng?: number; lat?: number; address?: string }>({})
 
 /** 输入框 @input：防抖后对文本地理编码，命中则让地图跳转到该地点。 */
 function onLocationTextInput() {
+  // 程序回填（地图→输入框方向）抑制：不把回填当成用户输入去编码，避免死循环。
+  if (suppressLocationInput) {
+    suppressLocationInput = false
+    return
+  }
   const text = form.locationText.trim()
-  // 文本为空，或等于当前已选点地址（避免地图回填→input→再编码的死循环），跳过。
-  if (!text || text === location.value.address) return
+  if (!text) return
   if (locationInputTimer.value) clearTimeout(locationInputTimer.value)
   locationInputTimer.value = setTimeout(() => geocodeText(text), 300)
 }
@@ -131,6 +137,7 @@ watch(
   () => location.value?.address,
   (addr) => {
     if (addr && addr !== form.locationText) {
+      suppressLocationInput = true
       form.locationText = addr
     }
   },
