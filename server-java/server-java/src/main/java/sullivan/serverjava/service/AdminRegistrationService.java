@@ -137,15 +137,13 @@ public class AdminRegistrationService {
                 ClaimResult claim = claimFromDb(codeHash, adminId, role.getId(), createdByAdminId);
                 role = claim.role();
                 createdByAdminId = claim.createdByAdminId();
-            } else {
-                markDbCodeUsed(codeHash, adminId);
             }
         } else {
             ClaimResult claim = claimFromDb(codeHash, adminId, null, null);
             role = claim.role();
             createdByAdminId = claim.createdByAdminId();
         }
-        return finishRegister(adminId, request, role, createdByAdminId);
+        return finishRegister(adminId, codeHash, request, role, createdByAdminId);
     }
 
     /** Redis 中的注册码数据（读自 value；roleId 为角色 ID，createdByAdminId 可能为 null）。 */
@@ -197,9 +195,11 @@ public class AdminRegistrationService {
         if (role == null || !"ACTIVE".equals(role.getStatus())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "注册码对应角色不可用");
         }
+        // 此处只用乐观锁把状态置为 USED（防并发重复使用），used_by_admin_id 留到
+        // finishRegister 插入 admin_account 之后再回填——否则外键 fk_registration_code_user
+        // 会因 admin_account 尚未落库而失败。
         UpdateWrapper<AdminRegistrationCode> claim = new UpdateWrapper<>();
         claim.set("status", "USED")
-                .set("used_by_admin_id", adminId)
                 .set("used_at", LocalDateTime.now())
                 .setSql("version = version + 1")
                 .eq("id", code.getId())
@@ -216,9 +216,13 @@ public class AdminRegistrationService {
     private record ClaimResult(AdminRole role, String createdByAdminId) {
     }
 
-    /** 创建管理员账号与角色关联（注册码已在调用方核销）。 */
-    private RegistrationResponse finishRegister(String adminId, AdminRegisterRequest request, AdminRole role,
-                                                String createdByAdminId) {
+    /**
+     * 创建管理员账号与角色关联，并在账号落库后回填注册码的使用记录（USED / used_by_admin_id）。
+     * 必须先插入 admin_account 再更新 admin_registration_code.used_by_admin_id，
+     * 否则外键 fk_registration_code_user → admin_account(id) 会因目标行不存在而失败。
+     */
+    private RegistrationResponse finishRegister(String adminId, String codeHash, AdminRegisterRequest request,
+                                                AdminRole role, String createdByAdminId) {
         AdminAccount admin = new AdminAccount();
         admin.setId(adminId);
         admin.setStatus("ENABLED");
@@ -238,20 +242,38 @@ public class AdminRegistrationService {
         accountRole.setStatus("ACTIVE");
         accountRole.setGrantedByAdminId(createdByAdminId);
         adminAccountRoleMapper.insert(accountRole);
+
+        // 管理员已落库，此时再回填注册码使用记录，外键可达。
+        markDbCodeUsed(codeHash, adminId);
         return new RegistrationResponse(adminId, "ADMIN", "ENABLED", Set.of(role.getRoleCode()));
     }
 
-    /** Redis 路径核销后，回填 DB 审计字段：标记 USED、记录使用管理员与时间。 */
+    /**
+     * 在管理员落库后回填注册码审计字段：标记 USED 并记录使用管理员与时间。
+     * 必须在 admin_account 插入后调用，否则 fk_registration_code_user 外键会失败。
+     * 覆盖两种状态：
+     *  - Redis 路径：DB 行仍为 ACTIVE → 置为 USED 并回填；
+     *  - DB 路径：claimFromDb 已置为 USED → 仅回填 used_by_admin_id。
+     */
     private void markDbCodeUsed(String codeHash, String usedByAdminId) {
         // 用显式列名（而非 lambda）构造条件，避免 MyBatis-Plus lambda 缓存解析在测试环境不可用。
-        UpdateWrapper<AdminRegistrationCode> update = new UpdateWrapper<>();
-        update.set("status", "USED")
+        UpdateWrapper<AdminRegistrationCode> claim = new UpdateWrapper<>();
+        claim.set("status", "USED")
                 .set("used_by_admin_id", usedByAdminId)
                 .set("used_at", LocalDateTime.now())
                 .setSql("version = version + 1")
                 .eq("code_hash", codeHash)
                 .eq("status", "ACTIVE");
-        registrationCodeMapper.update(null, update);
+        if (registrationCodeMapper.update(null, claim) == 0) {
+            // 已由 claimFromDb 置为 USED，只回填使用人。
+            UpdateWrapper<AdminRegistrationCode> backfill = new UpdateWrapper<>();
+            backfill.set("used_by_admin_id", usedByAdminId)
+                    .set("used_at", LocalDateTime.now())
+                    .setSql("version = version + 1")
+                    .eq("code_hash", codeHash)
+                    .eq("status", "USED");
+            registrationCodeMapper.update(null, backfill);
+        }
     }
 
     /** 过期处理：把仍在 ACTIVE 的过期注册码标记为 EXPIRED（满足“过期标识”字段）。 */

@@ -108,8 +108,8 @@ class AdminRegistrationServiceTests {
         assertThat(captor.getValue().getRoleId()).isEqualTo("role-operations");
         assertThat(captor.getValue().getGrantedByAdminId()).isEqualTo("hr-1");
         assertThat(result.roles()).containsExactly("OPERATIONS");
-        // Redis 路径核销后应回填 DB 审计字段（标记 USED）。
-        verify(codeMapper).update(isNull(), any());
+        // Redis 路径核销后应回填 DB 审计字段（先置 USED，再回填 used_by_admin_id）。
+        verify(codeMapper, org.mockito.Mockito.times(2)).update(isNull(), any());
     }
 
     private AdminRole role(String id, String code) {
