@@ -77,6 +77,12 @@ watch(
 )
 
 function placeMarker(lng: number, lat: number) {
+  ensureMarker(lng, lat)
+  resolveAddress(lng, lat)
+}
+
+/** 创建/移动标记并居中地图（不含逆地理编码）。 */
+function ensureMarker(lng: number, lat: number) {
   const AMap = window.AMap
   if (!marker) {
     marker = new AMap.Marker({
@@ -92,7 +98,15 @@ function placeMarker(lng: number, lat: number) {
     marker.setPosition([lng, lat])
   }
   map.setCenter([lng, lat])
-  resolveAddress(lng, lat)
+}
+
+/**
+ * 程序化定位：放置标记 + 居中地图。传入 address 时同步 emit（供父组件 v-model 联动）；
+ * 不传则只移动地图与标记（用于"输入框→地图"方向，避免反向覆盖输入框内容）。
+ */
+function setLocation(lng: number, lat: number, address?: string) {
+  ensureMarker(lng, lat)
+  if (address != null) emit('update:modelValue', { lng, lat, address })
 }
 
 function resolveAddress(lng: number, lat: number) {
@@ -110,6 +124,9 @@ onBeforeUnmount(() => {
   marker = null
   geocoder = null
 })
+
+// 暴露地图实例与定位方法，供父组件（如 ActivityCreate 输入框→地图联动）调用。
+defineExpose({ map, setLocation })
 </script>
 
 <style scoped>

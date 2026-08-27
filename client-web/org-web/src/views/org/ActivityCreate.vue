@@ -11,11 +11,12 @@
           <el-input v-model="form.description" type="textarea" :rows="3" placeholder="活动说明与志愿者要求" />
         </el-form-item>
         <el-form-item label="活动地点" required>
-          <el-input v-model="form.locationText" maxlength="300" placeholder="地点文本，如：朝阳公园南门" />
+          <el-input v-model="form.locationText" maxlength="300" placeholder="地点文本，如：朝阳公园南门"
+                    @input="onLocationTextInput" />
         </el-form-item>
 
         <el-form-item label="地图选点">
-          <AmapPicker v-model="location" style="width: 100%" />
+          <AmapPicker ref="amapPickerRef" v-model="location" style="width: 100%" />
         </el-form-item>
 
         <el-row :gutter="16">
@@ -62,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createActivity } from '@/api/org'
@@ -73,6 +74,10 @@ import type { ActivityCreateRequest } from '@/types/api'
 const router = useRouter()
 const loading = ref(false)
 const keepFormRef = ref<{ clearCache: () => void } | null>(null)
+const amapPickerRef = ref<{ map: any; setLocation: (lng: number, lat: number, address?: string) => void } | null>(null)
+
+// 输入框 → 地图：防抖 300ms，避免每次按键都地理编码。
+const locationInputTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 
 const form = reactive({
   title: '',
@@ -86,6 +91,50 @@ const form = reactive({
 })
 
 const location = ref<{ lng?: number; lat?: number; address?: string }>({})
+
+// —— 活动地点输入框 ↔ 地图选点 双向联动 ——
+
+/** 输入框 @input：防抖后对文本地理编码，命中则让地图跳转到该地点。 */
+function onLocationTextInput() {
+  const text = form.locationText.trim()
+  // 文本为空，或等于当前已选点地址（避免地图回填→input→再编码的死循环），跳过。
+  if (!text || text === location.value.address) return
+  if (locationInputTimer.value) clearTimeout(locationInputTimer.value)
+  locationInputTimer.value = setTimeout(() => geocodeText(text), 300)
+}
+
+/** 地理编码：把地点文本转成经纬度，地图定位 + 放置标记。 */
+function geocodeText(text: string) {
+  const AMap = (window as any).AMap
+  if (!AMap) return
+  AMap.plugin('AMap.Geocoder', () => {
+    const geocoder = new AMap.Geocoder({ city: '全国' })
+    geocoder.getLocation(text, (status: string, result: any) => {
+      if (status !== 'complete' || !result?.geocodes?.length) {
+        // 未命中不强行改 location，避免误清空已选点。
+        return ElMessage.info(`未找到地点：「${text}」`)
+      }
+      const g = result.geocodes[0]
+      const lng = g.location?.lng
+      const lat = g.location?.lat
+      if (lng == null || lat == null) return
+      // 只定位地图+标记，不 emit（避免反向覆盖输入框正在编辑的文本）。
+      // address 仍记录到 location，供提交时携带完整信息。
+      amapPickerRef.value?.setLocation(lng, lat)
+      location.value = { lng, lat, address: g.formattedAddress || text }
+    })
+  })
+}
+
+/** 地图选点 → 输入框：AmapPicker 选点/拖拽后更新 location，把 address 写回 locationText。 */
+watch(
+  () => location.value?.address,
+  (addr) => {
+    if (addr && addr !== form.locationText) {
+      form.locationText = addr
+    }
+  },
+)
 
 async function submit() {
   if (!form.title || !form.description || !form.locationText) {

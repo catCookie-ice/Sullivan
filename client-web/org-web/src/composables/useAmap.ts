@@ -4,6 +4,10 @@ let loadPromise: Promise<void> | null = null
 /**
  * 加载高德地图脚本（幂等）。未配置 VITE_AMAP_KEY 时 reject。
  * 调用方需在组件卸载后释放地图实例；本函数只负责脚本加载。
+ *
+ * 注意：JS API 2.0 自 2021-12-02 起强制要求安全密钥（securityJsCode），
+ * 必须在脚本加载前设置 window._AMapSecurityConfig，否则报 INVALID_USER_SCODE。
+ * 未配置 VITE_AMAP_SECURITY_CODE 时保持原行为（让调用方看到加载失败的提示）。
  */
 export function loadAmap(): Promise<void> {
   if (window.AMap) return Promise.resolve()
@@ -14,6 +18,10 @@ export function loadAmap(): Promise<void> {
       loadPromise = null
       reject(new Error('VITE_AMAP_KEY 未配置，无法加载高德地图'))
       return
+    }
+    const securityCode = import.meta.env.VITE_AMAP_SECURITY_CODE
+    if (securityCode) {
+      ;(window as any)._AMapSecurityConfig = { securityJsCode: securityCode }
     }
     const script = document.createElement('script')
     script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(key)}`
