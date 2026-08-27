@@ -11,8 +11,12 @@
           <el-input v-model="form.description" type="textarea" :rows="3" placeholder="活动说明与志愿者要求" />
         </el-form-item>
         <el-form-item label="活动地点" required>
-          <el-input v-model="form.locationText" maxlength="300" placeholder="地点文本，如：朝阳公园南门"
-                    @input="onLocationTextInput" />
+          <div class="location-combo">
+            <el-input ref="locationInputRef" v-model="form.locationText" maxlength="300"
+                      placeholder="地点文本，如：朝阳公园南门"
+                      @input="onLocationTextInput" @keydown.tab.prevent="onLocationTab" />
+            <span v-if="locationHint" class="location-hint" :style="{ left: locationHintLeft }" aria-hidden="true">{{ locationHint }}</span>
+          </div>
         </el-form-item>
 
         <el-form-item label="地图选点">
@@ -63,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createActivity } from '@/api/org'
@@ -84,6 +88,30 @@ const amapPickerRef = ref<{
 const locationInputTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 // 程序回填输入框时置位，抑制随后的 @input 触发（防止"地图→输入框"再编码死循环）。
 let suppressLocationInput = false
+// geocodeText 设置 location 时置位，抑制 watch(location) 回填输入框（否则会覆盖用户原文）。
+let suppressWatchBackfill = false
+
+// 活动地点输入框 DOM（el-input 实例）与补全建议。
+const locationInputRef = ref<{ $el: HTMLElement } | null>(null)
+const locationSuggestion = ref('')
+// 半透明提示文本 = 建议地址去掉用户已输入前缀后的剩余部分；仅当建议以输入开头且未完全补全时显示。
+const locationHint = computed(() => {
+  const text = form.locationText.trim()
+  const sug = locationSuggestion.value
+  if (!sug || !text || sug === text) return ''
+  return sug.startsWith(text) ? sug.slice(text.length) : ''
+})
+// 提示文本的左偏移 = 输入框内边距 + 已输入文本的像素宽度（用 canvas 测量，中文按 1 字符宽）。
+const locationHintLeft = computed(() => {
+  const text = form.locationText.trim()
+  if (!text) return '11px'
+  const measure = document.createElement('canvas').getContext('2d')
+  if (measure) {
+    measure.font = '14px sans-serif'
+    return `${11 + measure.measureText(text).width}px`
+  }
+  return `${11 + text.length * 14}px`
+})
 
 const form = reactive({
   title: '',
@@ -108,9 +136,22 @@ function onLocationTextInput() {
     return
   }
   const text = form.locationText.trim()
+  // 用户继续输入、与建议前缀不一致时清掉建议；为空也清。
+  if (!text || !locationSuggestion.value.startsWith(text)) {
+    locationSuggestion.value = ''
+  }
   if (!text) return
   if (locationInputTimer.value) clearTimeout(locationInputTimer.value)
   locationInputTimer.value = setTimeout(() => geocodeText(text), 300)
+}
+
+/** Tab 补全：把建议的完整地址填入输入框（用户也可以不改，保持原输入）。 */
+function onLocationTab() {
+  const sug = locationSuggestion.value
+  if (!sug || !locationHint.value) return
+  suppressLocationInput = true
+  form.locationText = sug
+  locationSuggestion.value = ''
 }
 
 /** 地理编码：把地点文本转成经纬度，地图定位 + 放置标记。 */
@@ -133,9 +174,15 @@ function geocodeText(text: string) {
         return
       }
       console.info('[ActivityCreate] 地理编码成功', text, '→', lng, lat, '地址=', g.formattedAddress)
+      // 记录补全建议（完整地址），输入框后半段半透明显示，可 Tab 补全或保持原文。
+      locationSuggestion.value = g.formattedAddress || text
       // 用 flyTo 强制地图居中+缩放+放标记，确保视图移动（比 setLocation 更直接）。
       amapPickerRef.value?.flyTo(lng, lat)
+      // 更新 location（供提交带经纬度），但抑制 watch(location) 回填输入框——用户输入应保持不变，
+      // 只有 Tab 主动补全才替换。
+      suppressWatchBackfill = true
       location.value = { lng, lat, address: g.formattedAddress || text }
+      suppressWatchBackfill = false
     })
   })
 }
@@ -144,6 +191,8 @@ function geocodeText(text: string) {
 watch(
   () => location.value,
   (loc, prev) => {
+    // geocodeText 引起的 location 更新不在此回填输入框（由用户选择 Tab 或保持原文）。
+    if (suppressWatchBackfill) return
     // 仅在坐标确实变化时回填（避免连续选同一点、或 address 相同导致 watch 不触发）。
     const moved = !prev || prev.lng !== loc?.lng || prev.lat !== loc?.lat
     if (!moved || !loc || loc.lng == null || loc.lat == null) return
@@ -151,6 +200,7 @@ watch(
     const text = loc.address || `${loc.lng.toFixed(6)}, ${loc.lat.toFixed(6)}`
     if (text !== form.locationText) {
       suppressLocationInput = true
+      locationSuggestion.value = ''
       form.locationText = text
     }
   },
@@ -197,3 +247,25 @@ async function submit() {
   }
 }
 </script>
+
+<style scoped>
+.location-combo {
+  position: relative;
+  width: 100%;
+}
+/* 半透明补全提示：紧跟输入文本之后，显示建议地址的剩余部分，可 Tab 补全。 */
+.location-hint {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-3, #999);
+  opacity: 0.6;
+  font-size: 14px;
+  line-height: 1;
+  pointer-events: none;
+  white-space: pre;
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+</style>
