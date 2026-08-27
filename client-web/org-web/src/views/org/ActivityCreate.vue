@@ -204,6 +204,9 @@ watch(
       form.locationText = text
     }
   },
+  // 关键：同步触发。geocodeText 里 suppressWatchBackfill=true → 赋值 location → 回调立即执行守卫生效；
+  // 若默认 flush:'pre'（异步），等回调跑时守卫已被置回 false，回填照样发生 → 直接补全无选择。
+  { flush: 'sync' },
 )
 
 async function submit() {
