@@ -3,6 +3,8 @@
 interface ImportMetaEnv {
   /** 高德地图 JS API Key（创建志愿活动选点） */
   readonly VITE_AMAP_KEY?: string
+  /** 高德地图 JS API 安全密钥（securityJsCode，JS API 2.0 强制要求） */
+  readonly VITE_AMAP_SECURITY_CODE?: string
 }
 
 interface ImportMeta {
