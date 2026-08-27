@@ -3,6 +3,10 @@
     <div v-if="error" class="amap-error">
       <el-alert type="warning" :closable="false" show-icon :title="error" />
     </div>
+    <div v-else-if="securityMissing" class="amap-error">
+      <el-alert type="error" :closable="false" show-icon
+        title="未配置高德安全密钥（VITE_AMAP_SECURITY_CODE）。JS API 2.0 强制要求，否则地图选点/地理编码不可用。请在 org-web/.env 中填写。" />
+    </div>
     <div v-else ref="containerRef" class="amap-box" :style="{ height: height || '320px', width: '100%' }" />
     <div class="amap-tip" v-if="!error">
       在地图上点击或拖拽红色标记选择地点；当前：{{ pickedLabel }}
@@ -12,7 +16,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { loadAmap } from '@/composables/useAmap'
+import { hasAmapSecurityCode, loadAmap } from '@/composables/useAmap'
 
 interface AmapLocation {
   lng?: number
@@ -29,6 +33,9 @@ const emit = defineEmits<{ (e: 'update:modelValue', value: AmapLocation): void }
 
 const containerRef = ref<HTMLDivElement | null>(null)
 const error = ref('')
+// JS API 2.0 未配置 securityJsCode 时，基础地图能显示但 Geocoder 服务会失效，
+// 需明确提示，避免用户误以为功能坏了。
+const securityMissing = !hasAmapSecurityCode()
 
 let map: any = null
 let marker: any = null
@@ -124,10 +131,13 @@ function resolveAddress(lng: number, lat: number) {
     return
   }
   geocoder.getAddress([lng, lat], (status: string, result: any) => {
-    const address = status === 'complete' && result?.regeocode?.formattedAddress
-      ? result.regeocode.formattedAddress
-      : undefined
-    emit('update:modelValue', { lng, lat, address })
+    if (status !== 'complete' || !result?.regeocode?.formattedAddress) {
+      // 逆地理编码失败：多为 INVALID_USER_SCODE（安全密钥未配置/不匹配）或配额问题。
+      console.warn('[AmapPicker] 逆地理编码失败 status=', status, 'info=', result?.info, '坐标=', lng, lat)
+      emit('update:modelValue', { lng, lat, address: undefined })
+      return
+    }
+    emit('update:modelValue', { lng, lat, address: result.regeocode.formattedAddress })
   })
 }
 

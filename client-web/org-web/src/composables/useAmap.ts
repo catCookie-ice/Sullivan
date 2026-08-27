@@ -1,6 +1,11 @@
 // 高德地图 JS API 动态加载（v2.0）。可复用于实时位置视图（后续需求）。
 let loadPromise: Promise<void> | null = null
 
+/** 是否已配置 securityJsCode（JS API 2.0 强制要求；未配置时 Geocoder 等服务会失效）。 */
+export function hasAmapSecurityCode(): boolean {
+  return Boolean(import.meta.env.VITE_AMAP_SECURITY_CODE)
+}
+
 /**
  * 加载高德地图脚本（幂等）。未配置 VITE_AMAP_KEY 时 reject。
  * 调用方需在组件卸载后释放地图实例；本函数只负责脚本加载。

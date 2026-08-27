@@ -117,7 +117,8 @@ function geocodeText(text: string) {
     const geocoder = new AMap.Geocoder({ city: '全国' })
     geocoder.getLocation(text, (status: string, result: any) => {
       if (status !== 'complete' || !result?.geocodes?.length) {
-        // 未命中不强行改 location，避免误清空已选点。
+        // 未命中不强行改 location，避免误清空已选点；失败多为 INVALID_USER_SCODE（安全密钥）。
+        console.warn('[ActivityCreate] 地理编码失败 status=', status, 'info=', result?.info, '文本=', text)
         return ElMessage.info(`未找到地点：「${text}」`)
       }
       const g = result.geocodes[0]
