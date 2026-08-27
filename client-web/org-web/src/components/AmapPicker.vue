@@ -68,10 +68,15 @@ onMounted(async () => {
 watch(
   () => props.modelValue,
   (next) => {
-    if (map && next?.lng != null && next?.lat != null) {
-      map.setCenter([next.lng, next.lat])
-      placeMarker(next.lng, next.lat)
+    if (!map || next?.lng == null || next?.lat == null) return
+    // 防抖动：本组件 emit 回来的坐标与标记当前位置一致时，说明是自反馈，跳过重新定位。
+    // （resolveAddress 每次 emit 都是新对象引用，若不判断坐标会无限触发 watch → setCenter 抖动。）
+    const pos = marker?.getPosition?.()
+    if (pos && Math.abs(pos.getLng() - next.lng) < 1e-9 && Math.abs(pos.getLat() - next.lat) < 1e-9) {
+      return
     }
+    map.setCenter([next.lng, next.lat])
+    placeMarker(next.lng, next.lat)
   },
 )
 
