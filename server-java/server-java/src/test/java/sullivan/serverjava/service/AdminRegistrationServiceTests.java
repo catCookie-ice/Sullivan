@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import sullivan.serverjava.domain.AdminAccountRole;
 import sullivan.serverjava.domain.AdminRegistrationCode;
@@ -32,6 +33,7 @@ class AdminRegistrationServiceTests {
     private AdminAccountRoleMapper accountRoleMapper;
     private AdminRegistrationCodeMapper codeMapper;
     private StringRedisTemplate redisTemplate;
+    private ValueOperations<String, String> valueOps;
     private AdminRegistrationService service;
 
     @BeforeEach
@@ -41,9 +43,9 @@ class AdminRegistrationServiceTests {
         roleMapper = mock(AdminRoleMapper.class);
         accountRoleMapper = mock(AdminAccountRoleMapper.class);
         codeMapper = mock(AdminRegistrationCodeMapper.class);
-        // Redis 无此 key（返回 null）→ register 回退到 DB 乐观锁路径，便于断言 DB 行为。
+        // 默认 Redis 无此 key（返回 null）→ register 回退到 DB 乐观锁路径，便于断言 DB 行为。
         redisTemplate = mock(StringRedisTemplate.class);
-        var valueOps = mock(org.springframework.data.redis.core.ValueOperations.class);
+        valueOps = mock(ValueOperations.class);
         when(redisTemplate.opsForValue()).thenReturn(valueOps);
         when(valueOps.get(any(String.class))).thenReturn(null);
         service = new AdminRegistrationService(accountMapper, roleMapper, accountRoleMapper, codeMapper,
@@ -87,6 +89,27 @@ class AdminRegistrationServiceTests {
         assertThat(captor.getValue().getRoleId()).isEqualTo("role-operations");
         assertThat(captor.getValue().getGrantedByAdminId()).isEqualTo("hr-1");
         assertThat(result.roles()).containsExactly("OPERATIONS");
+    }
+
+    @Test
+    void registrationViaRedisPathResolvesRoleById() {
+        // Redis 命中：value 中 roleId 是角色 ID，register 应按 ID 解析并原子核销。
+        when(accountMapper.selectCount(any())).thenReturn(0L);
+        when(valueOps.get(any(String.class)))
+                .thenReturn("{\"roleId\":\"role-operations\",\"expiresAt\":\"2026-09-01T00:00:00\",\"createdByAdminId\":\"hr-1\"}");
+        when(roleMapper.selectById("role-operations")).thenReturn(role("role-operations", "OPERATIONS"));
+        when(redisTemplate.delete(any(String.class))).thenReturn(true);
+
+        var result = service.register(new AdminRegisterRequest(
+                "operator02", "password123", "运营员", "SV-redis-test"));
+
+        ArgumentCaptor<AdminAccountRole> captor = ArgumentCaptor.forClass(AdminAccountRole.class);
+        verify(accountRoleMapper).insert(captor.capture());
+        assertThat(captor.getValue().getRoleId()).isEqualTo("role-operations");
+        assertThat(captor.getValue().getGrantedByAdminId()).isEqualTo("hr-1");
+        assertThat(result.roles()).containsExactly("OPERATIONS");
+        // Redis 路径核销后应回填 DB 审计字段（标记 USED）。
+        verify(codeMapper).update(isNull(), any());
     }
 
     private AdminRole role(String id, String code) {

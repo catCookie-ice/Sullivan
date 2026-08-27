@@ -125,10 +125,9 @@ public class AdminRegistrationService {
         AdminRole role;
         String createdByAdminId;
         if (redisData != null) {
-            role = adminRoleMapper.selectOne(Wrappers.<AdminRole>lambdaQuery()
-                    .eq(AdminRole::getRoleCode, redisData.roleCode())
-                    .eq(AdminRole::getStatus, "ACTIVE"));
-            if (role == null) {
+            // Redis value 中的 roleId 即角色 ID（createCode 时写入），按 ID 查并校验 ACTIVE。
+            role = adminRoleMapper.selectById(redisData.roleId());
+            if (role == null || !"ACTIVE".equals(role.getStatus())) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "注册码对应角色不可用");
             }
             createdByAdminId = redisData.createdByAdminId();
@@ -149,8 +148,8 @@ public class AdminRegistrationService {
         return finishRegister(adminId, request, role, createdByAdminId);
     }
 
-    /** Redis 中的注册码数据（读自 value，roleCode/createdByAdminId 可能为 null）。 */
-    private record RedisCodeData(String roleCode, String createdByAdminId) {
+    /** Redis 中的注册码数据（读自 value；roleId 为角色 ID，createdByAdminId 可能为 null）。 */
+    private record RedisCodeData(String roleId, String createdByAdminId) {
     }
 
     /** 从 Redis 读取注册码数据；无此 key / 不可用 / 解析失败返回 null。 */
@@ -244,13 +243,15 @@ public class AdminRegistrationService {
 
     /** Redis 路径核销后，回填 DB 审计字段：标记 USED、记录使用管理员与时间。 */
     private void markDbCodeUsed(String codeHash, String usedByAdminId) {
-        registrationCodeMapper.update(null, Wrappers.<AdminRegistrationCode>lambdaUpdate()
-                .set(AdminRegistrationCode::getStatus, "USED")
-                .set(AdminRegistrationCode::getUsedByAdminId, usedByAdminId)
-                .set(AdminRegistrationCode::getUsedAt, LocalDateTime.now())
+        // 用显式列名（而非 lambda）构造条件，避免 MyBatis-Plus lambda 缓存解析在测试环境不可用。
+        UpdateWrapper<AdminRegistrationCode> update = new UpdateWrapper<>();
+        update.set("status", "USED")
+                .set("used_by_admin_id", usedByAdminId)
+                .set("used_at", LocalDateTime.now())
                 .setSql("version = version + 1")
-                .eq(AdminRegistrationCode::getCodeHash, codeHash)
-                .eq(AdminRegistrationCode::getStatus, "ACTIVE"));
+                .eq("code_hash", codeHash)
+                .eq("status", "ACTIVE");
+        registrationCodeMapper.update(null, update);
     }
 
     /** 过期处理：把仍在 ACTIVE 的过期注册码标记为 EXPIRED（满足“过期标识”字段）。 */
