@@ -116,7 +116,23 @@ function ensureMarker(lng: number, lat: number) {
  * 不传则只移动地图与标记（用于"输入框→地图"方向，避免反向覆盖输入框内容）。
  */
 function setLocation(lng: number, lat: number, address?: string) {
+  if (!map) {
+    console.warn('[AmapPicker] setLocation 调用时地图尚未就绪', lng, lat)
+    return
+  }
   ensureMarker(lng, lat)
+  if (address != null) emit('update:modelValue', { lng, lat, address })
+}
+
+/** 程序化定位并强制缩放（输入框→地图方向用），确保地图视图一定移动。 */
+function flyTo(lng: number, lat: number, address?: string) {
+  if (!map) {
+    console.warn('[AmapPicker] flyTo 调用时地图尚未就绪', lng, lat)
+    return
+  }
+  ensureMarker(lng, lat)
+  map.setZoom(16)
+  map.setCenter([lng, lat])
   if (address != null) emit('update:modelValue', { lng, lat, address })
 }
 
@@ -149,7 +165,7 @@ onBeforeUnmount(() => {
 })
 
 // 暴露地图实例与定位方法，供父组件（如 ActivityCreate 输入框→地图联动）调用。
-defineExpose({ map, setLocation })
+defineExpose({ map, setLocation, flyTo })
 </script>
 
 <style scoped>

@@ -74,7 +74,11 @@ import type { ActivityCreateRequest } from '@/types/api'
 const router = useRouter()
 const loading = ref(false)
 const keepFormRef = ref<{ clearCache: () => void } | null>(null)
-const amapPickerRef = ref<{ map: any; setLocation: (lng: number, lat: number, address?: string) => void } | null>(null)
+const amapPickerRef = ref<{
+  map: any
+  setLocation: (lng: number, lat: number, address?: string) => void
+  flyTo: (lng: number, lat: number, address?: string) => void
+} | null>(null)
 
 // 输入框 → 地图：防抖 300ms，避免每次按键都地理编码。
 const locationInputTimer = ref<ReturnType<typeof setTimeout> | null>(null)
@@ -124,10 +128,13 @@ function geocodeText(text: string) {
       const g = result.geocodes[0]
       const lng = g.location?.lng
       const lat = g.location?.lat
-      if (lng == null || lat == null) return
-      // 只定位地图+标记，不 emit（避免反向覆盖输入框正在编辑的文本）。
-      // address 仍记录到 location，供提交时携带完整信息。
-      amapPickerRef.value?.setLocation(lng, lat)
+      if (lng == null || lat == null) {
+        console.warn('[ActivityCreate] 地理编码结果无坐标', text, g)
+        return
+      }
+      console.info('[ActivityCreate] 地理编码成功', text, '→', lng, lat, '地址=', g.formattedAddress)
+      // 用 flyTo 强制地图居中+缩放+放标记，确保视图移动（比 setLocation 更直接）。
+      amapPickerRef.value?.flyTo(lng, lat)
       location.value = { lng, lat, address: g.formattedAddress || text }
     })
   })
