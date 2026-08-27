@@ -53,7 +53,6 @@ onMounted(async () => {
   const lng = initial?.lng ?? 116.397428
   const lat = initial?.lat ?? 39.90923
   map = new AMap.Map(containerRef.value, { zoom: 14, center: [lng, lat] })
-  geocoder = new AMap.Geocoder({ city: '全国' })
 
   if (initial?.lng != null && initial?.lat != null) {
     placeMarker(initial.lng, initial.lat)
@@ -110,7 +109,16 @@ function setLocation(lng: number, lat: number, address?: string) {
 }
 
 function resolveAddress(lng: number, lat: number) {
-  geocoder?.getAddress([lng, lat], (status: string, result: any) => {
+  if (!geocoder) {
+    // Geocoder 插件尚未加载完成（onMounted 异步）；加载后立即用当前坐标编码。
+    const AMap = window.AMap
+    AMap.plugin('AMap.Geocoder', () => {
+      geocoder = new AMap.Geocoder({ city: '全国' })
+      resolveAddress(lng, lat)
+    })
+    return
+  }
+  geocoder.getAddress([lng, lat], (status: string, result: any) => {
     const address = status === 'complete' && result?.regeocode?.formattedAddress
       ? result.regeocode.formattedAddress
       : undefined
