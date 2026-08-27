@@ -21,6 +21,14 @@ import {
 } from './useKeepAuto'
 import type { KeepAutoFormContext } from './useKeepAuto'
 
+/**
+ * 模块级去重锁：防止同一保存键的恢复弹窗叠加。
+ * 原因：组件可能被重复挂载（HMR、路由重进、同一页面多个 KeepAutoForm 检测到同一草稿），
+ * 若每次都 ElMessageBox.confirm 会叠加多个弹窗。这里以 saveKey 为粒度，
+ * 弹窗期间置位、弹窗结束（确认/丢弃）后释放。
+ */
+const pendingPrompts = new Set<string>()
+
 const props = withDefaults(
   defineProps<{
     /** 表单数据对象（与 el-form 的 :model 一致，必填）。 */
@@ -152,6 +160,9 @@ onMounted(async () => {
   const draft = readDraft(saveKey.value)
   if (draft == null || isDraftEmpty(draft)) return
 
+  // 同 key 已有一个恢复弹窗在等待时，本实例不再弹，避免叠加。
+  if (pendingPrompts.has(saveKey.value)) return
+  pendingPrompts.add(saveKey.value)
   try {
     await ElMessageBox.confirm(
       '检测到该表单有未完成的草稿，是否恢复上次填写的内容？',
@@ -176,6 +187,8 @@ onMounted(async () => {
   } catch {
     // 用户选择"丢弃" → 清除草稿缓存；当前表单内容不动，且不再回写。
     removeDraft(saveKey.value)
+  } finally {
+    pendingPrompts.delete(saveKey.value)
   }
 })
 
