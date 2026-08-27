@@ -75,7 +75,7 @@ public class AuthService {
     private TokenResponse loginOrganization(LoginRequest request) {
         Organization organization = organizationMapper.selectOne(Wrappers.<Organization>lambdaQuery()
                 .eq(Organization::getLoginName, request.loginName()));
-        if (organization == null || "DISABLED".equals(organization.getStatus()) ||
+        if (organization == null || !"APPROVED".equals(organization.getStatus()) ||
                 !passwordEncoder.matches(request.password(), organization.getPasswordHash())) {
             throw unauthorized();
         }

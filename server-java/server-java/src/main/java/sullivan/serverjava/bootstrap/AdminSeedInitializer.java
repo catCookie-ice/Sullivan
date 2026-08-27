@@ -59,10 +59,11 @@ public class AdminSeedInitializer implements ApplicationRunner {
                     || "ADMIN_MANAGE".equals(seed.code())) {
                 ensureGrant(hrAdmin.getId(), permission.getId());
             }
-            // 运营管理员：运营统计 + 用户管理 + 机构管理。
+            // 运营管理员：运营统计 + 用户管理 + 机构管理 + 机构审核。
             if ("OPERATION_STATS".equals(seed.code())
                     || "USER_MANAGE".equals(seed.code())
-                    || "ORG_MANAGE".equals(seed.code())) {
+                    || "ORG_MANAGE".equals(seed.code())
+                    || "ORG_REVIEW".equals(seed.code())) {
                 ensureGrant(operations.getId(), permission.getId());
             }
         }

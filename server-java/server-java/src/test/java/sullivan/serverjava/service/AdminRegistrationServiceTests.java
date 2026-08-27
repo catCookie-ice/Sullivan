@@ -3,6 +3,7 @@ package sullivan.serverjava.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import sullivan.serverjava.domain.AdminAccountRole;
 import sullivan.serverjava.domain.AdminRegistrationCode;
@@ -30,16 +31,23 @@ class AdminRegistrationServiceTests {
     private AdminRoleMapper roleMapper;
     private AdminAccountRoleMapper accountRoleMapper;
     private AdminRegistrationCodeMapper codeMapper;
+    private StringRedisTemplate redisTemplate;
     private AdminRegistrationService service;
 
     @BeforeEach
+    @SuppressWarnings("unchecked")
     void setUp() {
         accountMapper = mock(AdminAccountMapper.class);
         roleMapper = mock(AdminRoleMapper.class);
         accountRoleMapper = mock(AdminAccountRoleMapper.class);
         codeMapper = mock(AdminRegistrationCodeMapper.class);
+        // Redis 无此 key（返回 null）→ register 回退到 DB 乐观锁路径，便于断言 DB 行为。
+        redisTemplate = mock(StringRedisTemplate.class);
+        var valueOps = mock(org.springframework.data.redis.core.ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(valueOps.get(any(String.class))).thenReturn(null);
         service = new AdminRegistrationService(accountMapper, roleMapper, accountRoleMapper, codeMapper,
-                new BCryptPasswordEncoder());
+                redisTemplate, new BCryptPasswordEncoder());
     }
 
     @Test

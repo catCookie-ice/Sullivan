@@ -10,6 +10,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,6 +20,7 @@ import sullivan.serverjava.security.AuthPrincipal;
 import sullivan.serverjava.service.AdminManagementService;
 import sullivan.serverjava.web.AdminManagementDtos.AdminOrgResponse;
 import sullivan.serverjava.web.AdminManagementDtos.AdminUserResponse;
+import sullivan.serverjava.web.AdminManagementDtos.OrgReviewRequest;
 import sullivan.serverjava.web.AdminManagementDtos.UserDeleteResult;
 
 /**
@@ -92,6 +95,19 @@ public class AdminManagementController {
             Authentication authentication) {
         require(authentication, "ORG_MANAGE");
         managementService.deleteOrganization(organizationId);
+    }
+
+    @PostMapping("/organizations/{organizationId}/review")
+    @Operation(summary = "审核机构（通过/驳回）",
+            description = "仅 PENDING 状态的机构可审。通过置为 APPROVED；驳回置为 REJECTED 且必须填写审核意见。"
+                    + "记录审核人、审核时间与审核意见。需 ORG_REVIEW 权限。")
+    public AdminOrgResponse reviewOrganization(
+            @Parameter(description = "机构唯一标识", example = "o_1234567890")
+            @PathVariable String organizationId,
+            @RequestBody OrgReviewRequest request,
+            Authentication authentication) {
+        AuthPrincipal principal = require(authentication, "ORG_REVIEW");
+        return managementService.reviewOrganization(principal.id(), organizationId, request);
     }
 
     private AuthPrincipal require(Authentication authentication, String permission) {

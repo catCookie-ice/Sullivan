@@ -28,8 +28,12 @@
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="注册时间" width="170" />
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
+            <template v-if="row.status === 'PENDING'">
+              <el-button type="success" size="small" @click="handleReview(row, true)">通过</el-button>
+              <el-button type="danger" size="small" @click="handleReview(row, false)">驳回</el-button>
+            </template>
             <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -52,7 +56,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listOrganizations, deleteOrganization } from '@/api/admin'
+import { listOrganizations, deleteOrganization, reviewOrganization } from '@/api/admin'
 import type { AdminOrgResponse } from '@/types/api'
 
 const rows = ref<AdminOrgResponse[]>([])
@@ -92,6 +96,35 @@ async function load(page?: number) {
     ElMessage.error(e.response?.data?.error || '加载失败')
   } finally {
     loading.value = false
+  }
+}
+
+async function handleReview(row: AdminOrgResponse, approved: boolean) {
+  const name = row.publicName || row.loginName
+  let note: string | undefined
+  if (!approved) {
+    try {
+      const { value } = await ElMessageBox.prompt(`请填写驳回机构「${name}」的原因（必填）`, '驳回机构', {
+        inputPlaceholder: '如：资质材料不齐全',
+        inputValidator: (v) => (v && v.trim() ? true : '驳回原因不能为空'),
+      })
+      note = value.trim()
+    } catch {
+      return // 取消
+    }
+  } else {
+    try {
+      await ElMessageBox.confirm(`确定通过机构「${name}」的审核？`, '通过机构', { type: 'success' })
+    } catch {
+      return // 取消
+    }
+  }
+  try {
+    await reviewOrganization(row.id, { approved, note })
+    ElMessage.success(approved ? '机构已通过审核' : '机构已驳回')
+    load()
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.error || (approved ? '审核失败' : '驳回失败'))
   }
 }
 

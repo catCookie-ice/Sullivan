@@ -8,6 +8,14 @@ export interface TokenResponse {
   permissions: string[]
 }
 
+// 注册成功响应（用户/机构/管理员）
+export interface RegistrationResponse {
+  id: string
+  principalType: string
+  status: string
+  roles: string[]
+}
+
 // 分页（MyBatis-Plus 结构）
 export interface PageResult<T> {
   records: T[]

@@ -20,8 +20,10 @@ import sullivan.serverjava.mapper.UserProfileMapper;
 import sullivan.serverjava.mapper.UserRoleMapper;
 import sullivan.serverjava.web.AdminManagementDtos.AdminOrgResponse;
 import sullivan.serverjava.web.AdminManagementDtos.AdminUserResponse;
+import sullivan.serverjava.web.AdminManagementDtos.OrgReviewRequest;
 import sullivan.serverjava.web.AdminManagementDtos.UserDeleteResult;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -134,6 +136,31 @@ public class AdminManagementService {
             throw new ApiException(HttpStatus.NOT_FOUND, "机构不存在");
         }
         organizationMapper.deleteById(organizationId);
+    }
+
+    /** 审核机构：通过置为 APPROVED，驳回置为 REJECTED，均记录审核人/时间/意见。仅 PENDING 可审。 */
+    @Transactional
+    public AdminOrgResponse reviewOrganization(String actorId, String organizationId, OrgReviewRequest request) {
+        if (request == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "缺少审核参数");
+        }
+        if (!request.approved() && (request.note() == null || request.note().isBlank())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "驳回时必须填写审核意见");
+        }
+        Organization organization = organizationMapper.selectById(organizationId);
+        if (organization == null) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "机构不存在");
+        }
+        if (!"PENDING".equals(organization.getStatus())) {
+            throw new ApiException(HttpStatus.CONFLICT, "仅待审核（PENDING）状态的机构可审核，当前状态：" + organization.getStatus());
+        }
+        organization.setStatus(request.approved() ? "APPROVED" : "REJECTED");
+        organization.setReviewedByAdminId(actorId);
+        organization.setReviewedAt(LocalDateTime.now());
+        organization.setReviewNote(request.approved() ? request.note() : request.note().trim());
+        organizationMapper.updateById(organization);
+        return new AdminOrgResponse(organization.getId(), organization.getStatus(), organization.getLoginName(),
+                organization.getLegalName(), organization.getPublicName(), organization.getCreatedAt());
     }
 
     private <T> Page<T> validatedPage(long page, long size) {

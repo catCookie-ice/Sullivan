@@ -12,6 +12,9 @@
         <el-form-item>
           <el-button type="primary" :loading="loading" @click="handleLogin">登录</el-button>
         </el-form-item>
+        <div style="margin-bottom: 12px">
+          <el-link type="primary" @click="router.push('/register')">没有账号？使用注册码注册管理员</el-link>
+        </div>
         <el-alert v-if="error" type="error" :closable="false" :title="error" />
       </el-form>
     </el-card>

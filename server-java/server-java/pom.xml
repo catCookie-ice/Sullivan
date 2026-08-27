@@ -81,6 +81,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+        <!-- 管理员注册码缓存与原子核销（Redis） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
         <!-- 实时长连接（监护-受护 WebSocket） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

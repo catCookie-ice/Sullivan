@@ -29,6 +29,14 @@ export function deleteOrganization(organizationId: string) {
   return request.delete<never, void>(`/admin/organizations/${organizationId}`)
 }
 
+// 审核机构：通过/驳回（ORG_REVIEW）
+export function reviewOrganization(
+  organizationId: string,
+  payload: { approved: boolean; note?: string },
+) {
+  return request.post<never, AdminOrgResponse>(`/admin/organizations/${organizationId}/review`, payload)
+}
+
 // 创建管理员注册码
 export function createRegistrationCode(payload: AdminCodeCreateRequest) {
   return request.post<never, AdminCodeResponse>('/admin/registration-codes', payload)

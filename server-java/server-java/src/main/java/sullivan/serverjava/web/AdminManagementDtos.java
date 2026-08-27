@@ -45,4 +45,10 @@ public final class AdminManagementDtos {
                     allowableValues = {"ACCOUNT_DELETED", "VOLUNTEER_ROLE_REVOKED"}) String action,
             @Schema(description = "中文说明", example = "该用户是兼任志愿者，仅取消其志愿者角色，账号保留") String message) {
     }
+
+    public record OrgReviewRequest(
+            @Schema(description = "是否通过审核：true=通过（APPROVED），false=驳回（REJECTED）",
+                    example = "true") boolean approved,
+            @Schema(description = "审核意见；驳回时必填", example = "材料不齐全，请补充资质证明") String note) {
+    }
 }

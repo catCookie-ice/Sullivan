@@ -10,6 +10,11 @@ const router = createRouter({
       component: () => import('@/views/auth/LoginView.vue'),
     },
     {
+      path: '/register',
+      name: 'Register',
+      component: () => import('@/views/auth/RegisterView.vue'),
+    },
+    {
       path: '/',
       name: 'AdminLayout',
       component: () => import('@/layouts/AdminLayout.vue'),
@@ -32,7 +37,7 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
-  if (to.name !== 'Login' && !auth.accessToken) {
+  if (to.name !== 'Login' && to.name !== 'Register' && !auth.accessToken) {
     return { name: 'Login' }
   }
   if (to.name === 'Login' && auth.accessToken) {

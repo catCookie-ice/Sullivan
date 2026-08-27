@@ -20,4 +20,7 @@ public class Organization {
     private LocalDateTime createdAt;
     @TableLogic
     private LocalDateTime deletedAt;
+    private String reviewedByAdminId;
+    private LocalDateTime reviewedAt;
+    private String reviewNote;
 }
