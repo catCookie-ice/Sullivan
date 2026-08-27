@@ -8,7 +8,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sullivan.serverjava.common.ApiException;
-import sullivan.serverjava.common.Hashing;
 import sullivan.serverjava.common.IdGenerator;
 import sullivan.serverjava.domain.AdminAccount;
 import sullivan.serverjava.domain.AdminAccountRole;
@@ -79,10 +78,8 @@ public class AdminRegistrationService {
         byte[] random = new byte[24];
         secureRandom.nextBytes(random);
         String rawCode = "SV-" + Base64.getUrlEncoder().withoutPadding().encodeToString(random);
-        String codeHash = Hashing.sha256(rawCode);
         AdminRegistrationCode code = new AdminRegistrationCode();
-        code.setId(IdGenerator.next());
-        code.setCodeHash(codeHash);
+        code.setCode(rawCode);
         code.setRoleId(initialRole.getId());
         code.setStatus("ACTIVE");
         code.setExpiresAt(request.expiresAt());
@@ -90,20 +87,20 @@ public class AdminRegistrationService {
         code.setVersion(0L);
         registrationCodeMapper.insert(code);
 
-        // Redis 双写：key=admin:regcode:<hash>，TTL=距过期时间的秒数（DB 仍为持久审计记录）。
-        writeRedisCode(codeHash, initialRole.getId(), request.expiresAt(), actor.id());
+        // Redis 双写：key=admin:regcode:<明文码>，TTL=距过期时间的秒数（DB 仍为持久审计记录）。
+        writeRedisCode(rawCode, initialRole.getId(), request.expiresAt(), actor.id());
         return new AdminCodeResponse(rawCode, initialRole.getRoleCode(), request.expiresAt());
     }
 
     /** 把注册码写入 Redis 并设置 TTL（到过期时间为止）；已过期则直接不写。 */
-    private void writeRedisCode(String codeHash, String roleId, LocalDateTime expiresAt, String createdByAdminId) {
+    private void writeRedisCode(String code, String roleId, LocalDateTime expiresAt, String createdByAdminId) {
         try {
             long ttl = Duration.between(LocalDateTime.now(), expiresAt).getSeconds();
             if (ttl <= 0) return;
             String value = "{\"roleId\":\"" + roleId + "\",\"expiresAt\":\""
                     + expiresAt + "\",\"createdByAdminId\":\"" + createdByAdminId + "\"}";
             ValueOperations<String, String> ops = redisTemplate.opsForValue();
-            ops.set(REDIS_CODE_KEY_PREFIX + codeHash, value, Duration.ofSeconds(ttl));
+            ops.set(REDIS_CODE_KEY_PREFIX + code, value, Duration.ofSeconds(ttl));
         } catch (RuntimeException ignored) {
             // Redis 不可用（如未启动）时静默失败，注册码仍以 DB 为准（register 会回退 DB 校验）。
         }
@@ -116,12 +113,12 @@ public class AdminRegistrationService {
             throw new ApiException(HttpStatus.CONFLICT, "管理员登录名已存在");
         }
 
-        String codeHash = Hashing.sha256(request.registrationCode());
+        String code = request.registrationCode();
         String adminId = IdGenerator.next();
 
         // 1) 优先走 Redis：读出并校验注册码（不销毁），随后原子 DEL 核销。
         //    Redis 无此 key 或不可用时回退到 DB 乐观锁 claim。
-        RedisCodeData redisData = readRedisCode(codeHash);
+        RedisCodeData redisData = readRedisCode(code);
         AdminRole role;
         String createdByAdminId;
         if (redisData != null) {
@@ -131,19 +128,19 @@ public class AdminRegistrationService {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "注册码对应角色不可用");
             }
             createdByAdminId = redisData.createdByAdminId();
-            boolean deleted = Boolean.TRUE.equals(redisTemplate.delete(REDIS_CODE_KEY_PREFIX + codeHash));
+            boolean deleted = Boolean.TRUE.equals(redisTemplate.delete(REDIS_CODE_KEY_PREFIX + code));
             if (!deleted) {
                 // 并发下被其他请求抢先核销 → 回退 DB 乐观锁（会因版本不匹配而拒绝）。
-                ClaimResult claim = claimFromDb(codeHash, adminId, role.getId(), createdByAdminId);
+                ClaimResult claim = claimFromDb(code, adminId, role.getId(), createdByAdminId);
                 role = claim.role();
                 createdByAdminId = claim.createdByAdminId();
             }
         } else {
-            ClaimResult claim = claimFromDb(codeHash, adminId, null, null);
+            ClaimResult claim = claimFromDb(code, adminId, null, null);
             role = claim.role();
             createdByAdminId = claim.createdByAdminId();
         }
-        return finishRegister(adminId, codeHash, request, role, createdByAdminId);
+        return finishRegister(adminId, code, request, role, createdByAdminId);
     }
 
     /** Redis 中的注册码数据（读自 value；roleId 为角色 ID，createdByAdminId 可能为 null）。 */
@@ -151,9 +148,9 @@ public class AdminRegistrationService {
     }
 
     /** 从 Redis 读取注册码数据；无此 key / 不可用 / 解析失败返回 null。 */
-    private RedisCodeData readRedisCode(String codeHash) {
+    private RedisCodeData readRedisCode(String code) {
         try {
-            String json = redisTemplate.opsForValue().get(REDIS_CODE_KEY_PREFIX + codeHash);
+            String json = redisTemplate.opsForValue().get(REDIS_CODE_KEY_PREFIX + code);
             if (json == null) return null;
             return new RedisCodeData(extract(json, "roleId"), extract(json, "createdByAdminId"));
         } catch (RuntimeException ignored) {
@@ -177,21 +174,21 @@ public class AdminRegistrationService {
      *
      * @return null 表示注册码不存在/已过期/并发冲突（调用方抛 400/409）。
      */
-    private ClaimResult claimFromDb(String codeHash, String adminId, String knownRoleId, String fallbackCreatedBy) {
-        AdminRegistrationCode code = registrationCodeMapper.selectOne(
+    private ClaimResult claimFromDb(String code, String adminId, String knownRoleId, String fallbackCreatedBy) {
+        AdminRegistrationCode registrationCode = registrationCodeMapper.selectOne(
                 Wrappers.<AdminRegistrationCode>lambdaQuery()
-                        .eq(AdminRegistrationCode::getCodeHash, codeHash)
+                        .eq(AdminRegistrationCode::getCode, code)
                         .eq(AdminRegistrationCode::getStatus, "ACTIVE"));
-        if (code == null) {
+        if (registrationCode == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "注册码无效、已使用或已过期");
         }
-        if (code.getExpiresAt() != null && !code.getExpiresAt().isAfter(LocalDateTime.now())) {
-            markDbCodeExpired(code);
+        if (registrationCode.getExpiresAt() != null && !registrationCode.getExpiresAt().isAfter(LocalDateTime.now())) {
+            markDbCodeExpired(registrationCode);
             throw new ApiException(HttpStatus.BAD_REQUEST, "注册码已过期");
         }
         AdminRole role = knownRoleId != null
                 ? adminRoleMapper.selectById(knownRoleId)
-                : adminRoleMapper.selectById(code.getRoleId());
+                : adminRoleMapper.selectById(registrationCode.getRoleId());
         if (role == null || !"ACTIVE".equals(role.getStatus())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "注册码对应角色不可用");
         }
@@ -202,14 +199,14 @@ public class AdminRegistrationService {
         claim.set("status", "USED")
                 .set("used_at", LocalDateTime.now())
                 .setSql("version = version + 1")
-                .eq("id", code.getId())
+                .eq("code", registrationCode.getCode())
                 .eq("status", "ACTIVE")
-                .eq("version", code.getVersion());
+                .eq("version", registrationCode.getVersion());
         int claimed = registrationCodeMapper.update(null, claim);
         if (claimed != 1) {
             throw new ApiException(HttpStatus.CONFLICT, "注册码已被其他注册请求使用");
         }
-        String createdBy = fallbackCreatedBy != null ? fallbackCreatedBy : code.getCreatedByAdminId();
+        String createdBy = fallbackCreatedBy != null ? fallbackCreatedBy : registrationCode.getCreatedByAdminId();
         return new ClaimResult(role, createdBy);
     }
 
@@ -221,7 +218,7 @@ public class AdminRegistrationService {
      * 必须先插入 admin_account 再更新 admin_registration_code.used_by_admin_id，
      * 否则外键 fk_registration_code_user → admin_account(id) 会因目标行不存在而失败。
      */
-    private RegistrationResponse finishRegister(String adminId, String codeHash, AdminRegisterRequest request,
+    private RegistrationResponse finishRegister(String adminId, String code, AdminRegisterRequest request,
                                                 AdminRole role, String createdByAdminId) {
         AdminAccount admin = new AdminAccount();
         admin.setId(adminId);
@@ -244,7 +241,7 @@ public class AdminRegistrationService {
         adminAccountRoleMapper.insert(accountRole);
 
         // 管理员已落库，此时再回填注册码使用记录，外键可达。
-        markDbCodeUsed(codeHash, adminId);
+        markDbCodeUsed(code, adminId);
         return new RegistrationResponse(adminId, "ADMIN", "ENABLED", Set.of(role.getRoleCode()));
     }
 
@@ -255,14 +252,14 @@ public class AdminRegistrationService {
      *  - Redis 路径：DB 行仍为 ACTIVE → 置为 USED 并回填；
      *  - DB 路径：claimFromDb 已置为 USED → 仅回填 used_by_admin_id。
      */
-    private void markDbCodeUsed(String codeHash, String usedByAdminId) {
+    private void markDbCodeUsed(String code, String usedByAdminId) {
         // 用显式列名（而非 lambda）构造条件，避免 MyBatis-Plus lambda 缓存解析在测试环境不可用。
         UpdateWrapper<AdminRegistrationCode> claim = new UpdateWrapper<>();
         claim.set("status", "USED")
                 .set("used_by_admin_id", usedByAdminId)
                 .set("used_at", LocalDateTime.now())
                 .setSql("version = version + 1")
-                .eq("code_hash", codeHash)
+                .eq("code", code)
                 .eq("status", "ACTIVE");
         if (registrationCodeMapper.update(null, claim) == 0) {
             // 已由 claimFromDb 置为 USED，只回填使用人。
@@ -270,7 +267,7 @@ public class AdminRegistrationService {
             backfill.set("used_by_admin_id", usedByAdminId)
                     .set("used_at", LocalDateTime.now())
                     .setSql("version = version + 1")
-                    .eq("code_hash", codeHash)
+                    .eq("code", code)
                     .eq("status", "USED");
             registrationCodeMapper.update(null, backfill);
         }
@@ -281,7 +278,7 @@ public class AdminRegistrationService {
         registrationCodeMapper.update(null, Wrappers.<AdminRegistrationCode>lambdaUpdate()
                 .set(AdminRegistrationCode::getStatus, "EXPIRED")
                 .setSql("version = version + 1")
-                .eq(AdminRegistrationCode::getId, code.getId())
+                .eq(AdminRegistrationCode::getCode, code.getCode())
                 .eq(AdminRegistrationCode::getStatus, "ACTIVE"));
     }
 }

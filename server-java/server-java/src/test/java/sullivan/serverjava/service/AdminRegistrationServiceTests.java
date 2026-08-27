@@ -70,7 +70,7 @@ class AdminRegistrationServiceTests {
     @Test
     void registrationConsumesCodeAndAssignsItsRole() {
         AdminRegistrationCode code = new AdminRegistrationCode();
-        code.setId("code-1");
+        code.setCode("SV-test");
         code.setRoleId("role-operations");
         code.setStatus("ACTIVE");
         code.setVersion(0L);
