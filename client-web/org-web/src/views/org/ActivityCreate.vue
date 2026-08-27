@@ -134,11 +134,16 @@ function geocodeText(text: string) {
 
 /** 地图选点 → 输入框：AmapPicker 选点/拖拽后更新 location，把 address 写回 locationText。 */
 watch(
-  () => location.value?.address,
-  (addr) => {
-    if (addr && addr !== form.locationText) {
+  () => location.value,
+  (loc, prev) => {
+    // 仅在坐标确实变化时回填（避免连续选同一点、或 address 相同导致 watch 不触发）。
+    const moved = !prev || prev.lng !== loc?.lng || prev.lat !== loc?.lat
+    if (!moved || !loc || loc.lng == null || loc.lat == null) return
+    // 逆地理编码可能失败（address 为 undefined），此时回填坐标作为可读文本，保证输入框有变化。
+    const text = loc.address || `${loc.lng.toFixed(6)}, ${loc.lat.toFixed(6)}`
+    if (text !== form.locationText) {
       suppressLocationInput = true
-      form.locationText = addr
+      form.locationText = text
     }
   },
 )
