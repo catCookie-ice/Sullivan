@@ -59,3 +59,6 @@ Thumbs.db
 
 # 本地个人记录
 个人日记(AI工具排除此文件夹)/
+
+# 参考项目（本地参考材料，不入库；其可用资产已移植进 client-android/client-ward/）
+参考1/
