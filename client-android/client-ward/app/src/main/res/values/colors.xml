@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sullivan 主题色。靛蓝沿用骨架里既有的 statusBarColor（#FF1A237E），
+         深色模式用同名 _light 变体，避免深底上对比度不足。 -->
+    <color name="sullivan_indigo">#FF1A237E</color>
+    <color name="sullivan_indigo_dark">#FF0D1466</color>
+    <color name="sullivan_indigo_light">#FF9FA8DA</color>
+    <color name="sullivan_accent">#FF03DAC5</color>
+
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- 检测结果配色，与 script.py 中 OpenCV 使用的 BGR 颜色保持一致。 -->
+    <color name="level_clear">#FF4EDC32</color>
+    <color name="level_caution">#FFFFB400</color>
+    <color name="level_danger">#FFE6281E</color>
+    <color name="panel_scrim">#B3000000</color>
+</resources>

@@ -1,0 +1,46 @@
+<resources>
+    <string name="app_name">Sullivan</string>
+
+    <!-- ===== 受护人入口 ===== -->
+    <string name="role_entry_title">选择你的角色</string>
+    <string name="role_entry_subtitle">受护人可在本机进行障碍检测与语音提示，画面不上传</string>
+    <string name="role_protectee">受护人</string>
+    <string name="role_protectee_desc">开启摄像头，实时识别前方障碍并语音提示</string>
+    <string name="role_guardian">监护人</string>
+    <string name="role_guardian_desc">查看绑定受护人的位置与报警</string>
+    <string name="role_volunteer">志愿者</string>
+    <string name="role_volunteer_desc">接收附近的协助请求</string>
+    <string name="role_not_implemented">%1$s客户端尚未实现</string>
+
+    <!-- ===== 障碍检测（移植自「参考1」端侧检测应用） ===== -->
+    <string name="status_model_loading">正在加载模型…</string>
+    <string name="status_model_missing">未找到模型文件</string>
+    <string name="status_model_ready">模型就绪：%1$s</string>
+    <string name="status_model_failed">模型加载失败</string>
+    <string name="model_source_imported">自定义模型</string>
+
+    <string name="prompt_idle">正在启动摄像头…</string>
+    <string name="prompt_no_permission">需要摄像头权限才能进行障碍检测</string>
+    <string name="prompt_grant">授予权限</string>
+
+    <string name="switch_speech">语音播报</string>
+    <string name="switch_haptics">振动提示</string>
+    <string name="action_pick_model">更换模型</string>
+
+    <!-- 播报频率档位：按钮上显示当前档位，点一下换下一档 -->
+    <string name="action_rate">播报频率：%1$s</string>
+    <string name="rate_quiet">少</string>
+    <string name="rate_standard">标准</string>
+    <string name="rate_chatty">多</string>
+
+    <!-- 剧烈晃动报警 -->
+    <string name="alarm_shake">检测到剧烈晃动</string>
+    <string name="action_im_fine">我没事</string>
+    <string name="hint_no_gyroscope">这台设备没有陀螺仪，剧烈晃动报警不可用</string>
+
+    <string name="hint_model_missing">未找到 YOLO 模型。请把 yolov8n.onnx 放到 app/src/main/assets/ 后重新安装，或点击右上角「更换模型」从手机存储中选择 .onnx 文件。</string>
+    <string name="hint_model_failed">模型加载失败：%1$s\n请确认文件是 ultralytics 导出的 YOLOv8/YOLO11 检测模型。</string>
+    <string name="hint_camera_failed">摄像头启动失败：%1$s</string>
+    <string name="model_imported">模型已导入，正在加载…</string>
+    <string name="model_import_failed">模型导入失败：%1$s</string>
+</resources>

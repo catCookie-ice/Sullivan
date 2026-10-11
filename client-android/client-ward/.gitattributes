@@ -1,0 +1,17 @@
+# 默认按内容自动识别文本，仓库里统一存 LF，检出时按平台转换。
+# 仓库根 .editorconfig 也要求全库 LF，但全局 core.autocrlf=true 会覆盖它，
+# 所以这里对两个脚本显式定死。
+* text=auto
+
+# 这两个必须是 LF：gradlew 是 shell 脚本，检出成 CRLF 之后在 Linux / macOS / Git Bash
+# 下会直接报 "bad interpreter"，而 Windows 上又必须用 CRLF 的 bat。
+gradlew text eol=lf
+*.sh text eol=lf
+gradlew.bat text eol=crlf
+*.bat text eol=crlf
+
+# 二进制：别让 Git 去猜、更别做行尾转换。
+*.onnx binary
+*.jar binary
+*.webp binary
+*.png binary

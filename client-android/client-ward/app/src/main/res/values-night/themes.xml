@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- 深色模式：主色换浅一档，保证深底上的对比度。 -->
+    <style name="Theme.Sullivan" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/sullivan_indigo_light</item>
+        <item name="colorPrimaryVariant">@color/sullivan_indigo</item>
+        <item name="colorOnPrimary">@color/black</item>
+        <item name="colorSecondary">@color/sullivan_accent</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+    </style>
+</resources>

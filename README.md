@@ -12,7 +12,7 @@
 | `server-java/` | 统一业务后端：账号、权限、公益、报警、管理 | Java 21 + Spring Boot 3 |
 | `server-python/` | 导航推理与空间分析 | Python 3.11 + FastAPI |
 | `sullivan-vision/` | 离线模型评测与 ONNX 导出 | PyTorch + Ultralytics |
-| `client-android/` | 受护人/监护人/志愿者 App | Kotlin + Compose |
+| `client-android/client-ward/` | 受护人 App（端侧障碍检测，已实现）；监护人/志愿者端未实现 | Java + CameraX + ONNX Runtime（Kotlin + Compose 依赖保留待后续） |
 | `client-web/` | 三个前端项目：机构端 / 监护与志愿者端 / 管理端 | Vue 3 + TypeScript |
 | `deploy/` | 容器编排与初始化脚本 | Docker Compose |
 

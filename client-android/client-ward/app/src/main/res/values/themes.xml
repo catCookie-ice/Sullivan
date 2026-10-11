@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!--
+        受护人客户端主题。
+        父主题必须是 MaterialComponents（或其后代）：受护人检测界面用到 Material 的
+        SwitchMaterial，界面基类是 AppCompatActivity。原来继承的
+        android:Theme.Material.Light.NoActionBar 会让 SwitchMaterial 在 inflate 时抛
+        IllegalArgumentException。
+    -->
+    <style name="Theme.Sullivan" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/sullivan_indigo</item>
+        <item name="colorPrimaryVariant">@color/sullivan_indigo_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/sullivan_accent</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+    </style>
+
+    <!-- 相机检测界面：全屏、无 ActionBar，避免遮挡预览画面。 -->
+    <style name="Theme.Sullivan.Camera" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:statusBarColor">@android:color/black</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+    </style>
+</resources>

@@ -37,9 +37,9 @@ node_modules/
 dist/
 .vite/
 
-# Android
-client-android/.idea/
-client-android/app/release/
+# Android（受护人端工程现位于 client-android/client-ward/）
+client-android/client-ward/.idea/
+client-android/client-ward/app/release/
 *.apk
 *.aab
 

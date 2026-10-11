@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 剧烈晃动报警的振动提示（PromptAnnouncer） -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- 受护人端侧检测依赖后置摄像头 -->
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="true" />
+    <!-- 陀螺仪**不是**必需：缺失时报警功能关闭并提示一次，其余功能照常 -->
+    <uses-feature
+        android:name="android.hardware.sensor.gyroscope"
+        android:required="false" />
+
+    <application
+        android:name=".SullivanApp"
+        android:label="Sullivan"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Sullivan">
+
+        <!-- 三角色入口：受护人 / 监护人 / 志愿者 -->
+        <activity
+            android:name=".ui.roleentry.RoleEntryActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 登录 -->
+        <activity android:name=".ui.login.LoginActivity" />
+
+        <!--
+            受护人主页：端侧障碍检测。
+            必须锁竖屏且声明 configChanges —— 旋转会重建 Activity 从而拆掉 CameraX 绑定，
+            而预览画面与叠加层的坐标换算都假设画面几何在 Activity 生命周期内不变。
+        -->
+        <activity
+            android:name=".ui.protectee.home.ProtecteeActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Sullivan.Camera" />
+
+        <!-- 监护人主页 -->
+        <activity android:name=".ui.guardian.home.GuardianActivity" />
+
+        <!-- 志愿者主页 -->
+        <activity android:name=".ui.volunteer.home.VolunteerActivity" />
+
+        <meta-data
+            android:name="com.amap.api.v2.apikey"
+            android:value="${AMAP_API_KEY}" />
+    </application>
+</manifest>
