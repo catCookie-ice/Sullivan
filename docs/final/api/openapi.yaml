@@ -131,6 +131,104 @@ paths:
     post:
       tags: [Binding]
       summary: 任一方解除生效绑定（permanent=true 返回 403）
+  # ============ 二维码扫码绑定与扫码登录 ============
+  # 状态机见 docs/final/02 §4.4 / §4.5；表见 docs/final/05 §2 与 db/schema.sql 的 V6 段。
+  # 两个扫码交互都只在 Android 端提供（出示端与扫描端）。
+  #
+  # 绑定码：受护人登录后出示；监护人扫码即完成绑定，记为「受护人发起 + 监护人扫码确认」，
+  # 不新增绑定状态转换（落在 PENDING -> ACTIVE 之内）。
+  /qr/bind-codes:
+    post:
+      tags: [QR]
+      summary: 受护人签发绑定码（需受护人令牌；同受护人旧码置 REVOKED）
+  /qr/bind-codes/current:
+    get:
+      tags: [QR]
+      summary: 取当前有效绑定码，无则 data 为 null（需受护人令牌）
+  /qr/bind-codes/scan:
+    post:
+      tags: [QR]
+      summary: 监护人扫码建立绑定（需监护人令牌；重复扫幂等；已有监护人发起的 PENDING 返回 409）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, description: 二维码里的 12 位绑定码 }
+  # 登录票据：受护人未登录时在登录页出示；监护人扫码、选择自己已绑定的受护人并确认后，
+  # 由出示设备用一次性凭据换取该受护人的令牌。令牌不出现在任何轮询响应里。
+  /qr/login-tickets:
+    post:
+      tags: [QR]
+      summary: 公开：创建登录票据（只上传 clientSecret 的 SHA-256，明文留在出示设备上）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [secretHash]
+              properties:
+                secretHash: { type: string, pattern: '^[0-9a-f]{64}$', description: clientSecret 的小写十六进制 SHA-256 }
+  /qr/login-tickets/{ticket}:
+    get:
+      tags: [QR]
+      summary: 公开：轮询票据状态（只返回状态；CONFIRMED 时返回 exchangeCode；绝不返回 accessToken）
+      parameters:
+        - name: ticket
+          in: path
+          required: true
+          schema: { type: string }
+  /qr/login-tickets/{ticket}/exchange:
+    post:
+      tags: [QR]
+      summary: 公开：一次性兑换令牌（clientSecret 与 exchangeCode 必须同时匹配；成功后票据 CONSUMED）
+      parameters:
+        - name: ticket
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientSecret, exchangeCode]
+              properties:
+                clientSecret: { type: string }
+                exchangeCode: { type: string }
+  /qr/login-tickets/{ticket}/scan:
+    post:
+      tags: [QR]
+      summary: 监护人扫描登录码（需监护人令牌；他人抢扫返回 409），返回该监护人 ACTIVE 绑定的受护人候选
+      parameters:
+        - name: ticket
+          in: path
+          required: true
+          schema: { type: string }
+  /qr/login-tickets/{ticket}/confirm:
+    post:
+      tags: [QR]
+      summary: 监护人确认授权某受护人登录（服务端复核 ACTIVE 绑定，未绑定返回 403；幂等）
+      parameters:
+        - name: ticket
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [protecteeId]
+              properties:
+                protecteeId: { type: string, description: 监护人选定并授权的受护人账号 ID }
+
   # 旧路径兼容别名（新前端请使用 /bindings）
   /guardians/protectees:
     post:
