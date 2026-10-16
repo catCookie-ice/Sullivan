@@ -41,6 +41,10 @@ public class BindingService {
         this.userRoleMapper = userRoleMapper;
     }
 
+    /** 扫码绑定的结果：{@code alreadyBound=true} 表示关系此前已生效，本次扫码是幂等重扫。 */
+    public record ScanBindResult(BindingResponse binding, boolean alreadyBound) {
+    }
+
     /** 当前用户作为发起方发起绑定：targetRole=PROTECTEE 时调用者须为监护人，反之亦然。 */
     @Transactional
     public BindingResponse requestBinding(String callerId, BindingRequest request) {
@@ -75,6 +79,75 @@ public class BindingService {
         binding.setExpiresAt(LocalDateTime.now().plusDays(EXPIRE_DAYS));
         guardianBindingMapper.insert(binding);
         return toBindingResponse(binding);
+    }
+
+    /**
+     * 扫码绑定：受护人出示绑定码、监护人扫码后**即时生效**，记为「受护人发起 + 监护人扫码确认」。
+     *
+     * <p>落点完全在 docs/final/02 §4.2 既有转换内：受护人 {@code requestBinding} 建 PENDING，
+     * 监护人作为接收方 {@code acceptBinding}，两步同事务，无需基线变更。之所以要一个外层事务，
+     * 是因为两步之间失败会留下一条无人认领的 PENDING 行。</p>
+     *
+     * <p>幂等：同一监护人对同一受护人重复扫码返回既有 ACTIVE 关系（{@code alreadyBound=true}），
+     * 而不是 409 —— 「扫码加好友」语义下重复扫是正常操作。但若已存在一条他人发起的 PENDING
+     * （即受护人还没确认的、由监护人发起的申请），则 409：只有接收方能 ACCEPT，不能代对方确认。</p>
+     */
+    @Transactional
+    public ScanBindResult bindViaScan(String protecteeId, String guardianId) {
+        requireEnabledUser(protecteeId, "受护人");
+        requireActiveRole(protecteeId, "PROTECTEE");
+
+        GuardianBinding existing = guardianBindingMapper.selectOne(Wrappers.<GuardianBinding>lambdaQuery()
+                .eq(GuardianBinding::getGuardianUid, guardianId)
+                .eq(GuardianBinding::getProtecteeUid, protecteeId)
+                .eq(GuardianBinding::getStatus, "ACTIVE"));
+        if (existing != null) {
+            return new ScanBindResult(toBindingResponse(existing), true);
+        }
+        Long pending = guardianBindingMapper.selectCount(Wrappers.<GuardianBinding>lambdaQuery()
+                .eq(GuardianBinding::getGuardianUid, guardianId)
+                .eq(GuardianBinding::getProtecteeUid, protecteeId)
+                .eq(GuardianBinding::getStatus, "PENDING"));
+        if (pending > 0) {
+            throw new ApiException(HttpStatus.CONFLICT,
+                    "已有待确认的绑定申请，请在绑定列表中处理后再扫码");
+        }
+
+        BindingResponse pendingBinding = requestBinding(protecteeId, new BindingRequest(guardianId, "GUARDIAN"));
+        BindingResponse active = acceptBinding(guardianId, pendingBinding.id());
+        if (active.primary()) {
+            demoteScanBinding(active);
+            // 回读一次：降级之后可能又被 promoteNextPrimary 提回主绑定，响应必须与库内一致。
+            active = toBindingResponse(loadBinding(active.id()));
+        }
+        return new ScanBindResult(active, false);
+    }
+
+    /**
+     * 显式固化「扫码建立的关系不是主监护」，不依赖 {@code acceptBinding} 内部「首条即主」的隐式判断。
+     *
+     * <p>受护人由监护人建号时已写入 permanent 主绑定，所以扫码路径本就不可能拿到 primary；
+     * 写死可避免将来受护人自助注册（无既有主绑定）时静默变成主监护。若置为 false 后该受护人
+     * 反而没有任何 ACTIVE 主绑定了（异常路径），按 confirmed_at 提升最早的一条，保持不变量。</p>
+     */
+    private void demoteScanBinding(BindingResponse created) {
+        guardianBindingMapper.update(null, Wrappers.<GuardianBinding>lambdaUpdate()
+                .set(GuardianBinding::getIsPrimary, false)
+                .setSql("version = version + 1")
+                .eq(GuardianBinding::getId, created.id())
+                .eq(GuardianBinding::getIsPrimary, true));
+        promoteNextPrimary(created.protecteeId());
+    }
+
+    /** 账号必须存在且 ENABLED。 */
+    private void requireEnabledUser(String userId, String label) {
+        UserAccount account = userAccountMapper.selectById(userId);
+        if (account == null) {
+            throw new ApiException(HttpStatus.NOT_FOUND, label + "不存在");
+        }
+        if (!"ENABLED".equals(account.getStatus())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, label + "账号不可用");
+        }
     }
 
     /** 接收方（非发起方）确认绑定。首条生效关系自动成为主绑定。 */
@@ -185,6 +258,29 @@ public class BindingService {
                         .or()
                         .eq(GuardianBinding::getGuardianUid, uidB)
                         .eq(GuardianBinding::getProtecteeUid, uidA))) > 0;
+    }
+
+    /** 该监护人当前 ACTIVE 绑定的受护人 ID 列表（扫码登录的候选来源）。 */
+    public List<String> activeProtecteeIds(String guardianId) {
+        return guardianBindingMapper.selectList(Wrappers.<GuardianBinding>lambdaQuery()
+                        .eq(GuardianBinding::getGuardianUid, guardianId)
+                        .eq(GuardianBinding::getStatus, "ACTIVE")
+                        .orderByAsc(GuardianBinding::getConfirmedAt)
+                        .orderByAsc(GuardianBinding::getId))
+                .stream().map(GuardianBinding::getProtecteeUid).toList();
+    }
+
+    /**
+     * 方向固定的 ACTIVE 绑定判断：{@code guardianId} 必须是 {@code protecteeId} 的监护人。
+     *
+     * <p>与 {@link #hasActiveBinding} 的区别在于不复用「任一方向」语义 —— 扫码授权登录的真授权点，
+     * 必须确认「这个监护人确实管着这个受护人」，而不是「两人之间存在某种关系」。</p>
+     */
+    public boolean hasActiveGuardianship(String guardianId, String protecteeId) {
+        return guardianBindingMapper.selectCount(Wrappers.<GuardianBinding>lambdaQuery()
+                .eq(GuardianBinding::getGuardianUid, guardianId)
+                .eq(GuardianBinding::getProtecteeUid, protecteeId)
+                .eq(GuardianBinding::getStatus, "ACTIVE")) > 0;
     }
 
     private GuardianBinding loadBinding(String bindingId) {

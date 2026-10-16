@@ -30,6 +30,12 @@ public class SecurityConfig {
                         // 找回密码 start/verify 公开；me/recovery 系列需登录（anyRequest 统一拦截）
                         .requestMatchers("/api/v1/auth/password-recovery/start",
                                 "/api/v1/auth/password-recovery/verify").permitAll()
+                        // 扫码授权登录：出示设备此时尚未登录，故建票/轮询/兑换必须匿名可用。
+                        // 逐条精确到方法所挂的路径，不要写成 /api/v1/qr/**——scan 与 confirm
+                        // 必须保持需要登录（它们是这个流程的真授权点），一把梭会把它们一起放行。
+                        .requestMatchers("/api/v1/qr/login-tickets",
+                                "/api/v1/qr/login-tickets/*",
+                                "/api/v1/qr/login-tickets/*/exchange").permitAll()
                         // OpenAPI 接口文档（Swagger UI / JSON 契约）免认证访问
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**",
                                 "/api-docs", "/api-docs/**").permitAll()

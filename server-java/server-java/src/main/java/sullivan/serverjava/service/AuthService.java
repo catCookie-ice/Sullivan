@@ -62,6 +62,23 @@ public class AuthService {
                 !passwordEncoder.matches(request.password(), account.getPasswordHash())) {
             throw unauthorized();
         }
+        return userToken(account);
+    }
+
+    /**
+     * 为一个已经用别的方式验证过身份的受护人签发令牌。
+     *
+     * <p>目前唯一的调用方是二维码扫码授权登录（{@code QrLoginService.exchange}）：身份由监护人确认，
+     * 而不是由受护人的密码证明。之所以要把角色解析抽到这里，是因为扫码路径必须有和账密登录
+     * **完全一致**的角色集合——另写一份一定会漂移。</p>
+     *
+     * <p>注意这条路径绕过了「受护人知道自己的密码」这个唯一的持有证明，是一次显式的授权决策，
+     * 代价记录在 docs/final/17-开发日记-2026-10-16.md。</p>
+     */
+    public TokenResponse userToken(UserAccount account) {
+        if (account == null || !"ENABLED".equals(account.getStatus())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "账号不可用");
+        }
         Set<String> roles = userRoleMapper.selectList(Wrappers.<UserRole>lambdaQuery()
                         .eq(UserRole::getUserId, account.getId()).eq(UserRole::getStatus, "ACTIVE")).stream()
                 .map(UserRole::getRoleCode).collect(Collectors.toUnmodifiableSet());

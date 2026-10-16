@@ -50,7 +50,10 @@ public class RegistrationService {
 
     @Transactional
     public RegistrationResponse registerUser(UserRegisterRequest request) {
-        if (!Set.of("GUARDIAN", "VOLUNTEER").contains(request.role())) {
+        // 不能写成 Set.of("GUARDIAN","VOLUNTEER").contains(request.role())：Set.of 的不可变集合
+        // 在 contains(null) 时抛 NPE，而 role 上的 @Pattern 不校验 null，于是公开接口上省略 role
+        // 会返回 500（内部错误）而不是 400（参数错）。
+        if (!"GUARDIAN".equals(request.role()) && !"VOLUNTEER".equals(request.role())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "自然人只能自主注册为监护人或志愿者");
         }
         assertUserLoginAvailable(request.loginName());
