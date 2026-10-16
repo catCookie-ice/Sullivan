@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    受护人扫码登录：出示登录二维码 + 轮询。
+
+    与「我的绑定码」页同属受护人端，所以字号偏大、对比度拉满、
+    每一步状态都有文字说明（受护人不会盯着一个转圈的图标去猜现在该干什么）。
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/white"
+    android:fillViewport="true"
+    tools:context=".ui.login.QrLoginActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingStart="24dp"
+        android:paddingTop="32dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="24dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/qrlogin_title"
+            android:textColor="@android:color/black"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/qrlogin_hint"
+            android:textColor="#FF444444"
+            android:textSize="17sp" />
+
+        <!--
+            二维码本身对低视力用户零信息量，所以整块标记为对无障碍服务不可见：
+            让 TalkBack 跳过它，直接读到下面那句「等待监护人扫描」。
+        -->
+        <ImageView
+            android:id="@+id/qrlogin_image"
+            android:layout_width="280dp"
+            android:layout_height="280dp"
+            android:layout_marginTop="24dp"
+            android:background="@android:color/white"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter" />
+
+        <TextView
+            android:id="@+id/qrlogin_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:text="@string/qrlogin_step_wait"
+            android:textColor="@android:color/black"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/qrlogin_ttl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:textColor="#FF666666"
+            android:textSize="15sp"
+            tools:text="118 秒后失效" />
+
+        <Button
+            android:id="@+id/qrlogin_retry"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="20dp"
+            android:text="@string/bindcode_refresh"
+            android:textSize="18sp" />
+    </LinearLayout>
+</ScrollView>

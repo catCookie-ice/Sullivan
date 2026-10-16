@@ -43,4 +43,80 @@
     <string name="hint_camera_failed">摄像头启动失败：%1$s</string>
     <string name="model_imported">模型已导入，正在加载…</string>
     <string name="model_import_failed">模型导入失败：%1$s</string>
+
+    <!-- ===== 账号与登录 ===== -->
+    <string name="action_my_bind_code">我的绑定码</string>
+
+    <string name="login_title">监护人登录</string>
+    <string name="login_subtitle">扫码绑定受护人、扫受护人登录码，都需要你先登录。</string>
+    <string name="login_field_account">登录名</string>
+    <string name="login_field_password">密码</string>
+    <string name="login_field_server">服务器地址</string>
+    <string name="login_server_hint">例如 http://192.168.1.10:8642/api/v1/</string>
+    <string name="login_action_submit">登录</string>
+    <string name="login_action_scan_login">我是受护人，改用扫码登录</string>
+    <string name="login_in_progress">正在登录…</string>
+    <string name="login_missing_fields">请填写登录名与密码</string>
+    <string name="login_failed_empty">登录响应没有携带令牌，请确认服务器地址是否正确</string>
+    <string name="login_succeeded">登录成功</string>
+
+    <!-- ===== 扫码登录（受护人） ===== -->
+    <string name="qrlogin_title">扫码登录</string>
+    <string name="qrlogin_hint">请让监护人在他的手机上扫描这个二维码</string>
+    <string name="qrlogin_step_wait">等待监护人扫描…</string>
+    <string name="qrlogin_step_scanned">监护人已扫描，正在选择要登录的受护人…</string>
+    <string name="qrlogin_step_exchanging">正在完成登录…</string>
+    <string name="qrlogin_expired">二维码已过期，正在重新生成…</string>
+    <string name="qrlogin_failed">生成登录码失败：%1$s</string>
+    <string name="qrlogin_exchange_failed">登录未完成：%1$s</string>
+    <string name="qrlogin_ttl">%1$d 秒后失效</string>
+
+    <!-- ===== 我的绑定码（受护人） ===== -->
+    <string name="bindcode_title">我的绑定码</string>
+    <!-- 那行「受护人：王小明」：让受护人一眼确认这是自己的码，而不是旁边病友的 -->
+    <string name="bindcode_owner">受护人：%1$s</string>
+    <string name="bindcode_hint">请让监护人在他的手机上扫描这个二维码，扫到即完成绑定</string>
+    <string name="bindcode_ttl">%1$d 秒后失效，过期会自动换一张</string>
+    <string name="bindcode_refresh">换一张</string>
+    <string name="bindcode_speak">朗读绑定码</string>
+    <string name="bindcode_speaking">绑定码是 %1$s</string>
+    <string name="bindcode_loading">正在生成…</string>
+    <string name="bindcode_failed">生成失败：%1$s</string>
+
+    <!-- ===== 扫码页 ===== -->
+    <string name="scan_title_bind">扫描受护人的绑定码</string>
+    <string name="scan_title_login">扫描受护人的登录码</string>
+    <string name="scan_camera_tip">把二维码放进取景框</string>
+    <string name="scan_no_permission">需要摄像头权限才能扫码</string>
+    <string name="scan_grant">授予权限</string>
+    <string name="scan_manual_entry">手动输入</string>
+    <string name="scan_manual_title">输入绑定码</string>
+    <string name="scan_manual_hint">12 位，字母和数字，不含 0/O/1/I</string>
+    <string name="scan_manual_invalid">这看起来不是有效的绑定码</string>
+    <string name="scan_wrong_kind_login">这是登录码。请回到主页，用「扫受护人登录码」。</string>
+    <string name="scan_wrong_kind_bind">这是绑定码。请回到主页，用「扫码绑定受护人」。</string>
+    <string name="scan_unrecognized">没认出这个二维码</string>
+    <string name="scan_camera_failed">摄像头启动失败：%1$s</string>
+
+    <!-- ===== 监护人主页 ===== -->
+    <string name="guardian_title">监护人</string>
+    <string name="guardian_account">当前账号：%1$s</string>
+    <string name="guardian_action_scan_bind">扫码绑定受护人</string>
+    <string name="guardian_action_scan_bind_desc">扫描受护人出示的绑定码，扫到即完成绑定</string>
+    <string name="guardian_action_scan_login">扫受护人登录码</string>
+    <string name="guardian_action_scan_login_desc">扫描受护人的登录码，选一位受护人授权对方设备登录</string>
+    <string name="guardian_action_logout">退出登录</string>
+    <string name="guardian_bind_failed">绑定失败：%1$s</string>
+    <string name="guardian_pick_protectee">选择要授权登录的受护人</string>
+    <string name="guardian_pick_empty">你还没有已绑定的受护人，请先扫码绑定</string>
+    <string name="guardian_confirm_title">确认授权登录</string>
+    <string name="guardian_confirm_message">让 %1$s 的账号在对方那台设备上登录？\n\n注意：登录成功的是对方那台设备，你手上这台的账号不变。</string>
+    <string name="guardian_authorized">已授权。请让对方设备完成登录（你手上这台仍然是你的身份）。</string>
+    <string name="guardian_authorize_failed">授权失败：%1$s</string>
+    <string name="guardian_scan_failed">取候选受护人失败：%1$s</string>
+    <string name="guardian_logged_out">已退出登录</string>
+    <string name="guardian_need_login">请先登录</string>
+
+    <string name="action_cancel">取消</string>
+    <string name="action_ok">确定</string>
 </resources>

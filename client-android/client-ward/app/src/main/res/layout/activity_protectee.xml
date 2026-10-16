@@ -49,6 +49,21 @@
             android:textSize="12sp"
             tools:text="8.4 FPS · 96 ms" />
 
+        <!--
+            我的绑定码：登录后才能展示绑定码（未登录时进去会先走扫码登录）。
+            放在模型状态这一行上，与「更换模型」并列 —— 两者都是低频入口，
+            不该占用障碍检测的主画面。
+        -->
+        <Button
+            android:id="@+id/my_bind_code_button"
+            style="?attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="0dp"
+            android:text="@string/action_my_bind_code"
+            android:textColor="@color/sullivan_accent"
+            android:textSize="12sp" />
+
         <Button
             android:id="@+id/pick_model_button"
             style="?attr/borderlessButtonStyle"

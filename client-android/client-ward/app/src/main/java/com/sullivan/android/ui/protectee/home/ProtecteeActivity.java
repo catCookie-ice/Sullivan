@@ -1,6 +1,7 @@
 package com.sullivan.android.ui.protectee.home;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -30,6 +31,7 @@ import androidx.camera.view.PreviewView;
 import androidx.core.content.ContextCompat;
 
 import com.sullivan.android.R;
+import com.sullivan.android.ui.protectee.binding.BindCodeActivity;
 import com.sullivan.android.vision.assist.AnnounceRate;
 import com.sullivan.android.vision.assist.AssistSettings;
 import com.sullivan.android.vision.assist.ObstacleAdvisor;
@@ -210,6 +212,10 @@ public class ProtecteeActivity extends AppCompatActivity {
                 view -> dismissAlarm());
         pickModelButton.setOnClickListener(
                 view -> modelPickerLauncher.launch(new String[]{"*/*"}));
+        // 绑定码是网络功能，而本页（障碍检测）必须保持离线可用：
+        // 所以这里只加一个入口，不在这页做任何登录前置。
+        findViewById(R.id.my_bind_code_button).setOnClickListener(
+                view -> startActivity(new Intent(this, BindCodeActivity.class)));
         findViewById(R.id.grant_permission_button).setOnClickListener(
                 view -> permissionLauncher.launch(Manifest.permission.CAMERA));
 

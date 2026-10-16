@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    通用扫码页（监护人扫受护人的绑定码 / 登录码）。
+
+    这块界面**不服务低视力用户** —— 拿手机扫二维码的是监护人，通常是视力正常的人。
+    所以这里的取舍偏向「看得清、点得准」，而不是受护人界面那种「大字号 + TalkBack 优先」。
+    但「手动输入」这条兜底路径仍然必须显眼：摄像头脏了、受护人屏幕碎了的时候，
+    它是唯一还能走通的路线。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black"
+    tools:context=".ui.common.scan.QrScanActivity">
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/scan_preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no" />
+
+    <!-- 标题 -->
+    <TextView
+        android:id="@+id/scan_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="@color/panel_scrim"
+        android:paddingStart="20dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="16dp"
+        android:textColor="@android:color/white"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        tools:text="扫描受护人的绑定码" />
+
+    <!--
+        取景框。用四边留白的白色描边示意，而不是画一个「只有框内有效」的限制区：
+        ZXing 是全幅面搜索的，框只是引导用户把码放中间，不做裁剪（裁了反而更容易丢码）。
+    -->
+    <View
+        android:id="@+id/scan_frame"
+        android:layout_width="240dp"
+        android:layout_height="240dp"
+        android:layout_gravity="center"
+        android:background="@drawable/scan_frame"
+        android:contentDescription="@string/scan_camera_tip"
+        android:importantForAccessibility="no" />
+
+    <!-- 底部操作区 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@color/panel_scrim"
+        android:orientation="vertical"
+        android:paddingStart="20dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="24dp">
+
+        <TextView
+            android:id="@+id/scan_tip"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/scan_camera_tip"
+            android:textColor="@android:color/white"
+            android:textSize="16sp" />
+
+        <Button
+            android:id="@+id/scan_manual_button"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="12dp"
+            android:text="@string/scan_manual_entry"
+            android:textSize="18sp" />
+
+        <Button
+            android:id="@+id/scan_grant_button"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="12dp"
+            android:text="@string/scan_grant"
+            android:textSize="18sp"
+            android:visibility="gone" />
+    </LinearLayout>
+</FrameLayout>

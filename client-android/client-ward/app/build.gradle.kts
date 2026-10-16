@@ -1,11 +1,5 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.hilt.android)
-    kotlin("kapt")
 }
 
 android {
@@ -48,27 +42,18 @@ android {
         // .onnx 模型直接以未压缩方式打包，避免每次加载时解压整个文件（12 MB）。
         noCompress.add("onnx")
     }
-}
 
-// 不显式指定的话 Kotlin 默认 jvmTarget 1.8，与上面的 Java 17 冲突，
-// 构建报 Inconsistent JVM-target compatibility。
-kotlin {
-    compilerOptions {
-        jvmTarget = JvmTarget.JVM_17
+    buildFeatures {
+        // ApiClient 用 BuildConfig.DEBUG 决定要不要装 HTTP 日志拦截器：
+        // release 里绝不能把请求体（含密码、clientSecret）写进 logcat。
+        buildConfig = true
     }
 }
 
+// 本模块是纯 Java 工程（零 .kt 文件），因此不挂 kotlin-android 插件。
+// 原先挂着的 kotlin + kapt + Compose + Hilt 是一整套没有一行代码用到的死依赖；
+// kapt 与中文路径、GBK 编码的组合又是这条工具链里最脆的一环，去掉它的收益是实打实的。
 dependencies {
-    implementation(platform(libs.compose.bom))
-    implementation(libs.compose.ui)
-    implementation(libs.compose.material3)
-    implementation(libs.compose.navigation)
-    implementation(libs.lifecycle.viewmodel.compose)
-
-    implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
-    implementation(libs.hilt.navigation.compose)
-
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp)
@@ -86,9 +71,8 @@ dependencies {
     implementation(libs.camera.view)
     implementation(libs.onnxruntime.android)
 
-    testImplementation(libs.junit)
-}
+    // 二维码：生成（绑定码/登录码）与解码（扫码页共用同一套 BitMatrix 处理）
+    implementation(libs.zxing.core)
 
-kapt {
-    correctErrorTypes = true
+    testImplementation(libs.junit)
 }

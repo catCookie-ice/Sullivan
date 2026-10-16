@@ -8,6 +8,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.sullivan.android.R;
+import com.sullivan.android.ui.login.LoginActivity;
 import com.sullivan.android.ui.protectee.home.ProtecteeActivity;
 
 /**
@@ -18,9 +19,11 @@ import com.sullivan.android.ui.protectee.home.ProtecteeActivity;
  *
  * 每个角色入口分别注册对应账号，不要求同一账号多角色。
  *
- * <p>当前只有受护人一端落地：走的是移植进来的端侧障碍检测（{@link ProtecteeActivity}）。
- * 监护人 / 志愿者两个入口只给出"尚未实现"提示——按 docs/final/16 N-07，
- * 不留点不进去却能看出是空壳的入口，所以这里明说而不是静默跳转。
+ * <p>受护人入口走的是移植进来的端侧障碍检测（{@link ProtecteeActivity}），
+ * <b>不需要登录</b>；监护人入口进 {@link LoginActivity} 做账号密码登录
+ * （扫码授权要求监护人已被认证，这一步没有别的办法）。志愿者入口只给出
+ * "尚未实现"提示——按 docs/final/16 N-07，不留点不进去却能看出是空壳的入口，
+ * 所以这里明说而不是静默跳转。
  */
 public class RoleEntryActivity extends AppCompatActivity {
 
@@ -32,7 +35,7 @@ public class RoleEntryActivity extends AppCompatActivity {
         findViewById(R.id.card_protectee).setOnClickListener(
                 view -> startActivity(new Intent(this, ProtecteeActivity.class)));
         findViewById(R.id.card_guardian).setOnClickListener(
-                view -> showNotImplemented(R.string.role_guardian));
+                view -> startActivity(new Intent(this, LoginActivity.class)));
         findViewById(R.id.card_volunteer).setOnClickListener(
                 view -> showNotImplemented(R.string.role_volunteer));
     }
