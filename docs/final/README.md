@@ -44,6 +44,7 @@
 | 17 | [开发日记：2026-10-18（受护人端拆分）](./17-开发日记-2026-10-18-受护人端拆分.md) | 受护人端拆成独立工程 `client-protectee`，旧工程改名 `client-guardian` 并删除受护人代码；两侧 `vision/`、`qr/`、`ui/common/` 各存一份 |
 | 18 | [待办：优化前端表现](./18-待办-优化前端表现.md) | 前端表现类待办清单（不属 `16` 的 `[FULL]` 预留点台账） |
 | 19 | [待办：安全与性能加固](./19-待办-安全与性能加固.md) | 传输加密、限流、令牌 `jti`/黑名单/refresh、Redis 削峰六项待办；并记录双令牌为「已写进需求但漏实现」的欠账 |
+| 20 | [待办：Android 客户端体验与无障碍](./20-待办-Android客户端体验与无障碍.md) | 受护人端语音操控（FR-10 欠账）与声纹识别、用户可见标识从账号 ID 改为登录名、登录后页面拆分、发起会话直接选人 |
 | API | [OpenAPI 契约](./api/openapi.yaml) | MINI 当前 REST API 及未来扩展约定 |
 | DB | [MySQL DDL](./db/schema.sql) | SullivanMINI 可执行逻辑模型 DDL |
 
@@ -87,3 +88,5 @@
 截至 2026-10-18，`client-android/client-ward` 补齐了 `client-web` 四个前端里已接真实后端的接口所对应的 Android 操作界面（新增 9 个 Activity，工程内共 16 个；`org-web`/`admin-web` 是桌面控制台，不做），并把全端 UI 统一换成新艺术运动风——**含此前已有的页面**，受护人相机页也在内，但相机页只换皮不换骨（提示字号下限 ≥22sp、组件顺序、`contentDescription`、`level_clear/caution/danger` 三个安全色一律未动）。同日后端地址从「运行时可填」改为**构建期常量**（`BuildConfig.SERVER_BASE_URL`，真实值只进不入库的 `local.properties`）：起因是受护人扫码登录那条路径在真机上必然撞上模拟器专用的 `10.0.2.2`，而受护人端没有账密登录、没人替它把地址填对。新增 5 个测试类 39 例，全量 201 例通过（0 失败 0 跳过）。**这批界面一页都没有在真机或模拟器上被真正点开过**，视觉效果、输入法顶起、TalkBack 朗读顺序与真实网络下的长连接握手全部未经检验（见日记 §4.3）。同时向 `19` §7 登记了本次新暴露的明文端点（找回密码两步、实时会话发起）与 `ws://` 明文长连接。详见 `17-开发日记-2026-10-18.md`。
 
 同日晚些时候，原 `client-android/client-ward` **一分为二**：受护人端拆成独立工程 `client-android/client-protectee/`（`com.sullivan.protectee`，应用名**「Sullivan 守护」**，`ProtecteeHomeActivity` 直接作 LAUNCHER，没有角色入口页），原工程改名为 `client-android/client-guardian/`（包名 `com.sullivan.android` 不变，应用名仍是「Sullivan」，只剩监护人 / 志愿者两个角色）。动力是**部署形态本就是两类东西**：受护人端是装在一台专用设备上的离线无障碍工具（相机 + ONNX Runtime + 12.8 MB 模型 + 振动），监护人端是纯联网账号应用；混装时受护人手机上平白多出监护人功能，监护人端则为模型和推理库买单。两侧**各存一份**公共代码（`data/api/**`、`SessionStore`、`qr/QrPayload`、`ui/common/**`、`res/values/**`），这是用户选定的形态，代价是改一处要同步两处。拆分后两侧单测合计 245 例全绿（196 + 49），两侧 `assembleDebug` 与 `assembleRelease` 均通过；**界面仍然一页都没有在真机上被点开过**（与上一段同样的欠账）。详见 `17-开发日记-2026-10-18-受护人端拆分.md`。
+
+同日登记后续待办 **`20-待办-Android客户端体验与无障碍.md`**（五项）：UX-01 实现 `01` **FR-10** 的受护人语音操控 —— 这是 MINI 范围内本就写明的 P1，至今一行未写；UX-02 声纹识别（全仓库首次出现，属 `[FULL]`，须先登记 `16`）；UX-03 把用户可见标识从账号 ID 换成登录名（**依赖服务端新增按登录名查找的端点**，现有 `LookupController` 只有 `GET /users/{userId}`）；UX-04 拆开「一页塞进一个功能所有接口」的页面（`RealtimeActivity`、`BindingListActivity` 最典型）；UX-05 发起会话时直接选已绑定的人（硬依赖：`BindingResponse` 目前只有 `guardianId`/`protecteeId`，**不带姓名**，选择器要能显示名字得先补这个字段）。
