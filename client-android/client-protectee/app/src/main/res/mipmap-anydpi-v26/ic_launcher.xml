@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    自适应启动图标。此前 manifest 里根本没写 android:icon，桌面显示的是系统默认图标。
+
+    只需要 anydpi-v26 这一份：minSdk 是 26，而自适应图标正是 API 26 引入的，
+    不存在更低版本要回退的场景，所以不用再放一套 PNG 进 mipmap-*dpi。
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@drawable/an_icon_launcher_foreground" />
+</adaptive-icon>

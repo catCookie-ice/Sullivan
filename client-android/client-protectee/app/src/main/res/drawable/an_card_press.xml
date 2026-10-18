@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    卡片的按下涟漪，蒙版与 an_card 的主面同形。
+
+    不用 ?attr/selectableItemBackground：那是四角同半径的底板，压在不对称圆角的卡片上，
+    按下的一瞬间会露出一圈方角，把刻意做的有机轮廓抵消掉。
+    <item android:id="@android:id/mask"> 只定义「涟漪出现在哪里」，本身不绘制颜色。
+-->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/an_ripple">
+    <item android:id="@android:id/mask">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/white" />
+            <corners
+                android:bottomLeftRadius="@dimen/an_radius_s"
+                android:bottomRightRadius="@dimen/an_radius_m"
+                android:topLeftRadius="@dimen/an_radius_l"
+                android:topRightRadius="@dimen/an_radius_xs" />
+        </shape>
+    </item>
+</ripple>

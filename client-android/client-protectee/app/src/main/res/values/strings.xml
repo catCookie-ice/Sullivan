@@ -1,0 +1,235 @@
+<resources>
+    <!-- 产品名是「Sullivan 守护」，与工程/包名里的 protectee 不同源 —— 这是用户明确选定的口径，
+         不要事后把哪一边「改回来」。 -->
+    <string name="app_name">Sullivan 守护</string>
+
+    <!-- ===== 障碍检测（移植自「参考1」端侧检测应用） ===== -->
+    <string name="status_model_loading">正在加载模型…</string>
+    <string name="status_model_missing">未找到模型文件</string>
+    <string name="status_model_ready">模型就绪：%1$s</string>
+    <string name="status_model_failed">模型加载失败</string>
+    <string name="model_source_imported">自定义模型</string>
+
+    <string name="prompt_idle">正在启动摄像头…</string>
+    <string name="prompt_no_permission">需要摄像头权限才能进行障碍检测</string>
+    <string name="prompt_grant">授予权限</string>
+
+    <string name="switch_speech">语音播报</string>
+    <string name="switch_haptics">振动提示</string>
+    <string name="action_pick_model">更换模型</string>
+
+    <!-- 播报频率档位：按钮上显示当前档位，点一下换下一档 -->
+    <string name="action_rate">播报频率：%1$s</string>
+    <string name="rate_quiet">少</string>
+    <string name="rate_standard">标准</string>
+    <string name="rate_chatty">多</string>
+
+    <!-- 剧烈晃动报警 -->
+    <string name="alarm_shake">检测到剧烈晃动</string>
+    <string name="action_im_fine">我没事</string>
+    <string name="hint_no_gyroscope">这台设备没有陀螺仪，剧烈晃动报警不可用</string>
+
+    <string name="hint_model_missing">未找到 YOLO 模型。请把 yolov8n.onnx 放到 app/src/main/assets/ 后重新安装，或点击右上角「更换模型」从手机存储中选择 .onnx 文件。</string>
+    <string name="hint_model_failed">模型加载失败：%1$s\n请确认文件是 ultralytics 导出的 YOLOv8/YOLO11 检测模型。</string>
+    <string name="hint_camera_failed">摄像头启动失败：%1$s</string>
+    <string name="model_imported">模型已导入，正在加载…</string>
+    <string name="model_import_failed">模型导入失败：%1$s</string>
+
+    <!-- ===== 账号 ===== -->
+    <string name="action_my_bind_code">我的绑定码</string>
+
+    <!-- ===== 扫码登录（受护人出示，监护人扫） ===== -->
+    <string name="qrlogin_title">扫码登录</string>
+    <string name="qrlogin_hint">请让监护人在他的手机上扫描这个二维码</string>
+    <string name="qrlogin_step_wait">等待监护人扫描…</string>
+    <string name="qrlogin_step_scanned">监护人已扫描，正在选择要登录的受护人…</string>
+    <string name="qrlogin_step_exchanging">正在完成登录…</string>
+    <string name="qrlogin_expired">二维码已过期，正在重新生成…</string>
+    <string name="qrlogin_failed">生成登录码失败：%1$s</string>
+    <string name="qrlogin_exchange_failed">登录未完成：%1$s</string>
+    <string name="qrlogin_ttl">%1$d 秒后失效</string>
+    <!-- 换令牌的响应里没有 accessToken（服务端 bug 或代理改写都会变成这样）时的提示。 -->
+    <string name="login_failed_empty">登录响应没有携带令牌，请重新登录</string>
+
+    <!-- ===== 我的绑定码（受护人） ===== -->
+    <string name="bindcode_title">我的绑定码</string>
+    <!-- 那行「受护人：王小明」：让受护人一眼确认这是自己的码，而不是旁边病友的 -->
+    <string name="bindcode_owner">受护人：%1$s</string>
+    <string name="bindcode_hint">请让监护人在他的手机上扫描这个二维码，扫到即完成绑定</string>
+    <string name="bindcode_ttl">%1$d 秒后失效，过期会自动换一张</string>
+    <string name="bindcode_refresh">换一张</string>
+    <string name="bindcode_speak">朗读绑定码</string>
+    <string name="bindcode_speaking">绑定码是 %1$s</string>
+    <string name="bindcode_loading">正在生成…</string>
+    <string name="bindcode_failed">生成失败：%1$s</string>
+
+    <!-- ===== 受护人主页 ===== -->
+    <!-- role_protectee 是从角色入口那页借来的键：布局里用它作本页标题（「受护人」）。
+         角色入口页本身不搬进本工程（本应用里没有第二个角色可切），但这个键值中性，保留原键名，
+         好让 layout 与 client-guardian 的同名布局保持逐字可 diff。 -->
+    <string name="role_protectee">受护人</string>
+    <string name="protectee_home_account_guest">未登录 —— 下面的功能需要先登录</string>
+    <string name="protectee_home_account_unknown">已登录（本次是扫码登录，没有登录名可显示）</string>
+    <string name="protectee_home_section_account">我的账号</string>
+    <string name="protectee_home_login_hint">障碍检测不需要登录，随时可以用。\n绑定码、绑定管理、公益活动和实时会话跟着账号走，需要先扫码登录。</string>
+    <string name="protectee_home_action_login">扫码登录</string>
+    <string name="protectee_home_action_detect">开始障碍检测</string>
+    <string name="protectee_home_detect_desc">无需登录，画面不上传，识别结果只在本机播报</string>
+    <string name="protectee_home_action_bind_code">我的绑定码</string>
+    <string name="protectee_home_bind_code_desc">出示一张二维码让监护人扫，扫到即完成绑定</string>
+    <string name="protectee_home_bindings_desc">看看你和哪几位监护人建立了关系</string>
+    <string name="protectee_home_action_logout">退出登录</string>
+    <string name="protectee_home_logged_out">已退出登录。障碍检测仍然可以直接用。</string>
+
+    <!--
+        ===== 主页四张卡借用的键 =====
+        这几个键的值本身是角色中性的（「绑定管理」「公益活动」「实时会话」「当前账号」），
+        键名却带着 guardian_ 前缀 —— 这是从监护人主页借过来的既有小瑕疵。
+        **两侧刻意保留同名同值**，好让两份 strings.xml 长期可以逐字 diff；
+        不在这里改名。详见 17-开发日记-2026-10-18-受护人端拆分.md §3。
+    -->
+    <string name="guardian_account">当前账号：%1$s</string>
+    <string name="guardian_action_bindings">绑定管理</string>
+    <string name="guardian_action_activities">公益活动</string>
+    <string name="guardian_action_activities_desc">浏览附近的公益志愿活动（只读，报名在机构端）</string>
+    <string name="guardian_action_realtime">实时会话</string>
+    <string name="guardian_action_realtime_desc">和已绑定的受护人开一条实时通道，互发消息</string>
+    <string name="guardian_need_login">请先登录</string>
+
+    <!-- ===== 公益活动（只读） ===== -->
+    <string name="activity_title">公益活动</string>
+    <string name="activity_subtitle">附近公益机构发布的活动。可以查看，报名在机构端进行。</string>
+    <string name="activity_filter_all">全部</string>
+    <string name="activity_filter_recruiting">招募中</string>
+    <string name="activity_filter_in_progress">进行中</string>
+    <string name="activity_filter_ended">已结束</string>
+    <string name="activity_filter_cancelled">已取消</string>
+    <string name="activity_summary">共 %1$d 个活动</string>
+    <string name="activity_empty">这个筛选下还没有活动。\n\n换个状态看看，或稍后再来 —— 活动由公益机构在机构端发布。</string>
+    <string name="activity_action_more">加载更多</string>
+    <string name="activity_quota">已报名 %1$d / %2$d</string>
+    <string name="activity_quota_unknown">名额未定</string>
+    <string name="activity_location_unknown">地点待定</string>
+    <string name="activity_org_unknown">机构未署名</string>
+    <string name="activity_title_unknown">（未命名活动）</string>
+
+    <!-- ===== 通用三态 ===== -->
+    <string name="state_loading">加载中…</string>
+    <string name="state_empty_title">这里还是空的</string>
+    <string name="state_error_title">没能加载出来</string>
+    <string name="state_retry">重试</string>
+
+    <!-- ===== 绑定管理 ===== -->
+    <string name="binding_title">绑定管理</string>
+    <string name="binding_subtitle">监护关系由双方的账号 ID 确定。你可以在这里发起、确认、解除绑定。</string>
+    <string name="binding_tab_list">我的绑定</string>
+    <string name="binding_tab_request">发起绑定</string>
+    <string name="binding_tab_lookup">查找账号</string>
+    <string name="binding_action_refresh">刷新</string>
+    <string name="binding_empty">还没有任何绑定关系。\n\n扫码绑定一位受护人，或到「发起绑定」里输入对方的账号 ID。</string>
+    <string name="binding_row_counterpart">对方：%1$s</string>
+    <string name="binding_row_side_guardian">我在这条关系里是监护人</string>
+    <string name="binding_row_side_protectee">我在这条关系里是受护人</string>
+    <string name="binding_row_side_none">这条关系里没有我</string>
+    <string name="binding_row_initiator_me">发起方：我</string>
+    <string name="binding_row_initiator_other">发起方：对方</string>
+    <string name="binding_row_permanent">永久绑定（代建受护人时建立，不能解除）</string>
+    <string name="binding_row_primary">主监护关系</string>
+    <string name="binding_row_incoming">等你确认</string>
+    <string name="binding_action_accept">确认</string>
+    <string name="binding_action_reject">拒绝</string>
+    <string name="binding_action_cancel">撤回请求</string>
+    <string name="binding_action_terminate">解除绑定</string>
+    <string name="binding_confirm_accept">确认这条绑定关系？确认后对方就能看到你的受护人信息，并能发起实时会话。</string>
+    <string name="binding_confirm_reject">拒绝这条绑定请求？拒绝后对方需要重新发起。</string>
+    <string name="binding_confirm_cancel">撤回你发起的这条绑定请求？</string>
+    <string name="binding_confirm_terminate">解除这条绑定？解除后双方将互相看不到对方，也不能再发起实时会话。这个操作不可撤销。</string>
+    <string name="binding_done_accept">已确认，这条关系已经生效</string>
+    <string name="binding_done_reject">已拒绝</string>
+    <string name="binding_done_cancel">已撤回</string>
+    <string name="binding_done_terminate">已解除</string>
+    <string name="binding_action_failed">操作失败：%1$s</string>
+
+    <string name="binding_request_as_guardian">以监护人身份绑定受护人</string>
+    <string name="binding_request_as_guardian_hint">输入受护人的账号 ID。对方账号 ID 可以在「查找账号」里核对。</string>
+    <string name="binding_request_as_guardian_action">发起绑定</string>
+    <string name="binding_request_as_protectee">以受护人身份申请监护人</string>
+    <string name="binding_request_as_protectee_hint">输入监护人的账号 ID。对方需要在自己的手机上确认。</string>
+    <string name="binding_request_as_protectee_action">申请绑定</string>
+    <string name="binding_request_need_id">请先填写对方的账号 ID</string>
+    <string name="binding_request_sent">绑定请求已发起，等对方确认</string>
+    <string name="binding_request_failed">发起失败：%1$s</string>
+    <string name="binding_request_owner_hint">代建受护人会自动建立永久绑定，不需要在这里发起。</string>
+
+    <string name="binding_lookup_title">按账号 ID 查找</string>
+    <string name="binding_lookup_field">账号 ID</string>
+    <string name="binding_lookup_action">查找</string>
+    <string name="binding_lookup_need_id">请先填写账号 ID</string>
+    <string name="binding_lookup_failed">查找失败：%1$s</string>
+    <string name="binding_lookup_result">账号 %1$s</string>
+    <string name="binding_lookup_display">显示名：%1$s</string>
+    <string name="binding_lookup_role">主角色：%1$s</string>
+    <string name="binding_lookup_roles">角色：%1$s</string>
+    <string name="binding_lookup_status">状态：%1$s</string>
+    <string name="binding_lookup_volunteer">兼任志愿者：%1$s</string>
+    <string name="binding_lookup_yes">是</string>
+    <string name="binding_lookup_no">否</string>
+    <string name="binding_lookup_none">没有查到结果</string>
+
+    <!-- ===== 实时会话 ===== -->
+    <string name="session_title">实时会话</string>
+    <string name="session_subtitle">和已绑定的对方开一条实时通道，用于日常问询与应急联络。通道只在双方都同意后建立。</string>
+    <string name="session_create_title">发起新会话</string>
+    <string name="session_create_field">对方的账号 ID</string>
+    <string name="session_action_create">发起会话</string>
+    <string name="session_list_title">我的会话</string>
+    <string name="session_action_refresh">刷新</string>
+    <string name="session_empty">还没有任何会话。\n\n在上面输入对方的账号 ID 发起一条；对方接受后就能连上。\n\n只能和已绑定的账号通话，未绑定的 ID 会被服务端拒绝。</string>
+    <string name="session_create_need_id">请先填写对方的账号 ID</string>
+    <string name="session_created">会话已发起，等对方接受</string>
+    <string name="session_create_failed">发起失败：%1$s</string>
+    <!-- 会话行 -->
+    <string name="session_row_role_mine">我发起的</string>
+    <string name="session_row_role_theirs">对方发起的</string>
+    <string name="session_row_counterpart">与 %1$s 的会话</string>
+    <string name="session_row_counterpart_unknown">与（未知账号）的会话</string>
+    <string name="session_row_meta">会话 %1$s · %2$s</string>
+    <string name="session_row_waiting_mine">等对方接受</string>
+    <string name="session_row_waiting_theirs">等你接受</string>
+    <!-- 动作 -->
+    <string name="session_action_accept">接受</string>
+    <string name="session_action_reject">拒绝</string>
+    <string name="session_action_connect">连接</string>
+    <string name="session_action_end">结束</string>
+    <string name="session_confirm_accept">接受这条会话？接受后对方可以连接进来，和你互发消息。</string>
+    <string name="session_confirm_reject">拒绝这条会话？拒绝后对方需要重新发起。</string>
+    <string name="session_confirm_end">结束这条会话？结束是双方的：你们都会断开，对方需要重新发起。</string>
+    <string name="session_done_accept">已接受，现在可以连接了</string>
+    <string name="session_done_reject">已拒绝</string>
+    <string name="session_done_end">已结束</string>
+    <string name="session_action_failed">操作失败：%1$s</string>
+    <!-- 连接与消息 -->
+    <string name="session_chat_title">已连接 · 与 %1$s 的会话</string>
+    <string name="session_chat_hint">连接期间互发的消息由服务端转发，不做留存 —— 断开后这条记录就没了。</string>
+    <string name="session_message_field">要说的话</string>
+    <string name="session_action_send">发送</string>
+    <string name="session_action_ping">心跳</string>
+    <string name="session_action_disconnect">断开</string>
+    <string name="session_message_need_text">请先输入想说的话</string>
+    <string name="session_not_connected">连接已经断开了，请重新点「连接」。</string>
+    <string name="session_disconnected">已断开连接</string>
+    <!-- 日志行的前缀：方括号里的那两个字 -->
+    <string name="session_log_connected">[连接] 已建立</string>
+    <string name="session_log_closed">[连接] 已断开</string>
+    <string name="session_log_error">[错误] %1$s</string>
+    <string name="session_log_joined">[会话] 已加入会话</string>
+    <string name="session_log_left">[会话] 对方离开了会话</string>
+    <string name="session_log_mine">[我] %1$s</string>
+    <string name="session_log_peer">[对方] %1$s</string>
+    <string name="session_log_ping">[心跳] 服务端发起心跳</string>
+    <string name="session_log_pong">[心跳] 服务端已回应</string>
+    <string name="session_log_other">[%1$s]</string>
+
+    <string name="action_cancel">取消</string>
+    <string name="action_ok">确定</string>
+</resources>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    筛选项的底：选中态是「纸深色 + 古金描边」，未选中是「透明 + 淡线」。
+
+    四角仍是不对称的（左上最圆、右上最方），与卡片同一套语言 ——
+    筛选条是一排小卡片，不是一排系统 Chip。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/an_paper_deep" />
+            <stroke
+                android:width="@dimen/an_stroke"
+                android:color="@color/an_gold" />
+            <corners
+                android:topLeftRadius="@dimen/an_radius_s"
+                android:topRightRadius="@dimen/an_radius_xs"
+                android:bottomRightRadius="@dimen/an_radius_s"
+                android:bottomLeftRadius="@dimen/an_radius_xs" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <stroke
+                android:width="@dimen/an_stroke_hair"
+                android:color="@color/an_line_soft" />
+            <corners
+                android:topLeftRadius="@dimen/an_radius_s"
+                android:topRightRadius="@dimen/an_radius_xs"
+                android:bottomRightRadius="@dimen/an_radius_s"
+                android:bottomLeftRadius="@dimen/an_radius_xs" />
+        </shape>
+    </item>
+</selector>

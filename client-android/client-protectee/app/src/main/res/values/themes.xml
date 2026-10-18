@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!--
+        受护人客户端主题。
+
+        父主题必须是 MaterialComponents（或其后代）：受护人检测界面用到 Material 的
+        SwitchMaterial，界面基类是 AppCompatActivity。原来继承的
+        android:Theme.Material.Light.NoActionBar 会让 SwitchMaterial 在 inflate 时抛
+        IllegalArgumentException。
+
+        colorOnPrimary / colorOnSecondary 都指向 an_paper 而不是 white/black：
+        an_paper 在日间是米白、夜间是近黑，正好跟着主色一起翻转。
+        主色日间是深古金（配米白字），夜间是浅古金（配近黑字），一组引用两种模式都对，
+        不用在 values-night 里重复覆盖这四个属主/属从的配对。
+    -->
+
+    <!--
+        为什么多出一层 Base：style 资源是按配置「整包」替换的，不是逐条合并。
+        如果 values-night/themes.xml 里直接重写 Theme.Sullivan，那个包只会包含里面写的
+        那三条，颜色属性会全部丢掉、退回 Material 默认色，夜间模式反而变得不像本工程。
+        所以把不随昼夜变化的属性全部放进 Base，日间/夜间两份 Theme.Sullivan 各自只声明
+        自己那几条系统栏开关。
+    -->
+    <style name="Base.Theme.Sullivan" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/an_gold_deep</item>
+        <item name="colorPrimaryVariant">@color/an_ink</item>
+        <item name="colorOnPrimary">@color/an_paper</item>
+        <item name="colorSecondary">@color/an_teal</item>
+        <item name="colorSecondaryVariant">@color/an_teal</item>
+        <item name="colorOnSecondary">@color/an_paper</item>
+        <item name="colorSurface">@color/an_paper_card</item>
+        <item name="colorOnSurface">@color/an_ink</item>
+        <item name="colorError">@color/an_terracotta</item>
+        <item name="colorOnError">@color/an_paper</item>
+        <item name="android:textColorPrimary">@color/an_ink</item>
+        <item name="android:textColorSecondary">@color/an_ink_2</item>
+
+        <!-- 页面底由 an_bg_page 提供（纸底 + 两团光晕），所有非相机页共用。 -->
+        <item name="android:windowBackground">@drawable/an_bg_page</item>
+        <item name="android:statusBarColor">@color/an_paper</item>
+        <item name="android:navigationBarColor">@color/an_paper</item>
+
+        <!-- 复用了同一套 an_* 令牌，系统强制反色会把羊皮纸算成「亮底」再翻一次，结果发灰。 -->
+        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
+    </style>
+
+    <style name="Theme.Sullivan" parent="Base.Theme.Sullivan">
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+
+    <!--
+        相机检测界面：全屏、无 ActionBar，避免遮挡预览画面。
+
+        继承 Theme.Sullivan（而不是重新挂 MaterialComponents）是为了让浮层里的
+        SwitchMaterial / MaterialButton 拿到同一套配色；只把四处「窗体背景」覆盖回纯黑 ——
+        检测页的前提是高对比度，任何纸色或光晕都会削弱叠加在图上的告警色。
+    -->
+    <style name="Theme.Sullivan.Camera" parent="Theme.Sullivan">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:statusBarColor">@android:color/black</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>

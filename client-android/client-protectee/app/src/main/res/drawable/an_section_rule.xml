@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    分区短横线：左短线 + 中央菱形 + 右短线，压在小标题下面。
+
+    比一条通栏的实线轻，又比什么都不画有仪式感。中央菱形是故意的 ——
+    菱形是这套风格里唯一出现的几何形，用来跟满屏的有机曲线对位。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="12dp"
+    android:viewportWidth="120"
+    android:viewportHeight="12">
+
+    <path
+        android:pathData="M0,6 L44,6"
+        android:strokeColor="@color/an_gold"
+        android:strokeWidth="1"
+        android:strokeLineCap="round" />
+
+    <path
+        android:fillColor="@color/an_gold"
+        android:pathData="M60,1.5 L64.5,6 L60,10.5 L55.5,6 z" />
+
+    <path
+        android:pathData="M76,6 L120,6"
+        android:strokeColor="@color/an_gold"
+        android:strokeWidth="1"
+        android:strokeLineCap="round" />
+</vector>

@@ -1,0 +1,46 @@
+[versions]
+agp = "8.13.0"
+retrofit = "2.11.0"
+okhttp = "4.12.0"
+
+# 受护人端侧障碍检测（移植自「参考1」）。版本照搬参考1 已在真机验证过的组合：
+# camera 必须留在 1.4.x —— 1.5.x 需要 compileSdk 36 / AGP 8.9+，会连带撬动整条工具链。
+appcompat = "1.6.1"
+material = "1.10.0"
+camerax = "1.4.1"
+onnxruntime = "1.20.0"
+annotation = "1.8.0"
+# material 1.10 会传递引入 recyclerview 1.0.0（2018 年的版本）。显式声明 1.3.2 是为了
+# 版本可控：1.0.0 的 ViewHolder 回收与 ItemDecoration 行为都和现在写的适配器不一致，
+# 而传递依赖的版本随时可能被别的库顶掉。
+recyclerview = "1.3.2"
+junit = "4.13.2"
+# 二维码生成。选 core 而不是 zxing-android-embedded：
+# core 是纯 Java、零 GMS 依赖（国内设备可用）；BitMatrix → Bitmap 的那二十行桥接代码自己写。
+# 3.5.3 是 3.5.x 线最后一个 release。
+#
+# 本端只**生成**二维码（绑定码、登录票据），不扫 —— 受护人不出示给谁看之外没有扫码场景，
+# client-guardian 那边的 QrImageAnalyzer / QrScanActivity 没有搬过来。
+zxing = "3.5.3"
+
+[libraries]
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
+
+# 端侧检测
+appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+androidx-annotation = { group = "androidx.annotation", name = "annotation", version.ref = "annotation" }
+androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
+camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "camerax" }
+camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
+camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
+camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
+onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxruntime" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }

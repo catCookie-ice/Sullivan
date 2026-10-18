@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        权限只列本应用真正用到的三项。
+
+        与 client-guardian 的差别（不是漏抄）：那边还声明了 RECORD_AUDIO 与两个定位权限，
+        那是既有欠账 —— 代码里没有任何录音或定位调用（grep AudioRecord / MediaRecorder /
+        amap 在 Java 侧零命中），只是 manifest 与依赖在空转。本工程从零写 manifest，
+        不把那些没人用的权限带进来：受护人手机上少一项权限申请，
+        就少一次被用户当成「为什么一个检测工具要麦克风」的怀疑。
+    -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 剧烈晃动报警的振动提示（PromptAnnouncer） -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- 本应用的全部价值都在后置摄像头上，没有相机就不该装 -->
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="true" />
+    <!-- 陀螺仪**不是**必需：缺失时报警功能关闭并提示一次，其余功能照常 -->
+    <uses-feature
+        android:name="android.hardware.sensor.gyroscope"
+        android:required="false" />
+
+    <application
+        android:name=".SullivanApp"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Sullivan"
+        android:usesCleartextTraffic="true">
+        <!--
+            usesCleartextTraffic：后端是 http://<局域网IP>:8642，没有 TLS。
+            不开这一项，Android 9+ 会直接掐掉所有明文请求。
+            这是**已知风险**而非疏漏：明文下二维码票据与最终令牌
+            对同网段任何人都可见。详见 docs/final/17-开发日记-2026-10-16.md
+            与 19-待办-安全与性能加固.md。
+        -->
+
+        <!--
+            启动页：受护人主页。
+            **本工程没有角色入口页** —— 这个应用里没有第二个角色可切，
+            多摆一页只会让低视力用户每次启动都多点一次。
+            主页上「开始障碍检测」那张卡永远可点，登录态、令牌过期、断网都不影响它。
+            锁竖屏：这一页是给用户拿在手上的，横竖切换会重建 Activity 并打断朗读。
+        -->
+        <activity
+            android:name=".ui.protectee.home.ProtecteeHomeActivity"
+            android:exported="true"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            受护人障碍检测页：端侧障碍检测本体。
+            必须锁竖屏且声明 configChanges —— 旋转会重建 Activity 从而拆掉 CameraX 绑定，
+            而预览画面与叠加层的坐标换算都假设画面几何在 Activity 生命周期内不变。
+        -->
+        <activity
+            android:name=".ui.protectee.home.ProtecteeActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Sullivan.Camera" />
+
+        <!-- 受护人「我的绑定码」：登录后才可以进，展示绑定二维码 + 可朗读的短码。 -->
+        <activity
+            android:name=".ui.protectee.binding.BindCodeActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:screenOrientation="portrait" />
+
+        <!-- 受护人扫码登录：出示登录二维码并轮询，换到令牌即回到主页。 -->
+        <activity
+            android:name=".ui.protectee.login.QrLoginActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:screenOrientation="portrait" />
+
+        <!--
+            绑定管理：三个页签（我的绑定 / 发起绑定 / 查找账号），锁竖屏。
+            横竖切换会重建 Activity，而刷新后的列表与页签位置对应不上，
+            用户会以为「刚刚确认的那条不见了」。
+        -->
+        <activity
+            android:name=".ui.common.binding.BindingListActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- 公益活动列表（只读）：需要登录。 -->
+        <activity
+            android:name=".ui.common.activity.ActivityListActivity"
+            android:screenOrientation="portrait" />
+
+        <!--
+            实时会话：列表 + 长连接收发。锁竖屏，因为横竖切换会重建 Activity，
+            而长连接是建在 Activity 生命周期上的 —— 重建会把它断掉，
+            用户正在等的消息就永远等不到了。
+        -->
+        <activity
+            android:name=".ui.common.realtime.RealtimeActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+    </application>
+</manifest>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    角花：两条从左上角甩出的弧形鞭线 + 两片叶芽，只画左上角这一份。
+
+    放页头或拱券卡片的左上角。要放其它三个角时用 android:rotation（90/180/270）旋转，
+    不要再画三份 —— 同一份资源旋转出来的四角，对称性反而比手画四份更整齐。
+
+    viewport 与控件尺寸都是 64dp，所以不做等比缩放，不会失真。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+
+    <!-- 主导鞭线：从角尖向右下甩出，越到末梢越细 -->
+    <path
+        android:pathData="M3,3 C28,6 44,22 47,50"
+        android:strokeColor="@color/an_gold_pale"
+        android:strokeWidth="1.4"
+        android:strokeLineCap="round" />
+
+    <!-- 副导鞭线：反向绕回来，两条之间夹出一个月牙 -->
+    <path
+        android:pathData="M3,3 C6,28 22,44 50,47"
+        android:strokeColor="@color/an_gold_pale"
+        android:strokeWidth="1.4"
+        android:strokeLineCap="round" />
+
+    <path
+        android:fillColor="@color/an_gold_pale"
+        android:pathData="M12,7 c6,-3 11,1 10,6 c-6,2 -11,-1 -10,-6 z" />
+    <path
+        android:fillColor="@color/an_gold_pale"
+        android:pathData="M7,12 c-3,6 1,11 6,10 c2,-6 -1,-11 -6,-10 z" />
+</vector>

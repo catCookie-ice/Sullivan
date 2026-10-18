@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    相机页开关的滑块色。
+
+    相机页底是纯黑，而主题里的 colorSecondary 是深青（an_teal，日间 #2E5A57）——
+    压在黑底上等于看不见，用户没法判断「语音播报」到底是开还是关，
+    而这两个开关恰好是低视力用户最需要确认状态的控件。
+
+    所以固定成一对与黑色底相配的明暗：选中是淡古金，未选是中灰（保留 alpha，
+    让它和 scrim 叠出层次）。这组值只服务相机页，不随昼夜换。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/an_gold_pale" android:state_checked="true" />
+    <item android:color="#FF9A9081" />
+</selector>

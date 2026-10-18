@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TextInputLayout 的 boxStrokeColor：聚焦时换深青，平时是暖线。 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/an_teal" android:state_focused="true" />
+    <item android:color="@color/an_line" />
+</selector>

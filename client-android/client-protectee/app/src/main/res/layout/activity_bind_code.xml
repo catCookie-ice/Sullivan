@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    受护人「我的绑定码」。
+
+    这一页是给**受护人自己看的**，所以：
+    - 纸面上仍是墨色高对比文字，字号偏大（低视力）；
+    - 二维码本身标记为无障碍不可见，旁边配一个可朗读的短码 + 「朗读绑定码」按钮 ——
+      二维码对看不见屏幕的人零信息量，短码才是他能说给监护人听的东西；
+    - 短码按 4 位分组显示（K7M2 XQ9T B4ND），朗读和手抄都少出错。
+
+    二维码的底色必须是纯白：QR 的定位图案靠明暗对比才能算角度，纸色会降低解码率。
+    所以 ImageView 单独铺 @android:color/white，而不是让它透出页面的羊皮纸。
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.Sullivan.Page"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.protectee.binding.BindCodeActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/bindcode_title"
+            android:textAppearance="@style/TextAppearance.Sullivan.Display" />
+
+        <TextView
+            android:id="@+id/bindcode_owner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_s"
+            android:textAppearance="@style/TextAppearance.Sullivan.Body"
+            android:textSize="18sp"
+            tools:text="受护人：王小明" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_xs"
+            android:text="@string/bindcode_hint"
+            android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+
+        <ImageView
+            android:id="@+id/bindcode_image"
+            android:layout_width="280dp"
+            android:layout_height="280dp"
+            android:layout_marginTop="@dimen/an_space_m"
+            android:background="@android:color/white"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:padding="12dp"
+            android:scaleType="fitCenter" />
+
+        <TextView
+            android:id="@+id/bindcode_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_m"
+            android:gravity="center"
+            android:text="@string/bindcode_loading"
+            android:textAppearance="@style/TextAppearance.Sullivan.Body"
+            android:textSize="18sp"
+            android:textColor="@color/an_ink" />
+
+        <!-- 可朗读的短码：大字号 + 字距拉开，读起来和抄起来都清楚 -->
+        <TextView
+            android:id="@+id/bindcode_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_s"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:letterSpacing="0.15"
+            android:textColor="@color/an_ink"
+            android:textSize="30sp"
+            android:textStyle="bold"
+            tools:text="K7M2 XQ9T B4ND" />
+
+        <TextView
+            android:id="@+id/bindcode_ttl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_s"
+            android:gravity="center"
+            android:textAppearance="@style/TextAppearance.Sullivan.Caption"
+            android:textSize="15sp"
+            tools:text="118 秒后失效，过期会自动换一张" />
+
+        <Button
+            android:id="@+id/bindcode_speak"
+            style="@style/Widget.Sullivan.Button.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginTop="@dimen/an_space_l"
+            android:text="@string/bindcode_speak"
+            android:textSize="20sp" />
+
+        <Button
+            android:id="@+id/bindcode_refresh"
+            style="@style/Widget.Sullivan.Button.Outline"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/an_button_height"
+            android:layout_marginTop="@dimen/an_space_m"
+            android:text="@string/bindcode_refresh"
+            android:textSize="18sp" />
+    </LinearLayout>
+</ScrollView>
