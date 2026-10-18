@@ -7,12 +7,14 @@ import android.text.TextUtils;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.sullivan.android.BuildConfig;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
 /**
- * 登录态与服务器地址的本地存储。
+ * 登录态的本地存储，以及后端地址的来源。
  *
  * <p>写法与 {@code vision/assist/AssistSettings} 保持一致：SharedPreferences、
  * 写入一律走 {@code apply()}（不在主线程等磁盘）。
@@ -22,25 +24,26 @@ import java.util.Set;
  * 在网络层没上 TLS 之前，把令牌单独加密只能防住「拿到已 root 设备的人」这一类攻击者，
  * 挡不住同网段的嗅探者 —— 而后者才是这套扫码流程的现实威胁模型。
  * 加密留到后端上 TLS 时一并做，届时这个类的语义不变，换实现即可。
+ *
+ * <p><b>后端地址是构建期常量，不是用户设置。</b>取 {@code BuildConfig.SERVER_BASE_URL}，
+ * 由 {@code app/build.gradle.kts} 从 {@code gradle.properties} 的
+ * {@code serverBaseUrl} 属性注入（写法同 {@code amapApiKey}），打哪个包就连哪台服务器。
+ *
+ * <p>这个类此前把地址存进 SharedPreferences 并在两个页面提供输入框，已撤销。
+ * 撤销的理由是它给出的是一个**假的选择权**：需要填地址的只有帮忙部署的那个人，
+ * 而受护人端按既定口径不做账密登录、根本没人替它把地址填对；
+ * 结果是真机首次安装必然撞上出厂默认值 {@code 10.0.2.2}（模拟器专用的宿主别名，
+ * 真机上无此路由），受护人只看到「网络连接失败」，不知道该改哪里、也没权限改。
+ * 把地址交回给打包的人，这类故障就变成构建期就能发现的问题，而不是现场故障。
  */
 public final class SessionStore {
 
     private static final String FILE_NAME = "session";
-    private static final String KEY_BASE_URL = "base_url";
     private static final String KEY_ACCESS_TOKEN = "access_token";
     private static final String KEY_PRINCIPAL_ID = "principal_id";
     private static final String KEY_PRINCIPAL_TYPE = "principal_type";
     private static final String KEY_ROLES = "roles";
     private static final String KEY_ACCOUNT_LABEL = "account_label";
-
-    /**
-     * 默认后端地址。
-     *
-     * <p>{@code 10.0.2.2} 是 Android 模拟器里指向宿主机的固定地址，服务端默认监听 8642
-     * （见 {@code server-java/README.md}）。真机联调时必须改成宿主机的局域网 IP，
-     * 且手机与电脑在同一网段 —— 所以在设置里留了改动入口，不写死。
-     */
-    public static final String DEFAULT_BASE_URL = "http://10.0.2.2:8642/api/v1/";
 
     private final SharedPreferences preferences;
 
@@ -49,18 +52,22 @@ public final class SessionStore {
                 .getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE);
     }
 
-    /** 后端基地址，保证以 {@code /} 结尾 —— Retrofit 要求 baseUrl 以斜杠收尾。 */
+    /**
+     * 后端基地址，来自构建期常量，保证以 {@code /} 结尾
+     * —— Retrofit 要求 baseUrl 以斜杠收尾。
+     */
     @NonNull
     public String baseUrl() {
-        String stored = preferences.getString(KEY_BASE_URL, null);
-        if (TextUtils.isEmpty(stored)) {
-            return DEFAULT_BASE_URL;
+        String configured = BuildConfig.SERVER_BASE_URL;
+        if (TextUtils.isEmpty(configured)) {
+            // gradle.properties 里没配 serverBaseUrl 时会是空串。空串交给 Retrofit
+            // 只会得到一句 "IllegalArgumentException: Invalid URL" 之类的报错，
+            // 栈里看不出是「配置缺失」；在这里补一刀，把它直接说清楚。
+            throw new IllegalStateException(
+                    "未配置 serverBaseUrl：请在 gradle.properties（或 local.properties）"
+                            + "里设置 serverBaseUrl=http://<主机>:8642/api/v1/");
         }
-        return stored.endsWith("/") ? stored : stored + "/";
-    }
-
-    public void setBaseUrl(@NonNull String baseUrl) {
-        preferences.edit().putString(KEY_BASE_URL, baseUrl.trim()).apply();
+        return configured.endsWith("/") ? configured : configured + "/";
     }
 
     @Nullable

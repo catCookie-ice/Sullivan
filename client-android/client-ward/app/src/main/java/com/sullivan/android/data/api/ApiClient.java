@@ -29,9 +29,10 @@ import retrofit2.converter.gson.GsonConverterFactory;
  * {@code docs/final/17-开发日记-2026-10-16.md}），依赖关系简单到用不着注解处理器：
  * 需要 {@link ApiService} 的地方调 {@link #get(Context)} 即可。
  *
- * <p><b>按 baseUrl 缓存</b>：服务器地址是运行时可改的（设置里输入宿主机 IP），
- * 改过之后 Retrofit 实例必须重建。这里存下建实例时用的 baseUrl，
- * 地址一变就整个重建，避免出现「改了地址但请求还发往旧地址」这种查半天的怪现象。
+ * <p><b>就是进程内单例，没有别的花样</b>：后端地址来自构建期常量
+ * （见 {@link SessionStore#baseUrl()}），一个安装包只可能连一台服务器，
+ * 所以这里不需要「地址变了就重建」那套逻辑。此前那套
+ * （按 baseUrl 缓存 + {@code invalidate()}）随地址输入框一并撤销。
  */
 public final class ApiClient {
 
@@ -40,33 +41,24 @@ public final class ApiClient {
     private static final Gson GSON = new Gson();
 
     private static volatile ApiService service;
-    private static volatile String cachedBaseUrl;
 
     private ApiClient() {
     }
 
-    /** 取接口实例。baseUrl 变化时自动重建。 */
+    /** 取接口实例（进程内单例，首次调用时构建）。 */
     @NonNull
     public static ApiService get(@NonNull Context context) {
-        SessionStore session = new SessionStore(context);
-        String baseUrl = session.baseUrl();
-        if (service == null || !baseUrl.equals(cachedBaseUrl)) {
+        ApiService current = service;
+        if (current == null) {
             synchronized (ApiClient.class) {
-                if (service == null || !baseUrl.equals(cachedBaseUrl)) {
-                    service = build(baseUrl, session).create(ApiService.class);
-                    cachedBaseUrl = baseUrl;
+                if (service == null) {
+                    SessionStore session = new SessionStore(context);
+                    service = build(session.baseUrl(), session).create(ApiService.class);
                 }
+                current = service;
             }
         }
-        return service;
-    }
-
-    /** 改了服务器地址后调用，下一次 {@link #get} 会重建。 */
-    public static void invalidate() {
-        synchronized (ApiClient.class) {
-            service = null;
-            cachedBaseUrl = null;
-        }
+        return current;
     }
 
     private static Retrofit build(@NonNull String baseUrl, @NonNull SessionStore session) {

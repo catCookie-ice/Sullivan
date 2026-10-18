@@ -1,6 +1,33 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
 }
+
+/**
+ * 后端基地址。**构建期常量，不做成用户设置**（理由见 SessionStore 的类注释）。
+ *
+ * 取值顺序（先命中者胜）：
+ *   1. Gradle 项目属性 —— `gradle.properties` 或命令行 `-PserverBaseUrl=…`；
+ *   2. `local.properties`（**不入库**，见根 .gitignore）—— 本机的真实地址放这里。
+ *
+ * 分两处是有意的：`gradle.properties` 是入库文件，里面**不能出现真实内网 IP**
+ * （地址与网段属于环境信息，不该进版本库）；而每个开发机的地址又各不相同，
+ * 所以真实值放 `local.properties`，仓库里只留一个注释掉的占位示例。
+ */
+// local.properties 的内容（Gradle 不会自动把它读成项目属性，得自己读）。
+// 必须 import java.util.Properties：脚本作用域里 `java` 是 AGP 挂上的 JavaPluginExtension
+// 访问器，写 java.util.Properties() 会被解析成「取 java 扩展的 util 属性」而编译失败。
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { stream -> load(stream) }
+    }
+}
+
+val serverBaseUrl: String = (project.findProperty("serverBaseUrl") as String?)
+    ?: localProperties.getProperty("serverBaseUrl")
+    ?: ""
 
 android {
     namespace = "com.sullivan.android"
@@ -17,6 +44,13 @@ android {
         // 占位符不满足会让 manifest merger 直接失败。从 local.properties / gradle 属性读，缺省空串。
         manifestPlaceholders["AMAP_API_KEY"] =
             (project.findProperty("amapApiKey") as String?) ?: ""
+
+        // 后端基地址（SessionStore 读 BuildConfig.SERVER_BASE_URL）。
+        // 缺省是**空串而不是模拟器地址**：给一个看似可用的默认值（10.0.2.2）
+        // 只会把「这个包到底连哪台服务器」这个必须回答的问题推迟到现场，
+        // 而现场给出的答案往往是「网络连接失败」。空串会让第一次取地址时
+        // 直接抛异常说清楚缺了什么（见 SessionStore.baseUrl()）。
+        buildConfigField("String", "SERVER_BASE_URL", "\"$serverBaseUrl\"")
     }
 
     buildTypes {
@@ -65,6 +99,8 @@ dependencies {
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.annotation)
+    // 绑定 / 活动 / 申请 / 会话四个列表共用一套适配器（SimpleListAdapter）。
+    implementation(libs.androidx.recyclerview)
     implementation(libs.camera.core)
     implementation(libs.camera.camera2)
     implementation(libs.camera.lifecycle)
