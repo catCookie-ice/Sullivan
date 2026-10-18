@@ -37,9 +37,11 @@ node_modules/
 dist/
 .vite/
 
-# Android（受护人端工程现位于 client-android/client-ward/）
-client-android/client-ward/.idea/
-client-android/client-ward/app/release/
+# Android（两个独立工程：监护人端 client-guardian，受护人端 client-protectee）
+client-android/client-guardian/.idea/
+client-android/client-guardian/app/release/
+client-android/client-protectee/.idea/
+client-android/client-protectee/app/release/
 *.apk
 *.aab
 
@@ -60,5 +62,5 @@ Thumbs.db
 # 本地个人记录
 个人日记(AI工具排除此文件夹)/
 
-# 参考项目（本地参考材料，不入库；其可用资产已移植进 client-android/client-ward/）
+# 参考项目（本地参考材料，不入库；其端侧检测资产已移植进 client-android/client-protectee/）
 参考1/
