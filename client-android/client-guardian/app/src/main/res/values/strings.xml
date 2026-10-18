@@ -1,53 +1,20 @@
 <resources>
     <string name="app_name">Sullivan</string>
 
-    <!-- ===== 受护人入口 ===== -->
+    <!--
+        ===== 角色入口 =====
+        受护人这一项已随受护人端拆走（client-android/client-protectee）。
+        本应用只有监护人 / 志愿者两个角色。原来的 role_not_implemented
+        （「%1$s客户端尚未实现」）在志愿者主页实现后就没有引用，早已删除；
+        它当初存在的原因仍成立：志愿者端的「接收附近的协助请求」「我的报名记录」
+        在服务端仍然没有接口，志愿者主页是用文案说明这件事，而不是摆两个点了没反应的入口。
+    -->
     <string name="role_entry_title">选择你的角色</string>
-    <string name="role_entry_subtitle">受护人可在本机进行障碍检测与语音提示，画面不上传</string>
-    <string name="role_protectee">受护人</string>
-    <string name="role_protectee_desc">开启摄像头，实时识别前方障碍并语音提示</string>
+    <string name="role_entry_subtitle">监护人与志愿者都在这里登录</string>
     <string name="role_guardian">监护人</string>
-    <string name="role_guardian_desc">查看绑定受护人的位置与报警</string>
+    <string name="role_guardian_desc">查看绑定受护人的绑定关系、发起实时会话</string>
     <string name="role_volunteer">志愿者</string>
     <string name="role_volunteer_desc">浏览公益活动，与已绑定的对方实时会话</string>
-    <!-- 曾有一条 role_not_implemented（「%1$s客户端尚未实现」），志愿者主页实现后已无引用，删除。
-         不过要记住它当初存在的原因：志愿者端的「接收附近的协助请求」「我的报名记录」
-         在服务端仍然没有接口，志愿者主页是用文案说明这件事，而不是摆两个点了没反应的入口。 -->
-
-    <!-- ===== 障碍检测（移植自「参考1」端侧检测应用） ===== -->
-    <string name="status_model_loading">正在加载模型…</string>
-    <string name="status_model_missing">未找到模型文件</string>
-    <string name="status_model_ready">模型就绪：%1$s</string>
-    <string name="status_model_failed">模型加载失败</string>
-    <string name="model_source_imported">自定义模型</string>
-
-    <string name="prompt_idle">正在启动摄像头…</string>
-    <string name="prompt_no_permission">需要摄像头权限才能进行障碍检测</string>
-    <string name="prompt_grant">授予权限</string>
-
-    <string name="switch_speech">语音播报</string>
-    <string name="switch_haptics">振动提示</string>
-    <string name="action_pick_model">更换模型</string>
-
-    <!-- 播报频率档位：按钮上显示当前档位，点一下换下一档 -->
-    <string name="action_rate">播报频率：%1$s</string>
-    <string name="rate_quiet">少</string>
-    <string name="rate_standard">标准</string>
-    <string name="rate_chatty">多</string>
-
-    <!-- 剧烈晃动报警 -->
-    <string name="alarm_shake">检测到剧烈晃动</string>
-    <string name="action_im_fine">我没事</string>
-    <string name="hint_no_gyroscope">这台设备没有陀螺仪，剧烈晃动报警不可用</string>
-
-    <string name="hint_model_missing">未找到 YOLO 模型。请把 yolov8n.onnx 放到 app/src/main/assets/ 后重新安装，或点击右上角「更换模型」从手机存储中选择 .onnx 文件。</string>
-    <string name="hint_model_failed">模型加载失败：%1$s\n请确认文件是 ultralytics 导出的 YOLOv8/YOLO11 检测模型。</string>
-    <string name="hint_camera_failed">摄像头启动失败：%1$s</string>
-    <string name="model_imported">模型已导入，正在加载…</string>
-    <string name="model_import_failed">模型导入失败：%1$s</string>
-
-    <!-- ===== 账号与登录 ===== -->
-    <string name="action_my_bind_code">我的绑定码</string>
 
     <string name="login_title">监护人登录</string>
     <string name="login_subtitle">扫码绑定受护人、扫受护人登录码，都需要你先登录。</string>
@@ -57,7 +24,6 @@
     <string name="login_field_account">登录名</string>
     <string name="login_field_password">密码</string>
     <string name="login_action_submit">登录</string>
-    <string name="login_action_scan_login">我是受护人，改用扫码登录</string>
     <string name="login_action_register">注册账号</string>
     <string name="login_action_forgot">忘记密码</string>
     <string name="login_in_progress">正在登录…</string>
@@ -65,28 +31,10 @@
     <string name="login_failed_empty">登录响应没有携带令牌，请重新登录</string>
     <string name="login_succeeded">登录成功</string>
 
-    <!-- ===== 扫码登录（受护人） ===== -->
-    <string name="qrlogin_title">扫码登录</string>
-    <string name="qrlogin_hint">请让监护人在他的手机上扫描这个二维码</string>
-    <string name="qrlogin_step_wait">等待监护人扫描…</string>
-    <string name="qrlogin_step_scanned">监护人已扫描，正在选择要登录的受护人…</string>
-    <string name="qrlogin_step_exchanging">正在完成登录…</string>
-    <string name="qrlogin_expired">二维码已过期，正在重新生成…</string>
-    <string name="qrlogin_failed">生成登录码失败：%1$s</string>
-    <string name="qrlogin_exchange_failed">登录未完成：%1$s</string>
-    <string name="qrlogin_ttl">%1$d 秒后失效</string>
-
-    <!-- ===== 我的绑定码（受护人） ===== -->
-    <string name="bindcode_title">我的绑定码</string>
-    <!-- 那行「受护人：王小明」：让受护人一眼确认这是自己的码，而不是旁边病友的 -->
-    <string name="bindcode_owner">受护人：%1$s</string>
-    <string name="bindcode_hint">请让监护人在他的手机上扫描这个二维码，扫到即完成绑定</string>
-    <string name="bindcode_ttl">%1$d 秒后失效，过期会自动换一张</string>
-    <string name="bindcode_refresh">换一张</string>
-    <string name="bindcode_speak">朗读绑定码</string>
-    <string name="bindcode_speaking">绑定码是 %1$s</string>
-    <string name="bindcode_loading">正在生成…</string>
-    <string name="bindcode_failed">生成失败：%1$s</string>
+    <!--
+        扫码登录（受护人出示）与「我的绑定码」两块字符串已随受护人端拆走
+        （client-android/client-protectee）。本端只剩「扫码」这一侧，见下面「扫码页」。
+    -->
 
     <!-- ===== 扫码页 ===== -->
     <string name="scan_title_bind">扫描受护人的绑定码</string>
@@ -106,6 +54,12 @@
     <!-- ===== 监护人主页 ===== -->
     <string name="guardian_title">监护人</string>
     <string name="guardian_account">当前账号：%1$s</string>
+    <!--
+        「有令牌但没拿到账号名」的兜底文案。
+        原先借用的是受护人那套的 protectee_home_account_unknown，受护人端拆走后
+        那批字符串不在了；这里补一条本端自己的，志愿者主页在用。
+    -->
+    <string name="account_unknown">已登录（没有取到账号名）</string>
     <string name="guardian_action_scan_bind">扫码绑定受护人</string>
     <string name="guardian_action_scan_bind_desc">扫描受护人出示的绑定码，扫到即完成绑定</string>
     <string name="guardian_action_scan_login">扫受护人登录码</string>
@@ -132,21 +86,6 @@
     <string name="guardian_scan_failed">取候选受护人失败：%1$s</string>
     <string name="guardian_logged_out">已退出登录</string>
     <string name="guardian_need_login">请先登录</string>
-
-    <!-- ===== 受护人主页（登录后） ===== -->
-    <!-- 扫码登录拿不到登录名（那条路径本来就没有「输入登录名」这一步），所以这句要有第三个说法。 -->
-    <string name="protectee_home_account_guest">未登录 —— 下面的功能需要先登录</string>
-    <string name="protectee_home_account_unknown">已登录（本次是扫码登录，没有登录名可显示）</string>
-    <string name="protectee_home_section_account">我的账号</string>
-    <string name="protectee_home_login_hint">障碍检测不需要登录，随时可以用。\n绑定码、绑定管理、公益活动和实时会话跟着账号走，需要先扫码登录。</string>
-    <string name="protectee_home_action_login">扫码登录</string>
-    <string name="protectee_home_action_detect">开始障碍检测</string>
-    <string name="protectee_home_detect_desc">无需登录，画面不上传，识别结果只在本机播报</string>
-    <string name="protectee_home_action_bind_code">我的绑定码</string>
-    <string name="protectee_home_bind_code_desc">出示一张二维码让监护人扫，扫到即完成绑定</string>
-    <string name="protectee_home_bindings_desc">看看你和哪几位监护人建立了关系</string>
-    <string name="protectee_home_action_logout">退出登录</string>
-    <string name="protectee_home_logged_out">已退出登录。障碍检测仍然可以直接用。</string>
 
     <!-- ===== 志愿者主页 ===== -->
     <!-- 不用 Markdown 的 **强调**：TextView 会原样把星号画出来。 -->
@@ -175,7 +114,6 @@
     <string name="register_action_submit">注册并登录</string>
     <string name="register_missing_fields">请填写登录名、显示名和密码</string>
     <string name="register_account_too_short">登录名至少 4 位</string>
-    <string name="register_display_missing">请填写显示名</string>
     <string name="register_password_too_short">密码至少 8 位</string>
     <string name="register_password_mismatch">两次输入的密码不一致</string>
     <string name="register_in_progress">正在注册…</string>
@@ -200,8 +138,6 @@
     <string name="forgot_pick_method">选择找回方式</string>
     <string name="forgot_method_phone">手机号（%1$s）</string>
     <string name="forgot_method_email">邮箱（%1$s）</string>
-    <string name="forgot_complete_phone">请补全 11 位手机号</string>
-    <string name="forgot_complete_email">请补全完整邮箱</string>
     <string name="forgot_field_complete_phone">完整手机号</string>
     <string name="forgot_field_complete_email">完整邮箱</string>
     <string name="forgot_need_method">请先选择找回方式</string>
@@ -268,7 +204,6 @@
     <string name="state_empty_title">这里还是空的</string>
     <string name="state_error_title">没能加载出来</string>
     <string name="state_retry">重试</string>
-    <string name="state_generic_failed">加载失败：%1$s</string>
 
     <!-- ===== 绑定管理 ===== -->
     <string name="binding_title">绑定管理</string>
@@ -376,7 +311,6 @@
     <string name="session_done_accept">已接受，现在可以连接了</string>
     <string name="session_done_reject">已拒绝</string>
     <string name="session_done_end">已结束</string>
-    <string name="session_ended_by_peer">这条会话已被对方结束</string>
     <string name="session_action_failed">操作失败：%1$s</string>
     <!-- 连接与消息 -->
     <string name="session_chat_title">已连接 · 与 %1$s 的会话</string>

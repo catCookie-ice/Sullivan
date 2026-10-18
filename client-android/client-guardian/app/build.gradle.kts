@@ -72,10 +72,9 @@ android {
         encoding = "UTF-8"
     }
 
-    androidResources {
-        // .onnx 模型直接以未压缩方式打包，避免每次加载时解压整个文件（12 MB）。
-        noCompress.add("onnx")
-    }
+    // 原有一条 androidResources { noCompress.add("onnx") }，为 12 MB 的
+    // yolov8n.onnx 免解压加载而设。模型与 assets/ 目录都已随受护人端拆走，
+    // 这里不再需要 —— 留着它只是在为一份不存在的资源开免压实名。
 
     buildFeatures {
         // ApiClient 用 BuildConfig.DEBUG 决定要不要装 HTTP 日志拦截器：
@@ -95,19 +94,21 @@ dependencies {
 
     implementation(libs.amap.location)
 
-    // 受护人端侧障碍检测：相机预览 + 端侧 ONNX 推理
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.annotation)
     // 绑定 / 活动 / 申请 / 会话四个列表共用一套适配器（SimpleListAdapter）。
     implementation(libs.androidx.recyclerview)
+    // 相机只剩「扫码」一处用途（QrScanActivity + QrImageAnalyzer），
+    // 用它跑 CameraX 预览 + 逐帧分析。端侧 ONNX 推理已随受护人端拆走，
+    // 因此 libs.onnxruntime.android 不再列在这里。
     implementation(libs.camera.core)
     implementation(libs.camera.camera2)
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.view)
-    implementation(libs.onnxruntime.android)
 
-    // 二维码：生成（绑定码/登录码）与解码（扫码页共用同一套 BitMatrix 处理）
+    // 二维码：解码（扫码页的 ZXing 多格式 Reader）。
+    // 生成那一侧（QrBitmapGenerator）已随受护人端拆走。
     implementation(libs.zxing.core)
 
     testImplementation(libs.junit)

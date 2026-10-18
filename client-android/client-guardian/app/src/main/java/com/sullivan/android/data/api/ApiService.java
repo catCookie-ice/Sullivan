@@ -81,15 +81,12 @@ public interface ApiService {
 
     // ------------------------------------------------------------------
     // 功能 A：扫码绑定（受护人出示 + 监护人扫码）
+    //
+    // 本端只有「扫码」这一侧：签发绑定码的 issueBindCode() 与取当前码
+    // currentBindCode() 属于**出示设备**（受护人那台），随受护人端拆到
+    // client-protectee 去了。currentBindCode 在拆分时顺带删掉 —— 它在拆分前
+    // 就已经没有任何调用方。
     // ------------------------------------------------------------------
-
-    /** 受护人本人签发一张新的绑定码（同一位受护人的旧码会被作废）。 */
-    @POST("qr/bind-codes")
-    Call<QrDtos.BindCodeResponse> issueBindCode();
-
-    /** 受护人本人取当前有效码；没有有效码时服务端返回 204，调用方得到空 body。 */
-    @GET("qr/bind-codes/current")
-    Call<QrDtos.BindCodeResponse> currentBindCode();
 
     /**
      * 监护人扫码绑定。{@code guardianId} 由服务端从 Bearer 令牌取得，
@@ -100,16 +97,11 @@ public interface ApiService {
 
     // ------------------------------------------------------------------
     // 功能 B：扫码登录（受护人出示登录码 + 监护人授权）
+    //
+    // 本端只有「授权」这一侧。建票（createLoginTicket）、轮询（loginTicketStatus）、
+    // 换令牌（exchangeLoginTicket）都是**出示设备**的动作，随受护人端拆到
+    // client-protectee 去了 —— 那三步都由受护人那台手机发起。
     // ------------------------------------------------------------------
-
-    /** 出示设备建票。**匿名可调用** —— 此时这台设备还没登录。 */
-    @POST("qr/login-tickets")
-    Call<QrDtos.LoginTicketCreateResponse> createLoginTicket(
-            @Body QrDtos.LoginTicketCreateRequest request);
-
-    /** 出示设备轮询状态。**匿名可调用**；响应里不会有令牌。 */
-    @GET("qr/login-tickets/{ticket}")
-    Call<QrDtos.LoginTicketStatusResponse> loginTicketStatus(@Path("ticket") String ticket);
 
     /** 监护人扫到登录码：标记 SCANNED，并取回自己名下可作为授权对象的受护人候选。 */
     @POST("qr/login-tickets/{ticket}/scan")
@@ -119,14 +111,6 @@ public interface ApiService {
     @POST("qr/login-tickets/{ticket}/confirm")
     Call<QrDtos.LoginTicketStatusResponse> confirmLoginTicket(
             @Path("ticket") String ticket, @Body QrDtos.LoginTicketConfirmRequest request);
-
-    /**
-     * 出示设备用本机 clientSecret + 拿到的 exchangeCode 换回令牌，**一次性**。
-     * 匿名可调用：secret 就是这一步的凭证。
-     */
-    @POST("qr/login-tickets/{ticket}/exchange")
-    Call<AuthDtos.TokenResponse> exchangeLoginTicket(
-            @Path("ticket") String ticket, @Body QrDtos.LoginTicketExchangeRequest request);
 
     // ------------------------------------------------------------------
     // 绑定管理（双向：监护人与受护人都能发起，接收方确认）

@@ -136,9 +136,12 @@
         </LinearLayout>
 
         <!--
-            注册与找回放在扫码登录下面一行：它们都是「账号出问题时」的旁路，
+            注册与找回并列一行：它们都是「账号出问题时」的旁路，
             不该和主表单抢同一块视觉重量。两个都是 Ghost（纯文字）样式，
             但高度仍是 an_button_height，触控目标一点没缩。
+
+            原来这里还有一个「我是受护人，改用扫码登录」的入口，随受护人端拆走
+            （client-protectee）一并删除 —— 本应用里已经没有受护人登录这回事。
         -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -162,13 +165,5 @@
                 android:layout_weight="1"
                 android:text="@string/login_action_forgot" />
         </LinearLayout>
-
-        <Button
-            android:id="@+id/login_protectee_qr"
-            style="@style/Widget.Sullivan.Button.Outline"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/an_button_height"
-            android:layout_marginTop="@dimen/an_space_m"
-            android:text="@string/login_action_scan_login" />
     </LinearLayout>
 </ScrollView>

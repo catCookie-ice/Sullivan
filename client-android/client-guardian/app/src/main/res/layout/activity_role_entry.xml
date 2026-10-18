@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     角色选择入口（docs/final/00 §4.2）。
-    每个角色是一整块可点区域：受护人用户多为低视力人群，靠 TalkBack 逐个聚焦，
-    点击目标做得足够大，且每块都带 contentDescription，读出来就能听懂这个角色是干什么的。
+    每个角色是一整块可点区域：靠 TalkBack 逐个聚焦，点击目标做得足够大，
+    且每块都带 contentDescription，读出来就能听懂这个角色是干什么的。
+
+    受护人不在这一页：受护人端已拆成独立应用 Sullivan 守护（client-protectee）。
 
     视觉上是新艺术运动风格的第一屏：羊皮纸底、左上角花蔓、衬线标题、
     错位双框卡片。装饰元素（花蔓、藤蔓线）一律 importantForAccessibility="no" ——
@@ -71,40 +73,17 @@
             android:scaleType="fitXY"
             android:src="@drawable/an_divider_vine" />
 
-        <!-- ===== 受护人 ===== -->
-        <LinearLayout
-            android:id="@+id/card_protectee"
-            style="@style/Widget.Sullivan.Card"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/an_space_l"
-            android:clickable="true"
-            android:contentDescription="@string/role_protectee_desc"
-            android:focusable="true"
-            android:minHeight="96dp"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/role_protectee"
-                android:textAppearance="@style/TextAppearance.Sullivan.Title" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/an_space_s"
-                android:text="@string/role_protectee_desc"
-                android:textAppearance="@style/TextAppearance.Sullivan.Body" />
-        </LinearLayout>
-
-        <!-- ===== 监护人 ===== -->
+        <!--
+            ===== 监护人 =====
+            受护人卡片已移至独立工程 client-protectee（见 RoleEntryActivity 的类注释）。
+            本页仍是第一屏，所以监护人卡片改成 an_space_l 上边距，接着页头那道藤蔓分隔线。
+        -->
         <LinearLayout
             android:id="@+id/card_guardian"
             style="@style/Widget.Sullivan.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/an_space_m"
+            android:layout_marginTop="@dimen/an_space_l"
             android:clickable="true"
             android:contentDescription="@string/role_guardian_desc"
             android:focusable="true"

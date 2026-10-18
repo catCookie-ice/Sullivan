@@ -62,7 +62,7 @@ public class VolunteerHomeActivity extends AppCompatActivity {
         String label = session.accountLabel();
         ((TextView) findViewById(R.id.volunteer_home_account)).setText(
                 TextUtils.isEmpty(label)
-                        ? getString(R.string.protectee_home_account_unknown)
+                        ? getString(R.string.account_unknown)
                         : getString(R.string.guardian_account, label));
 
         findViewById(R.id.volunteer_card_activities).setOnClickListener(

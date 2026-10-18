@@ -73,9 +73,12 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- 检测结果配色，与 script.py 中 OpenCV 使用的 BGR 颜色保持一致。 -->
-    <color name="level_clear">#FF4EDC32</color>
-    <color name="level_caution">#FFFFB400</color>
-    <color name="level_danger">#FFE6281E</color>
+    <!--
+        检测结果的三档安全色（level_clear / level_caution / level_danger）
+        已随障碍检测页拆到 client-android/client-protectee。
+        这里不能在两边各留一份：那三个值只服务相机叠加层，留在这里就是没人引用的死条目。
+    -->
+
+    <!-- 扫码页取景框外的压暗层，activity_scan.xml 在用。 -->
     <color name="panel_scrim">#B3000000</color>
 </resources>

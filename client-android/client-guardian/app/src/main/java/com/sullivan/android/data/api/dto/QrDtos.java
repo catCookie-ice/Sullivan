@@ -53,28 +53,11 @@ public final class QrDtos {
 
     // ------------------------------------------------------------------
     // 功能 B：扫码登录
+    //
+    // 本端只有「授权」这一侧。{@code LoginTicketCreateRequest}、
+    // {@code LoginTicketCreateResponse} 与 {@code LoginTicketExchangeRequest}
+    // 属于**出示设备**（受护人那台），随受护人端拆到 client-protectee 去了。
     // ------------------------------------------------------------------
-
-    /**
-     * {@code POST /api/v1/qr/login-tickets} 请求体。
-     *
-     * <p>只上传 {@code sha256(clientSecret)}，secret 本身留在本机。
-     * 二维码里只有 ticket；没有 secret 的话，光看见二维码换不出令牌。
-     */
-    public static final class LoginTicketCreateRequest {
-        public String secretHash;
-
-        public LoginTicketCreateRequest(String secretHash) {
-            this.secretHash = secretHash;
-        }
-    }
-
-    /** {@code POST /api/v1/qr/login-tickets} 响应体。 */
-    public static final class LoginTicketCreateResponse {
-        public String ticket;
-        public String expiresAt;
-        public long ttlSeconds;
-    }
 
     /**
      * {@code GET /api/v1/qr/login-tickets/{ticket}} 响应体。
@@ -112,17 +95,6 @@ public final class QrDtos {
 
         public LoginTicketConfirmRequest(String protecteeId) {
             this.protecteeId = protecteeId;
-        }
-    }
-
-    /** {@code POST .../{ticket}/exchange} 请求体：一次性核销，换取令牌。 */
-    public static final class LoginTicketExchangeRequest {
-        public String clientSecret;
-        public String exchangeCode;
-
-        public LoginTicketExchangeRequest(String clientSecret, String exchangeCode) {
-            this.clientSecret = clientSecret;
-            this.exchangeCode = exchangeCode;
         }
     }
 

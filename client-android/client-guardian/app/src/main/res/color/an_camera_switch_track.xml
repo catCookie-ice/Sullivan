@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- 相机页开关的轨道色，与 an_camera_switch_thumb 配套：选中淡古金半透明，未选中中灰半透明。 -->
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:color="#66D9C48A" android:state_checked="true" />
-    <item android:color="#669A9081" />
-</selector>

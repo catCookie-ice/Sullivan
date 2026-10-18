@@ -113,8 +113,6 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         submit.setOnClickListener(view -> submit());
-        findViewById(R.id.login_protectee_qr).setOnClickListener(
-                view -> startActivity(new Intent(this, QrLoginActivity.class)));
         findViewById(R.id.login_register).setOnClickListener(view -> startActivity(
                 RegisterActivity.intentFor(this, hintOf(this))));
         findViewById(R.id.login_forgot).setOnClickListener(

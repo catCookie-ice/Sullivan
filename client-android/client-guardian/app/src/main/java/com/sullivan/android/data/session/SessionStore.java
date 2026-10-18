@@ -16,8 +16,9 @@ import java.util.Set;
 /**
  * 登录态的本地存储，以及后端地址的来源。
  *
- * <p>写法与 {@code vision/assist/AssistSettings} 保持一致：SharedPreferences、
- * 写入一律走 {@code apply()}（不在主线程等磁盘）。
+ * <p>写法与受护人端（{@code client-protectee}）的 {@code vision/assist/AssistSettings}
+ * 保持一致：SharedPreferences、写入一律走 {@code apply()}（不在主线程等磁盘）。
+ * 那个类已随障碍检测功能迁出本工程，这里保留引述是因为两份实现的约定仍要对齐。
  *
  * <p><b>令牌是明文存的</b>，没有用 EncryptedSharedPreferences：本工程连后端都还在
  * 明文 HTTP 上（见 {@code docs/final/17-开发日记-2026-10-16.md} 的已知风险），

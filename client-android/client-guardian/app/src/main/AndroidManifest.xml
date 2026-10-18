@@ -21,7 +21,7 @@
     <application
         android:name=".SullivanApp"
         android:icon="@mipmap/ic_launcher"
-        android:label="Sullivan"
+        android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Sullivan"
@@ -64,28 +64,13 @@
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize" />
 
-        <!-- 受护人扫码登录：出示登录二维码并轮询，换到令牌即进入受护人主页。 -->
-        <activity
-            android:name=".ui.login.QrLoginActivity"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
-            android:screenOrientation="portrait" />
-
         <!--
-            受护人障碍检测页：端侧障碍检测本体。
-            必须锁竖屏且声明 configChanges —— 旋转会重建 Activity 从而拆掉 CameraX 绑定，
-            而预览画面与叠加层的坐标换算都假设画面几何在 Activity 生命周期内不变。
+            受护人端（扫码登录 / 障碍检测页 / 我的绑定码 / 受护人主页）已拆成
+            独立工程 client-android/client-protectee（应用名「Sullivan 守护」）。
+            那 4 个 Activity 与它们的布局、vision/ 包一并迁出本工程；
+            在这里声明一个指向不存在类的 Activity 会留下点了就崩的入口，所以删干净。
+            监护人侧「扫受护人登录码」仍在，见 ui.common.scan.QrScanActivity。
         -->
-        <activity
-            android:name=".ui.protectee.home.ProtecteeActivity"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Sullivan.Camera" />
-
-        <!-- 受护人「我的绑定码」：登录后才可以进，展示绑定二维码 + 可朗读的短码。 -->
-        <activity
-            android:name=".ui.protectee.binding.BindCodeActivity"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
-            android:screenOrientation="portrait" />
 
         <!-- 监护人主页：扫码绑定 / 扫受护人登录码 / 绑定与账号管理入口。 -->
         <activity android:name=".ui.guardian.home.GuardianActivity" />
@@ -131,15 +116,6 @@
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Sullivan.Camera" />
-
-        <!--
-            受护人主页（登录后）：障碍检测 + 账号相关入口。
-            **不锁竖屏之外的特殊主题**：这一页是普通界面，不碰相机。
-            但它必须在角色入口的第一屏可达 —— 受护人不会再去找别的入口。
-        -->
-        <activity
-            android:name=".ui.protectee.home.ProtecteeHomeActivity"
-            android:screenOrientation="portrait" />
 
         <!-- 志愿者主页：只有「是志愿者且不是监护人」的账号落到这里，见 LoginActivity.homeIntentFor。 -->
         <activity
