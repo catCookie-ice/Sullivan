@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    「设置找回方式」对话框的内容。
+
+    两个字段共用一个说明：至少填一项。**不要**把它们做成「手机号必填、邮箱选填」——
+    后端允许只设其中一种，界面上把手机号标成必填会让没有手机号的人放弃整个流程。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/an_space_l"
+    android:paddingTop="@dimen/an_space_s"
+    android:paddingEnd="@dimen/an_space_l"
+    android:paddingBottom="0dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/recovery_set_hint"
+        android:textAppearance="@style/TextAppearance.Sullivan.Caption" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.Sullivan.TextInputLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/an_space_m"
+        android:hint="@string/recovery_set_field_phone">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/recovery_set_phone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autofillHints="phone"
+            android:inputType="phone"
+            android:maxLength="11"
+            android:maxLines="1"
+            android:textColor="@color/an_ink"
+            android:textSize="@dimen/an_text_body" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.Sullivan.TextInputLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/an_space_m"
+        android:hint="@string/recovery_set_field_email">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/recovery_set_email"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autofillHints="emailAddress"
+            android:inputType="textEmailAddress"
+            android:maxLines="1"
+            android:textColor="@color/an_ink"
+            android:textSize="@dimen/an_text_body" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <TextView
+        android:id="@+id/recovery_set_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/an_space_s"
+        android:textColor="@color/an_terracotta"
+        android:textSize="14sp"
+        android:visibility="gone" />
+</LinearLayout>

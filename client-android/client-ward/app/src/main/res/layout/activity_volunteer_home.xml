@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    志愿者主页。
+
+    **这一页刻意只有四张卡**：web 端的志愿者端除公益活动和实时会话外全是
+    el-empty 占位（附近的协助请求、报名记录），后端没有对应接口。
+    与其在这里画一堆点了没反应的入口，不如把这件事直接写在页面上
+    （见 volunteer_home_notice）。
+
+    「申请兼任志愿者」这张卡只对 roles 含 GUARDIAN 的账号显示，由代码控制 ——
+    纯志愿者账号点进去只会得到一句「只有监护人能申请」，那是个假入口；
+    「切到监护人视角」同理，反过来。
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.Sullivan.Page"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.volunteer.home.VolunteerHomeActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_gravity="top|end"
+                android:contentDescription="@null"
+                android:importantForAccessibility="no"
+                android:rotation="90"
+                android:src="@drawable/an_flourish_corner" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingEnd="56dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Label" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_xs"
+                    android:text="@string/role_volunteer"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Display" />
+
+                <TextView
+                    android:id="@+id/volunteer_home_account"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_s"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Body"
+                    tools:text="当前账号：li_wei" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="20dp"
+            android:layout_marginTop="@dimen/an_space_m"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY"
+            android:src="@drawable/an_divider_vine" />
+
+        <LinearLayout
+            style="@style/Widget.Sullivan.Card.Flat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_l"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/volunteer_home_notice"
+                android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/volunteer_card_activities"
+            style="@style/Widget.Sullivan.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_m"
+            android:clickable="true"
+            android:contentDescription="@string/guardian_action_activities_desc"
+            android:focusable="true"
+            android:minHeight="96dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/guardian_action_activities"
+                android:textAppearance="@style/TextAppearance.Sullivan.Title" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_s"
+                android:text="@string/guardian_action_activities_desc"
+                android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/volunteer_card_realtime"
+            style="@style/Widget.Sullivan.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_m"
+            android:clickable="true"
+            android:contentDescription="@string/guardian_action_realtime_desc"
+            android:focusable="true"
+            android:minHeight="96dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/guardian_action_realtime"
+                android:textAppearance="@style/TextAppearance.Sullivan.Title" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_s"
+                android:text="@string/guardian_action_realtime_desc"
+                android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+        </LinearLayout>
+
+        <!-- 兼任申请：只在 roles 含 GUARDIAN 时显示（服务端只接受监护人提交）。 -->
+        <LinearLayout
+            android:id="@+id/volunteer_card_apply"
+            style="@style/Widget.Sullivan.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_m"
+            android:clickable="true"
+            android:contentDescription="@string/volunteer_home_apply_desc"
+            android:focusable="true"
+            android:minHeight="96dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/volunteer_title"
+                android:textAppearance="@style/TextAppearance.Sullivan.Title" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_s"
+                android:text="@string/volunteer_home_apply_desc"
+                android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+        </LinearLayout>
+
+        <!-- 切到监护人视角：同样只在 roles 含 GUARDIAN 时显示。 -->
+        <LinearLayout
+            android:id="@+id/volunteer_card_guardian"
+            style="@style/Widget.Sullivan.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_m"
+            android:clickable="true"
+            android:contentDescription="@string/volunteer_home_guardian_desc"
+            android:focusable="true"
+            android:minHeight="96dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/volunteer_home_guardian"
+                android:textAppearance="@style/TextAppearance.Sullivan.Title" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_s"
+                android:text="@string/volunteer_home_guardian_desc"
+                android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/volunteer_home_logout"
+            style="@style/Widget.Sullivan.Button.Outline"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/an_button_height"
+            android:layout_marginTop="@dimen/an_space_l"
+            android:text="@string/guardian_action_logout" />
+    </LinearLayout>
+</ScrollView>

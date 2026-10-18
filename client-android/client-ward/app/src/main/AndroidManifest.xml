@@ -20,7 +20,9 @@
 
     <application
         android:name=".SullivanApp"
+        android:icon="@mipmap/ic_launcher"
         android:label="Sullivan"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Sullivan"
         android:usesCleartextTraffic="true">
@@ -46,6 +48,22 @@
             android:name=".ui.login.LoginActivity"
             android:windowSoftInputMode="adjustResize" />
 
+        <!--
+            注册：只有监护人/志愿者能自助注册，受护人账号由监护人代建。
+            锁竖屏：这是一整页表单，横竖切换会重建 Activity 并清掉已输入的内容，
+            而用户此时多半正在对着屏幕外的纸抄一个手机号。
+        -->
+        <activity
+            android:name=".ui.auth.RegisterActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- 找回密码：三步向导，每一步的选项都依赖上一步的响应，同样不能横竖重建。 -->
+        <activity
+            android:name=".ui.auth.ForgotPasswordActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- 受护人扫码登录：出示登录二维码并轮询，换到令牌即进入受护人主页。 -->
         <activity
             android:name=".ui.login.QrLoginActivity"
@@ -53,7 +71,7 @@
             android:screenOrientation="portrait" />
 
         <!--
-            受护人主页：端侧障碍检测。
+            受护人障碍检测页：端侧障碍检测本体。
             必须锁竖屏且声明 configChanges —— 旋转会重建 Activity 从而拆掉 CameraX 绑定，
             而预览画面与叠加层的坐标换算都假设画面几何在 Activity 生命周期内不变。
         -->
@@ -69,8 +87,43 @@
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:screenOrientation="portrait" />
 
-        <!-- 监护人主页：扫码绑定 / 扫受护人登录码 / 已绑定受护人列表。 -->
+        <!-- 监护人主页：扫码绑定 / 扫受护人登录码 / 绑定与账号管理入口。 -->
         <activity android:name=".ui.guardian.home.GuardianActivity" />
+
+        <!-- 绑定管理：三个页签（我的绑定 / 发起绑定 / 查找账号），锁竖屏。
+             横竖切换会重建 Activity，而刷新后的列表与页签位置对应不上，
+             用户会以为「刚刚确认的那条不见了」。 -->
+        <activity
+            android:name=".ui.guardian.binding.BindingListActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- 创建受护人：一整页表单，同样锁竖屏（旋转会清掉已输入的登录名与密码）。 -->
+        <activity
+            android:name=".ui.guardian.binding.CreateProtecteeActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- 志愿者兼任申请：提交 + 申请记录 + 撤销。 -->
+        <activity
+            android:name=".ui.guardian.volunteer.VolunteerApplyActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- 公益活动列表（只读）：监护人与志愿者共用，需要登录。 -->
+        <activity
+            android:name=".ui.common.activity.ActivityListActivity"
+            android:screenOrientation="portrait" />
+
+        <!--
+            实时会话：列表 + 长连接收发。锁竖屏，因为横竖切换会重建 Activity，
+            而长连接是建在 Activity 生命周期上的 —— 重建会把它断掉，
+            用户正在等的消息就永远等不到了。
+        -->
+        <activity
+            android:name=".ui.common.realtime.RealtimeActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
 
         <!-- 通用扫码页：不透明全屏主题；自己申请 CAMERA 权限（监护人可能是全新安装）。 -->
         <activity
@@ -80,10 +133,18 @@
             android:theme="@style/Theme.Sullivan.Camera" />
 
         <!--
-            志愿者主页**不在这里声明**：该界面尚未实现，RoleEntryActivity 对志愿者入口
-            弹的是「尚未实现」提示。声明一个指向不存在类的 Activity 不会让构建失败
-            （manifest 不校验类是否存在），但会留下一个点了就崩的入口。
+            受护人主页（登录后）：障碍检测 + 账号相关入口。
+            **不锁竖屏之外的特殊主题**：这一页是普通界面，不碰相机。
+            但它必须在角色入口的第一屏可达 —— 受护人不会再去找别的入口。
         -->
+        <activity
+            android:name=".ui.protectee.home.ProtecteeHomeActivity"
+            android:screenOrientation="portrait" />
+
+        <!-- 志愿者主页：只有「是志愿者且不是监护人」的账号落到这里，见 LoginActivity.homeIntentFor。 -->
+        <activity
+            android:name=".ui.volunteer.home.VolunteerHomeActivity"
+            android:screenOrientation="portrait" />
 
         <meta-data
             android:name="com.amap.api.v2.apikey"

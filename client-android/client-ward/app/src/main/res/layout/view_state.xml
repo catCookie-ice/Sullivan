@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    列表页的「加载中 / 空 / 失败重试」三态视图。
+
+    三态共用同一块区域，靠 visibility 切换 —— 如果每个状态各占一块，
+    切换时整页会跳一下，而用户此时正在读那句「为什么没有内容」。
+
+    重试按钮只在失败态出现：空态不是错误，给它一个按钮只会让人反复点。
+-->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <TextView
+        android:id="@+id/state_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textAppearance="@style/TextAppearance.Sullivan.Title"
+        tools:text="还没有绑定关系" />
+
+    <TextView
+        android:id="@+id/state_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/an_space_s"
+        android:gravity="center"
+        android:textAppearance="@style/TextAppearance.Sullivan.Body"
+        tools:text="扫码绑定一位受护人后，这里会显示你们的关系。" />
+
+    <Button
+        android:id="@+id/state_retry"
+        style="@style/Widget.Sullivan.Button.Outline"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/an_button_height"
+        android:layout_marginTop="@dimen/an_space_l"
+        android:layout_gravity="center_horizontal"
+        android:minWidth="160dp"
+        android:text="@string/state_retry"
+        android:visibility="gone" />
+</merge>

@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    志愿者兼任申请：提交一次申请 + 我的申请记录 + 撤销。
+
+    只服务「监护人兼任志愿者」：想当志愿者的人必须先有 GUARDIAN 账号，
+    再走这里的申请把 VOLUNTEER 加成第二个角色。反过来不行 ——
+    志愿者账号不能申请成为监护人，因为监护关系需要一位具体的受护人，
+    而受护人账号只能由监护人代建。这条不对称写在页面上，
+    否则用户会一直找「申请成为监护人」的按钮。
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.Sullivan.Page"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.guardian.volunteer.VolunteerApplyActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_gravity="top|end"
+                android:contentDescription="@null"
+                android:importantForAccessibility="no"
+                android:rotation="90"
+                android:src="@drawable/an_flourish_corner" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingEnd="56dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Label" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_xs"
+                    android:text="@string/volunteer_title"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Display" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_s"
+                    android:text="@string/volunteer_subtitle"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="20dp"
+            android:layout_marginTop="@dimen/an_space_m"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY"
+            android:src="@drawable/an_divider_vine" />
+
+        <LinearLayout
+            style="@style/Widget.Sullivan.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_l"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/volunteer_reason_label"
+                android:textAppearance="@style/TextAppearance.Sullivan.Section" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Sullivan.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_s"
+                android:hint="@string/volunteer_reason_hint">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/volunteer_reason"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top|start"
+                    android:inputType="textMultiLine"
+                    android:maxLength="1000"
+                    android:minLines="3"
+                    android:textColor="@color/an_ink"
+                    android:textSize="@dimen/an_text_body" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Button
+                android:id="@+id/volunteer_submit"
+                style="@style/Widget.Sullivan.Button.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/an_button_height"
+                android:layout_marginTop="@dimen/an_space_l"
+                android:text="@string/volunteer_action_submit" />
+
+            <TextView
+                android:id="@+id/volunteer_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_m"
+                android:textSize="15sp"
+                android:visibility="gone"
+                tools:text="申请已提交，等管理员审核"
+                tools:visibility="visible" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_xl"
+            android:text="@string/volunteer_history_title"
+            android:textAppearance="@style/TextAppearance.Sullivan.Section" />
+
+        <ImageView
+            android:layout_width="120dp"
+            android:layout_height="12dp"
+            android:layout_marginTop="@dimen/an_space_s"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY"
+            android:src="@drawable/an_section_rule" />
+
+        <com.sullivan.android.ui.common.components.StateView
+            android:id="@+id/volunteer_state"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_m" />
+
+        <LinearLayout
+            android:id="@+id/volunteer_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </LinearLayout>
+</ScrollView>

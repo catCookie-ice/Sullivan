@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    志愿者申请记录的一行。
+
+    时间直接显示服务端的字符串，只把 'T' 换成空格、去掉秒以后的部分：
+    服务端给的是 LocalDateTime（如 2026-08-17T10:00:00），没有时区，
+    客户端不做任何换算 —— 换错时区会让「申请时间」比实际早或晚几个小时，
+    而它对用户唯一的意义就是「这是我什么时候提交的」。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.Sullivan.Card.Flat"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/an_space_m"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/application_status"
+            style="@style/Widget.Sullivan.Chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/an_chip_neutral"
+            android:textAppearance="@style/TextAppearance.Sullivan.Caption"
+            tools:text="待审核" />
+
+        <TextView
+            android:id="@+id/application_created"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/an_space_s"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:textAppearance="@style/TextAppearance.Sullivan.Caption"
+            tools:text="2026-08-17 10:00" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/application_reason"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/an_space_s"
+        android:textAppearance="@style/TextAppearance.Sullivan.Body"
+        tools:text="希望周末参与社区志愿活动" />
+
+    <Button
+        android:id="@+id/application_cancel"
+        style="@style/Widget.Sullivan.Button.Outline"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/an_touch_min"
+        android:layout_marginTop="@dimen/an_space_s"
+        android:text="@string/volunteer_action_cancel"
+        android:textSize="15sp"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+</LinearLayout>

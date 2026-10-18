@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    实时会话的一行。
+
+    状态与动作的关系由 StatusLabels + 会话规则决定，但这里的规则比绑定简单：
+    REQUESTED 只有接收方能接/拒，ACTIVE 双方都能连接与结束，其余状态无动作。
+    三个动作按钮都在布局里，按状态显隐 —— 理由同 row_binding：代码 new 出来的
+    Button 拿不到 MaterialButton 的样式。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.Sullivan.Card.Flat"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/an_space_m"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/session_status"
+            style="@style/Widget.Sullivan.Chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/an_chip_neutral"
+            android:textAppearance="@style/TextAppearance.Sullivan.Caption"
+            tools:text="进行中" />
+
+        <TextView
+            android:id="@+id/session_role"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/an_space_s"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:textAppearance="@style/TextAppearance.Sullivan.Caption"
+            tools:text="我发起的" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/session_counterpart"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/an_space_s"
+        android:textAppearance="@style/TextAppearance.Sullivan.Title"
+        tools:text="与 u_987 的会话" />
+
+    <TextView
+        android:id="@+id/session_meta"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/an_space_xs"
+        android:textAppearance="@style/TextAppearance.Sullivan.Caption"
+        tools:text="会话 rs_1 · 2026-08-17 10:00" />
+
+    <LinearLayout
+        android:id="@+id/session_actions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/an_space_s"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/session_accept"
+            style="@style/Widget.Sullivan.Button.Primary"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/an_touch_min"
+            android:layout_marginEnd="@dimen/an_space_s"
+            android:layout_weight="1"
+            android:text="@string/session_action_accept"
+            android:textSize="15sp"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/session_reject"
+            style="@style/Widget.Sullivan.Button.Outline"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/an_touch_min"
+            android:layout_marginEnd="@dimen/an_space_s"
+            android:layout_weight="1"
+            android:text="@string/session_action_reject"
+            android:textSize="15sp"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/session_connect"
+            style="@style/Widget.Sullivan.Button.Primary"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/an_touch_min"
+            android:layout_marginEnd="@dimen/an_space_s"
+            android:layout_weight="1"
+            android:text="@string/session_action_connect"
+            android:textSize="15sp"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/session_end"
+            style="@style/Widget.Sullivan.Button.Outline"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/an_touch_min"
+            android:layout_weight="1"
+            android:text="@string/session_action_end"
+            android:textSize="15sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+</LinearLayout>

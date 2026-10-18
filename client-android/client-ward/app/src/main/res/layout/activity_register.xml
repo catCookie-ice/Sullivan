@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    注册监护人 / 志愿者账号。
+
+    受护人**不能**从这里注册：受护人账号只能由已登录的监护人代建，
+    否则系统中就不存在任何一条「谁对他负责」的记录，而绑定关系正是这个应用的全部价值。
+    这句话写在副标题里，而不是等用户选完角色再报错。
+
+    找回手机号/邮箱做成可留空的**前置**字段，而不是注册完再提醒：
+    注册是唯一一次「用户还愿意填这些资料」的时刻，之后再追着要，多半要不到。
+    留空的代价（密码永久找不回）就写在这两个字段旁边，不藏在帮助页里。
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.Sullivan.Page"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.auth.RegisterActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_gravity="top|end"
+                android:contentDescription="@null"
+                android:importantForAccessibility="no"
+                android:rotation="90"
+                android:src="@drawable/an_flourish_corner" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingEnd="56dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Label" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_xs"
+                    android:text="@string/register_title"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Display" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_s"
+                    android:text="@string/register_subtitle"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="20dp"
+            android:layout_marginTop="@dimen/an_space_m"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY"
+            android:src="@drawable/an_divider_vine" />
+
+        <LinearLayout
+            style="@style/Widget.Sullivan.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_l"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/register_section_role"
+                android:textAppearance="@style/TextAppearance.Sullivan.Section" />
+
+            <RadioGroup
+                android:id="@+id/register_role"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_s"
+                android:orientation="vertical">
+
+                <RadioButton
+                    android:id="@+id/register_role_guardian"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/an_touch_min"
+                    android:buttonTint="@color/an_radio_tint"
+                    android:checked="true"
+                    android:text="@string/register_role_guardian"
+                    android:textColor="@color/an_ink"
+                    android:textSize="@dimen/an_text_body" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="40dp"
+                    android:paddingEnd="0dp"
+                    android:text="@string/register_role_guardian_desc"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Caption" />
+
+                <RadioButton
+                    android:id="@+id/register_role_volunteer"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/an_touch_min"
+                    android:layout_marginTop="@dimen/an_space_s"
+                    android:buttonTint="@color/an_radio_tint"
+                    android:text="@string/register_role_volunteer"
+                    android:textColor="@color/an_ink"
+                    android:textSize="@dimen/an_text_body" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="40dp"
+                    android:paddingEnd="0dp"
+                    android:text="@string/register_role_volunteer_desc"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Caption" />
+            </RadioGroup>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_s"
+                android:text="@string/register_role_note"
+                android:textAppearance="@style/TextAppearance.Sullivan.Caption" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Sullivan.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_l"
+                android:hint="@string/register_field_account">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/register_account"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autofillHints="username"
+                    android:inputType="text"
+                    android:maxLength="64"
+                    android:maxLines="1"
+                    android:textColor="@color/an_ink"
+                    android:textSize="@dimen/an_text_body" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Sullivan.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_m"
+                android:hint="@string/register_field_display">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/register_display"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autofillHints="name"
+                    android:inputType="textPersonName"
+                    android:maxLength="80"
+                    android:maxLines="1"
+                    android:textColor="@color/an_ink"
+                    android:textSize="@dimen/an_text_body" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Sullivan.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_m"
+                android:hint="@string/register_field_password">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/register_password"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autofillHints="newPassword"
+                    android:inputType="textPassword"
+                    android:maxLength="72"
+                    android:maxLines="1"
+                    android:textColor="@color/an_ink"
+                    android:textSize="@dimen/an_text_body" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Sullivan.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_m"
+                android:hint="@string/register_field_password_confirm">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/register_password_confirm"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword"
+                    android:maxLength="72"
+                    android:maxLines="1"
+                    android:textColor="@color/an_ink"
+                    android:textSize="@dimen/an_text_body" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_l"
+                android:text="@string/register_section_recovery"
+                android:textAppearance="@style/TextAppearance.Sullivan.Section" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_s"
+                android:text="@string/register_recovery_hint"
+                android:textAppearance="@style/TextAppearance.Sullivan.Caption" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Sullivan.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_m"
+                android:hint="@string/register_field_phone">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/register_recovery_phone"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autofillHints="phone"
+                    android:inputType="phone"
+                    android:maxLength="11"
+                    android:maxLines="1"
+                    android:textColor="@color/an_ink"
+                    android:textSize="@dimen/an_text_body" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Sullivan.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_m"
+                android:hint="@string/register_field_email">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/register_recovery_email"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autofillHints="emailAddress"
+                    android:inputType="textEmailAddress"
+                    android:maxLines="1"
+                    android:textColor="@color/an_ink"
+                    android:textSize="@dimen/an_text_body" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Button
+                android:id="@+id/register_submit"
+                style="@style/Widget.Sullivan.Button.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/an_button_height"
+                android:layout_marginTop="@dimen/an_space_l"
+                android:text="@string/register_action_submit" />
+
+            <TextView
+                android:id="@+id/register_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_m"
+                android:textColor="@color/an_gold_deep"
+                android:textSize="15sp"
+                android:visibility="gone"
+                tools:text="正在注册…"
+                tools:visibility="visible" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/register_go_login"
+            style="@style/Widget.Sullivan.Button.Ghost"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/an_button_height"
+            android:layout_marginTop="@dimen/an_space_m"
+            android:text="@string/register_action_go_login" />
+    </LinearLayout>
+</ScrollView>

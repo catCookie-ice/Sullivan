@@ -21,7 +21,12 @@ import com.sullivan.android.data.api.ResultCallback;
 import com.sullivan.android.data.api.dto.QrDtos;
 import com.sullivan.android.data.session.SessionStore;
 import com.sullivan.android.qr.QrPayload;
+import com.sullivan.android.ui.common.activity.ActivityListActivity;
+import com.sullivan.android.ui.common.realtime.RealtimeActivity;
 import com.sullivan.android.ui.common.scan.QrScanActivity;
+import com.sullivan.android.ui.guardian.binding.BindingListActivity;
+import com.sullivan.android.ui.guardian.binding.CreateProtecteeActivity;
+import com.sullivan.android.ui.guardian.volunteer.VolunteerApplyActivity;
 import com.sullivan.android.ui.login.LoginActivity;
 
 import java.util.ArrayList;
@@ -91,6 +96,22 @@ public class GuardianActivity extends AppCompatActivity {
                 QrScanActivity.intentFor(this, QrPayload.Kind.BIND, R.string.scan_title_bind)));
         findViewById(R.id.guardian_card_scan_login).setOnClickListener(view -> loginScanner.launch(
                 QrScanActivity.intentFor(this, QrPayload.Kind.LOGIN, R.string.scan_title_login)));
+        findViewById(R.id.guardian_card_bindings).setOnClickListener(
+                view -> startActivity(BindingListActivity.intentFor(this)));
+        findViewById(R.id.guardian_card_create_protectee).setOnClickListener(
+                view -> startActivity(CreateProtecteeActivity.intentFor(this)));
+        findViewById(R.id.guardian_card_volunteer_apply).setOnClickListener(
+                view -> startActivity(VolunteerApplyActivity.intentFor(this)));
+        findViewById(R.id.guardian_card_activities).setOnClickListener(
+                view -> startActivity(ActivityListActivity.intentFor(this)));
+        findViewById(R.id.guardian_card_realtime).setOnClickListener(
+                view -> startActivity(RealtimeActivity.intentFor(this)));
+
+        // 已经是志愿者就不显示「申请兼任志愿者」—— 一个永远只会得到
+        // 「已存在待审核/已通过申请」的入口，比没有这个入口更让人困惑。
+        View volunteerCard = findViewById(R.id.guardian_card_volunteer_apply);
+        volunteerCard.setVisibility(session.roles().contains("VOLUNTEER")
+                ? View.GONE : View.VISIBLE);
         findViewById(R.id.guardian_logout).setOnClickListener(view -> {
             session.clearLogin();
             Toast.makeText(this, R.string.guardian_logged_out, Toast.LENGTH_SHORT).show();
@@ -202,6 +223,9 @@ public class GuardianActivity extends AppCompatActivity {
     private void showStatus(@NonNull String message, boolean isError) {
         statusText.setVisibility(View.VISIBLE);
         statusText.setText(message);
-        statusText.setTextColor(getColor(isError ? R.color.level_danger : R.color.level_clear));
+        // 用 an_sage / an_terracotta 而不是 level_clear / level_danger：
+        // level_* 是给相机预览叠加层用的高饱和绿黄红，压在羊皮纸上会刺眼；
+        // 那三个颜色只在检测页出现，语义是「走得过去 / 注意 / 停下」，不是「成功 / 失败」。
+        statusText.setTextColor(getColor(isError ? R.color.an_terracotta : R.color.an_sage));
     }
 }

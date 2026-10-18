@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    监护人代建受护人账号。
+
+    与注册页的区别不只是「少一个角色单选」：这里的提交会在同一个事务里建立一条
+    permanent=true 的主绑定，**创建出来的受护人天生就绑好了**，不需要再扫一次码。
+    这条关系不可解除（terminate 返回 403），所以副标题必须把这句话说在前面 ——
+    用户以为还能反悔，和用户知道这是一锤子买卖，是两种完全不同的决定。
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.Sullivan.Page"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.guardian.binding.CreateProtecteeActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_gravity="top|end"
+                android:contentDescription="@null"
+                android:importantForAccessibility="no"
+                android:rotation="90"
+                android:src="@drawable/an_flourish_corner" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingEnd="56dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Label" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_xs"
+                    android:text="@string/create_protectee_title"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Display" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_s"
+                    android:text="@string/create_protectee_subtitle"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="20dp"
+            android:layout_marginTop="@dimen/an_space_m"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY"
+            android:src="@drawable/an_divider_vine" />
+
+        <LinearLayout
+            style="@style/Widget.Sullivan.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_l"
+            android:orientation="vertical">
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Sullivan.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/create_protectee_field_account">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/create_protectee_account"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autofillHints="username"
+                    android:inputType="text"
+                    android:maxLength="64"
+                    android:maxLines="1"
+                    android:textColor="@color/an_ink"
+                    android:textSize="@dimen/an_text_body" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Sullivan.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_m"
+                android:hint="@string/create_protectee_field_password">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/create_protectee_password"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autofillHints="newPassword"
+                    android:inputType="textPassword"
+                    android:maxLength="72"
+                    android:maxLines="1"
+                    android:textColor="@color/an_ink"
+                    android:textSize="@dimen/an_text_body" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Sullivan.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_m"
+                android:hint="@string/create_protectee_field_display">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/create_protectee_display"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autofillHints="name"
+                    android:inputType="textPersonName"
+                    android:maxLength="80"
+                    android:maxLines="1"
+                    android:textColor="@color/an_ink"
+                    android:textSize="@dimen/an_text_body" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Sullivan.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_m"
+                android:hint="@string/create_protectee_field_note">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/create_protectee_note"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top|start"
+                    android:inputType="textMultiLine"
+                    android:maxLength="500"
+                    android:minLines="3"
+                    android:textColor="@color/an_ink"
+                    android:textSize="@dimen/an_text_body" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_s"
+                android:text="@string/create_protectee_note_hint"
+                android:textAppearance="@style/TextAppearance.Sullivan.Caption" />
+
+            <Button
+                android:id="@+id/create_protectee_submit"
+                style="@style/Widget.Sullivan.Button.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/an_button_height"
+                android:layout_marginTop="@dimen/an_space_l"
+                android:text="@string/create_protectee_action_submit" />
+
+            <TextView
+                android:id="@+id/create_protectee_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_m"
+                android:textSize="15sp"
+                android:visibility="gone"
+                tools:text="已创建受护人 u_123，永久绑定已建立"
+                tools:visibility="visible" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/create_protectee_back"
+            style="@style/Widget.Sullivan.Button.Ghost"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/an_button_height"
+            android:layout_marginTop="@dimen/an_space_m"
+            android:text="@string/create_protectee_action_back" />
+    </LinearLayout>
+</ScrollView>

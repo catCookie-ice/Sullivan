@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    实时会话：发起 / 接受 / 拒绝 / 结束，以及连上之后的中继消息。
+
+    与 web 的 RealtimeDemo 同构，但有一处刻意的差别：**不要求用户手填「对方 UID」**。
+    web 端让用户填是因为它是一个调试页；手机上的会话是「和谁聊」，
+    对方在会话记录里本来就有（发起方/接收方的另一个），再让用户抄一遍只多一个出错点。
+
+    整页放在一个 ScrollView 里：会话最多几条，聊天气泡区自己滚动。
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/session_page"
+    style="@style/Widget.Sullivan.Page"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.common.realtime.RealtimeActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_gravity="top|end"
+                android:contentDescription="@null"
+                android:importantForAccessibility="no"
+                android:rotation="90"
+                android:src="@drawable/an_flourish_corner" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingEnd="56dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Label" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_xs"
+                    android:text="@string/session_title"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Display" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_s"
+                    android:text="@string/session_subtitle"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="20dp"
+            android:layout_marginTop="@dimen/an_space_m"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY"
+            android:src="@drawable/an_divider_vine" />
+
+        <!-- ===== 发起会话 ===== -->
+        <LinearLayout
+            style="@style/Widget.Sullivan.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_l"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/session_create_title"
+                android:textAppearance="@style/TextAppearance.Sullivan.Section" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Sullivan.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_s"
+                android:hint="@string/session_create_field">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/session_target"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:textColor="@color/an_ink"
+                    android:textSize="@dimen/an_text_body" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Button
+                android:id="@+id/session_create"
+                style="@style/Widget.Sullivan.Button.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/an_button_height"
+                android:layout_marginTop="@dimen/an_space_m"
+                android:text="@string/session_action_create" />
+
+            <TextView
+                android:id="@+id/session_status_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_m"
+                android:textSize="15sp"
+                android:visibility="gone"
+                tools:text="会话已发起，等对方接受"
+                tools:visibility="visible" />
+        </LinearLayout>
+
+        <!-- ===== 会话列表 ===== -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_xl"
+            android:text="@string/session_list_title"
+            android:textAppearance="@style/TextAppearance.Sullivan.Section" />
+
+        <ImageView
+            android:layout_width="120dp"
+            android:layout_height="12dp"
+            android:layout_marginTop="@dimen/an_space_s"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY"
+            android:src="@drawable/an_section_rule" />
+
+        <Button
+            android:id="@+id/session_refresh"
+            style="@style/Widget.Sullivan.Button.Ghost"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/an_touch_min"
+            android:layout_marginTop="@dimen/an_space_xs"
+            android:text="@string/session_action_refresh" />
+
+        <com.sullivan.android.ui.common.components.StateView
+            android:id="@+id/session_state"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <LinearLayout
+            android:id="@+id/session_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <!-- ===== 连接与消息 ===== -->
+        <LinearLayout
+            android:id="@+id/session_chat"
+            style="@style/Widget.Sullivan.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_l"
+            android:orientation="vertical"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/session_chat_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="@style/TextAppearance.Sullivan.Section"
+                tools:text="已连接 · 与 u_987 的会话" />
+
+            <TextView
+                android:id="@+id/session_chat_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_xs"
+                android:text="@string/session_chat_hint"
+                android:textAppearance="@style/TextAppearance.Sullivan.Caption" />
+
+            <ScrollView
+                android:id="@+id/session_log_scroll"
+                android:layout_width="match_parent"
+                android:layout_height="220dp"
+                android:layout_marginTop="@dimen/an_space_m"
+                android:background="@drawable/an_log_panel"
+                android:padding="@dimen/an_space_m">
+
+                <TextView
+                    android:id="@+id/session_log"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:lineSpacingExtra="4dp"
+                    android:textColor="@color/an_log_text"
+                    android:textSize="14sp"
+                    tools:text="[连接] 已建立\n[接收] relay 到家了吗" />
+            </ScrollView>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Sullivan.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_m"
+                android:hint="@string/session_message_field">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/session_message"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionSend"
+                    android:inputType="text"
+                    android:maxLines="3"
+                    android:textColor="@color/an_ink"
+                    android:textSize="@dimen/an_text_body" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Button
+                android:id="@+id/session_send"
+                style="@style/Widget.Sullivan.Button.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/an_button_height"
+                android:layout_marginTop="@dimen/an_space_s"
+                android:text="@string/session_action_send" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_s"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/session_ping"
+                    style="@style/Widget.Sullivan.Button.Outline"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/an_touch_min"
+                    android:layout_marginEnd="@dimen/an_space_s"
+                    android:layout_weight="1"
+                    android:text="@string/session_action_ping"
+                    android:textSize="15sp" />
+
+                <Button
+                    android:id="@+id/session_disconnect"
+                    style="@style/Widget.Sullivan.Button.Outline"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/an_touch_min"
+                    android:layout_weight="1"
+                    android:text="@string/session_action_disconnect"
+                    android:textSize="15sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>
