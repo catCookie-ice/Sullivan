@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- 深色模式：主色换浅一档，保证深底上的对比度。 -->
-    <style name="Theme.Sullivan" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/sullivan_indigo_light</item>
-        <item name="colorPrimaryVariant">@color/sullivan_indigo</item>
-        <item name="colorOnPrimary">@color/black</item>
-        <item name="colorSecondary">@color/sullivan_accent</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+    <!--
+        深色模式：只翻「系统栏图标的明暗」，配色本身全部由 values-night/colors.xml 接管 ——
+        Base.Theme.Sullivan 引用的都是 an_* 令牌，令牌一换，主题不用重写一遍。
+
+        必须重申 parent：style 是按配置整包替换的，这个包不含颜色属性，
+        全靠 Base.Theme.Sullivan 继承过来。反过来，也正因为是整包替换，
+        不能在这里省掉 parent 去「只覆盖两条」。
+    -->
+    <style name="Theme.Sullivan" parent="Base.Theme.Sullivan">
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
     </style>
 </resources>

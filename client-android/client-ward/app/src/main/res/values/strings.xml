@@ -9,8 +9,10 @@
     <string name="role_guardian">监护人</string>
     <string name="role_guardian_desc">查看绑定受护人的位置与报警</string>
     <string name="role_volunteer">志愿者</string>
-    <string name="role_volunteer_desc">接收附近的协助请求</string>
-    <string name="role_not_implemented">%1$s客户端尚未实现</string>
+    <string name="role_volunteer_desc">浏览公益活动，与已绑定的对方实时会话</string>
+    <!-- 曾有一条 role_not_implemented（「%1$s客户端尚未实现」），志愿者主页实现后已无引用，删除。
+         不过要记住它当初存在的原因：志愿者端的「接收附近的协助请求」「我的报名记录」
+         在服务端仍然没有接口，志愿者主页是用文案说明这件事，而不是摆两个点了没反应的入口。 -->
 
     <!-- ===== 障碍检测（移植自「参考1」端侧检测应用） ===== -->
     <string name="status_model_loading">正在加载模型…</string>
@@ -49,15 +51,18 @@
 
     <string name="login_title">监护人登录</string>
     <string name="login_subtitle">扫码绑定受护人、扫受护人登录码，都需要你先登录。</string>
+    <!-- 志愿者走同一个登录接口，只是入口卡片不同；标题跟着入口换，避免从「志愿者」进去却看到「监护人登录」 -->
+    <string name="login_title_volunteer">志愿者登录</string>
+    <string name="login_subtitle_volunteer">查看公益活动、报名协助，都需要你先登录。</string>
     <string name="login_field_account">登录名</string>
     <string name="login_field_password">密码</string>
-    <string name="login_field_server">服务器地址</string>
-    <string name="login_server_hint">例如 http://192.168.1.10:8642/api/v1/</string>
     <string name="login_action_submit">登录</string>
     <string name="login_action_scan_login">我是受护人，改用扫码登录</string>
+    <string name="login_action_register">注册账号</string>
+    <string name="login_action_forgot">忘记密码</string>
     <string name="login_in_progress">正在登录…</string>
     <string name="login_missing_fields">请填写登录名与密码</string>
-    <string name="login_failed_empty">登录响应没有携带令牌，请确认服务器地址是否正确</string>
+    <string name="login_failed_empty">登录响应没有携带令牌，请重新登录</string>
     <string name="login_succeeded">登录成功</string>
 
     <!-- ===== 扫码登录（受护人） ===== -->
@@ -105,6 +110,17 @@
     <string name="guardian_action_scan_bind_desc">扫描受护人出示的绑定码，扫到即完成绑定</string>
     <string name="guardian_action_scan_login">扫受护人登录码</string>
     <string name="guardian_action_scan_login_desc">扫描受护人的登录码，选一位受护人授权对方设备登录</string>
+    <string name="guardian_section_account">账号与关系</string>
+    <string name="guardian_action_bindings">绑定管理</string>
+    <string name="guardian_action_bindings_desc">查看并进行中的绑定关系、发起绑定、按账号 ID 查人</string>
+    <string name="guardian_action_create_protectee">创建受护人</string>
+    <string name="guardian_action_create_protectee_desc">代建一个受护人账号，并立即建立永久绑定</string>
+    <string name="guardian_action_activities">公益活动</string>
+    <string name="guardian_action_activities_desc">浏览附近的公益志愿活动（只读，报名在机构端）</string>
+    <string name="guardian_action_realtime">实时会话</string>
+    <string name="guardian_action_realtime_desc">和已绑定的受护人开一条实时通道，互发消息</string>
+    <string name="guardian_action_volunteer_apply">申请兼任志愿者</string>
+    <string name="guardian_action_volunteer_apply_desc">提交申请，审核通过后可以参加公益活动</string>
     <string name="guardian_action_logout">退出登录</string>
     <string name="guardian_bind_failed">绑定失败：%1$s</string>
     <string name="guardian_pick_protectee">选择要授权登录的受护人</string>
@@ -116,6 +132,273 @@
     <string name="guardian_scan_failed">取候选受护人失败：%1$s</string>
     <string name="guardian_logged_out">已退出登录</string>
     <string name="guardian_need_login">请先登录</string>
+
+    <!-- ===== 受护人主页（登录后） ===== -->
+    <!-- 扫码登录拿不到登录名（那条路径本来就没有「输入登录名」这一步），所以这句要有第三个说法。 -->
+    <string name="protectee_home_account_guest">未登录 —— 下面的功能需要先登录</string>
+    <string name="protectee_home_account_unknown">已登录（本次是扫码登录，没有登录名可显示）</string>
+    <string name="protectee_home_section_account">我的账号</string>
+    <string name="protectee_home_login_hint">障碍检测不需要登录，随时可以用。\n绑定码、绑定管理、公益活动和实时会话跟着账号走，需要先扫码登录。</string>
+    <string name="protectee_home_action_login">扫码登录</string>
+    <string name="protectee_home_action_detect">开始障碍检测</string>
+    <string name="protectee_home_detect_desc">无需登录，画面不上传，识别结果只在本机播报</string>
+    <string name="protectee_home_action_bind_code">我的绑定码</string>
+    <string name="protectee_home_bind_code_desc">出示一张二维码让监护人扫，扫到即完成绑定</string>
+    <string name="protectee_home_bindings_desc">看看你和哪几位监护人建立了关系</string>
+    <string name="protectee_home_action_logout">退出登录</string>
+    <string name="protectee_home_logged_out">已退出登录。障碍检测仍然可以直接用。</string>
+
+    <!-- ===== 志愿者主页 ===== -->
+    <!-- 不用 Markdown 的 **强调**：TextView 会原样把星号画出来。 -->
+    <string name="volunteer_home_notice">志愿者端目前只有公益活动和实时会话两个功能。\n\n「接收附近的协助请求」「我的报名记录」在网页端也还是占位页 —— 后端没有对应接口，所以这里不放入口。</string>
+    <string name="volunteer_home_apply_desc">提交成为志愿者的申请，审核通过后需要重新登录才生效</string>
+    <string name="volunteer_home_guardian">切到监护人视角</string>
+    <string name="volunteer_home_guardian_desc">你这个账号同时也是监护人，可以进去看绑定关系与受护人</string>
+
+    <!-- ===== 注册 ===== -->
+    <string name="register_title">注册账号</string>
+    <string name="register_subtitle">注册的是监护人或志愿者账号。受护人不能自助注册，由监护人代为创建。</string>
+    <string name="register_section_role">账号类型</string>
+    <string name="register_role_guardian">监护人</string>
+    <string name="register_role_guardian_desc">查看绑定受护人的绑定关系、发起实时会话</string>
+    <string name="register_role_volunteer">志愿者</string>
+    <string name="register_role_volunteer_desc">浏览公益活动、报名参与协助</string>
+    <string name="register_role_note">监护人之后可以申请兼任志愿者；志愿者不能反向兼任监护人。</string>
+    <string name="register_field_account">登录名（4–64 位）</string>
+    <string name="register_field_display">显示名</string>
+    <string name="register_field_password">密码（8–72 位）</string>
+    <string name="register_field_password_confirm">再输一遍密码</string>
+    <string name="register_section_recovery">找回方式</string>
+    <string name="register_recovery_hint">手机号和邮箱可以只填一个，也可以都不填。留空意味着密码忘记后无法找回 —— 后端没有别的找回途径。</string>
+    <string name="register_field_phone">手机号（可选）</string>
+    <string name="register_field_email">邮箱（可选）</string>
+    <string name="register_action_submit">注册并登录</string>
+    <string name="register_missing_fields">请填写登录名、显示名和密码</string>
+    <string name="register_account_too_short">登录名至少 4 位</string>
+    <string name="register_display_missing">请填写显示名</string>
+    <string name="register_password_too_short">密码至少 8 位</string>
+    <string name="register_password_mismatch">两次输入的密码不一致</string>
+    <string name="register_in_progress">正在注册…</string>
+    <string name="register_auto_login">注册成功，正在登录…</string>
+    <string name="register_auto_login_failed">注册成功（登录名 %1$s），但自动登录失败：%2$s\n请返回登录页手动登录。</string>
+    <string name="register_failed">注册失败：%1$s</string>
+    <string name="register_action_go_login">已有账号，去登录</string>
+
+    <!-- ===== 找回密码 ===== -->
+    <string name="forgot_title">找回密码</string>
+    <string name="forgot_subtitle">输入登录名，看看当初设过哪种找回方式。</string>
+    <!-- 步骤副标题：每一步都把「你现在要做什么、上一步发生了什么」说清楚 -->
+    <string name="forgot_step_login">第一步：输入登录名，查这个账号设过哪种找回方式。</string>
+    <string name="forgot_step_method">第二步：选中一种方式，并把当初填的号码或邮箱完整补一遍。</string>
+    <string name="forgot_step_result">第三步：验证结果。</string>
+    <string name="forgot_complete_hint">服务端只告诉我们这个账号的末尾几位，请把完整内容补全。</string>
+    <string name="forgot_field_login">登录名</string>
+    <string name="forgot_action_next">下一步</string>
+    <string name="forgot_action_restart">重新输入登录名</string>
+    <string name="forgot_action_verify">验证</string>
+    <string name="forgot_no_methods">这个账号没有设置找回手机号或邮箱，无法通过这里找回密码。</string>
+    <string name="forgot_pick_method">选择找回方式</string>
+    <string name="forgot_method_phone">手机号（%1$s）</string>
+    <string name="forgot_method_email">邮箱（%1$s）</string>
+    <string name="forgot_complete_phone">请补全 11 位手机号</string>
+    <string name="forgot_complete_email">请补全完整邮箱</string>
+    <string name="forgot_field_complete_phone">完整手机号</string>
+    <string name="forgot_field_complete_email">完整邮箱</string>
+    <string name="forgot_need_method">请先选择找回方式</string>
+    <string name="forgot_need_contact">请把手机号或邮箱补全</string>
+    <string name="forgot_mismatch">联系方式不匹配，请检查后重试</string>
+    <string name="forgot_verified">验证通过</string>
+    <string name="forgot_verified_note">验证通过并不等于密码已重置：重置密码的功能后端还没有开放。请记住这次验证结果，等它上线后再来。</string>
+    <string name="forgot_action_back_login">返回登录</string>
+    <string name="forgot_start_failed">查找失败：%1$s</string>
+    <string name="forgot_verify_failed">验证失败：%1$s</string>
+
+    <!-- ===== 登录后的找回提醒 ===== -->
+    <string name="recovery_dialog_title">设置找回方式</string>
+    <string name="recovery_dialog_message">你还没有设置找回手机号或邮箱。\n\n一旦忘记密码，这个账号就再也无法找回 —— 后端没有别的找回途径。现在花半分钟设置一下？</string>
+    <string name="recovery_dialog_action_set">现在设置</string>
+    <string name="recovery_dialog_action_later">下次再说</string>
+    <string name="recovery_dialog_action_dismiss">不再提醒</string>
+    <string name="recovery_set_title">填写找回方式</string>
+    <string name="recovery_set_hint">手机号和邮箱至少填一个。</string>
+    <string name="recovery_set_field_phone">手机号</string>
+    <string name="recovery_set_field_email">邮箱</string>
+    <string name="recovery_set_need_one">手机号和邮箱至少填一个</string>
+    <string name="recovery_set_in_progress">正在保存…</string>
+    <string name="recovery_set_succeeded">已保存，以后可以用它找回密码</string>
+    <string name="recovery_set_failed">保存失败：%1$s</string>
+
+    <!-- ===== 公益活动（只读） ===== -->
+    <string name="activity_title">公益活动</string>
+    <string name="activity_subtitle">附近公益机构发布的活动。受护人与志愿者都可以查看，报名在机构端进行。</string>
+    <string name="activity_filter_all">全部</string>
+    <string name="activity_filter_recruiting">招募中</string>
+    <string name="activity_filter_in_progress">进行中</string>
+    <string name="activity_filter_ended">已结束</string>
+    <string name="activity_filter_cancelled">已取消</string>
+    <string name="activity_summary">共 %1$d 个活动</string>
+    <string name="activity_empty">这个筛选下还没有活动。\n\n换个状态看看，或稍后再来 —— 活动由公益机构在机构端发布。</string>
+    <string name="activity_action_more">加载更多</string>
+    <string name="activity_quota">已报名 %1$d / %2$d</string>
+    <string name="activity_quota_unknown">名额未定</string>
+    <string name="activity_location_unknown">地点待定</string>
+    <string name="activity_org_unknown">机构未署名</string>
+    <string name="activity_title_unknown">（未命名活动）</string>
+
+    <!-- ===== 志愿者申请 ===== -->
+    <string name="volunteer_title">志愿者兼任申请</string>
+    <!-- 不用 Markdown 的 **强调**：TextView 会原样画出星号。 -->
+    <string name="volunteer_subtitle">通过审核后，志愿者角色才会加到你账号上，而且需要重新登录才生效。\n\n只有监护人能申请兼任志愿者；志愿者不能反向申请成为监护人。</string>
+    <string name="volunteer_reason_label">申请理由</string>
+    <string name="volunteer_reason_hint">选填，说明你希望参与志愿活动的原因</string>
+    <string name="volunteer_reason_empty">（未填写理由）</string>
+    <string name="volunteer_action_submit">提交申请</string>
+    <string name="volunteer_action_cancel">撤销申请</string>
+    <string name="volunteer_history_title">我的申请记录</string>
+    <string name="volunteer_empty">还没有提交过申请。\n\n通过审核后需要重新登录，志愿者角色才会生效。</string>
+    <string name="volunteer_submitting">正在提交…</string>
+    <string name="volunteer_submitted">申请已提交，等管理员审核</string>
+    <string name="volunteer_submit_failed">提交失败：%1$s</string>
+    <string name="volunteer_cancelled">已撤销申请</string>
+    <string name="volunteer_cancel_failed">撤销失败：%1$s</string>
+    <string name="volunteer_confirm_cancel">撤销这条申请？撤销后需要重新提交。</string>
+
+    <!-- ===== 通用三态 ===== -->
+    <string name="state_loading">加载中…</string>
+    <string name="state_empty_title">这里还是空的</string>
+    <string name="state_error_title">没能加载出来</string>
+    <string name="state_retry">重试</string>
+    <string name="state_generic_failed">加载失败：%1$s</string>
+
+    <!-- ===== 绑定管理 ===== -->
+    <string name="binding_title">绑定管理</string>
+    <string name="binding_subtitle">监护关系由双方的账号 ID 确定。你可以在这里发起、确认、解除绑定。</string>
+    <string name="binding_tab_list">我的绑定</string>
+    <string name="binding_tab_request">发起绑定</string>
+    <string name="binding_tab_lookup">查找账号</string>
+    <string name="binding_action_refresh">刷新</string>
+    <string name="binding_empty">还没有任何绑定关系。\n\n扫码绑定一位受护人，或到「发起绑定」里输入对方的账号 ID。</string>
+    <string name="binding_row_counterpart">对方：%1$s</string>
+    <string name="binding_row_side_guardian">我在这条关系里是监护人</string>
+    <string name="binding_row_side_protectee">我在这条关系里是受护人</string>
+    <string name="binding_row_side_none">这条关系里没有我</string>
+    <string name="binding_row_initiator_me">发起方：我</string>
+    <string name="binding_row_initiator_other">发起方：对方</string>
+    <string name="binding_row_permanent">永久绑定（代建受护人时建立，不能解除）</string>
+    <string name="binding_row_primary">主监护关系</string>
+    <string name="binding_row_incoming">等你确认</string>
+    <string name="binding_action_accept">确认</string>
+    <string name="binding_action_reject">拒绝</string>
+    <string name="binding_action_cancel">撤回请求</string>
+    <string name="binding_action_terminate">解除绑定</string>
+    <string name="binding_confirm_accept">确认这条绑定关系？确认后对方就能看到你的受护人信息，并能发起实时会话。</string>
+    <string name="binding_confirm_reject">拒绝这条绑定请求？拒绝后对方需要重新发起。</string>
+    <string name="binding_confirm_cancel">撤回你发起的这条绑定请求？</string>
+    <string name="binding_confirm_terminate">解除这条绑定？解除后双方将互相看不到对方，也不能再发起实时会话。这个操作不可撤销。</string>
+    <string name="binding_done_accept">已确认，这条关系已经生效</string>
+    <string name="binding_done_reject">已拒绝</string>
+    <string name="binding_done_cancel">已撤回</string>
+    <string name="binding_done_terminate">已解除</string>
+    <string name="binding_action_failed">操作失败：%1$s</string>
+
+    <string name="binding_request_as_guardian">以监护人身份绑定受护人</string>
+    <string name="binding_request_as_guardian_hint">输入受护人的账号 ID。对方账号 ID 可以在「查找账号」里核对。</string>
+    <string name="binding_request_as_guardian_action">发起绑定</string>
+    <string name="binding_request_as_protectee">以受护人身份申请监护人</string>
+    <string name="binding_request_as_protectee_hint">输入监护人的账号 ID。对方需要在自己的手机上确认。</string>
+    <string name="binding_request_as_protectee_action">申请绑定</string>
+    <string name="binding_request_need_id">请先填写对方的账号 ID</string>
+    <string name="binding_request_sent">绑定请求已发起，等对方确认</string>
+    <string name="binding_request_failed">发起失败：%1$s</string>
+    <string name="binding_request_owner_hint">代建受护人会自动建立永久绑定，不需要在这里发起。</string>
+
+    <string name="binding_lookup_title">按账号 ID 查找</string>
+    <string name="binding_lookup_field">账号 ID</string>
+    <string name="binding_lookup_action">查找</string>
+    <string name="binding_lookup_need_id">请先填写账号 ID</string>
+    <string name="binding_lookup_failed">查找失败：%1$s</string>
+    <string name="binding_lookup_result">账号 %1$s</string>
+    <string name="binding_lookup_display">显示名：%1$s</string>
+    <string name="binding_lookup_role">主角色：%1$s</string>
+    <string name="binding_lookup_roles">角色：%1$s</string>
+    <string name="binding_lookup_status">状态：%1$s</string>
+    <string name="binding_lookup_volunteer">兼任志愿者：%1$s</string>
+    <string name="binding_lookup_yes">是</string>
+    <string name="binding_lookup_no">否</string>
+    <string name="binding_lookup_none">没有查到结果</string>
+
+    <!-- ===== 创建受护人 ===== -->
+    <string name="create_protectee_title">创建受护人</string>
+    <!-- 不用 Markdown 的 **粗体**：TextView 不认，会原样把星号画出来（要粗体得用 Spannable）。 -->
+    <string name="create_protectee_subtitle">创建的同时会建立一条永久绑定：这位受护人从此由你负责，这条关系不能解除。\n\n受护人不能自己注册，只能由监护人代建 —— 否则系统里就没有任何一条「谁对他负责」的记录。</string>
+    <string name="create_protectee_field_account">受护人的登录名</string>
+    <string name="create_protectee_field_password">密码（8–72 位）</string>
+    <string name="create_protectee_field_display">显示名</string>
+    <string name="create_protectee_field_note">应急备注（可选）</string>
+    <string name="create_protectee_note_hint">如「对花生过敏；紧急联系人李女士 13800000000」。最长 500 字，只在绑定方之间可见。</string>
+    <string name="create_protectee_action_submit">创建并绑定</string>
+    <string name="create_protectee_missing">请填写登录名、密码和显示名</string>
+    <string name="create_protectee_account_too_short">登录名至少 4 位</string>
+    <string name="create_protectee_password_too_short">密码至少 8 位</string>
+    <string name="create_protectee_in_progress">正在创建…</string>
+    <string name="create_protectee_succeeded">已创建受护人 %1$s，永久绑定已建立</string>
+    <string name="create_protectee_failed">创建失败：%1$s</string>
+    <string name="create_protectee_action_back">返回绑定管理</string>
+
+    <!-- ===== 实时会话 ===== -->
+    <string name="session_title">实时会话</string>
+    <string name="session_subtitle">和已绑定的对方开一条实时通道，用于日常问询与应急联络。通道只在双方都同意后建立。</string>
+    <string name="session_create_title">发起新会话</string>
+    <string name="session_create_field">对方的账号 ID</string>
+    <string name="session_action_create">发起会话</string>
+    <string name="session_list_title">我的会话</string>
+    <string name="session_action_refresh">刷新</string>
+    <string name="session_empty">还没有任何会话。\n\n在上面输入对方的账号 ID 发起一条；对方接受后就能连上。\n\n只能和已绑定的账号通话，未绑定的 ID 会被服务端拒绝。</string>
+    <string name="session_create_need_id">请先填写对方的账号 ID</string>
+    <string name="session_created">会话已发起，等对方接受</string>
+    <string name="session_create_failed">发起失败：%1$s</string>
+    <!-- 会话行 -->
+    <string name="session_row_role_mine">我发起的</string>
+    <string name="session_row_role_theirs">对方发起的</string>
+    <string name="session_row_counterpart">与 %1$s 的会话</string>
+    <string name="session_row_counterpart_unknown">与（未知账号）的会话</string>
+    <string name="session_row_meta">会话 %1$s · %2$s</string>
+    <string name="session_row_waiting_mine">等对方接受</string>
+    <string name="session_row_waiting_theirs">等你接受</string>
+    <!-- 动作 -->
+    <string name="session_action_accept">接受</string>
+    <string name="session_action_reject">拒绝</string>
+    <string name="session_action_connect">连接</string>
+    <string name="session_action_end">结束</string>
+    <string name="session_confirm_accept">接受这条会话？接受后对方可以连接进来，和你互发消息。</string>
+    <string name="session_confirm_reject">拒绝这条会话？拒绝后对方需要重新发起。</string>
+    <string name="session_confirm_end">结束这条会话？结束是双方的：你们都会断开，对方需要重新发起。</string>
+    <string name="session_done_accept">已接受，现在可以连接了</string>
+    <string name="session_done_reject">已拒绝</string>
+    <string name="session_done_end">已结束</string>
+    <string name="session_ended_by_peer">这条会话已被对方结束</string>
+    <string name="session_action_failed">操作失败：%1$s</string>
+    <!-- 连接与消息 -->
+    <string name="session_chat_title">已连接 · 与 %1$s 的会话</string>
+    <string name="session_chat_hint">连接期间互发的消息由服务端转发，不做留存 —— 断开后这条记录就没了。</string>
+    <string name="session_message_field">要说的话</string>
+    <string name="session_action_send">发送</string>
+    <string name="session_action_ping">心跳</string>
+    <string name="session_action_disconnect">断开</string>
+    <string name="session_message_need_text">请先输入想说的话</string>
+    <string name="session_not_connected">连接已经断开了，请重新点「连接」。</string>
+    <string name="session_disconnected">已断开连接</string>
+    <!-- 日志行的前缀：方括号里的那两个字 -->
+    <string name="session_log_connected">[连接] 已建立</string>
+    <string name="session_log_closed">[连接] 已断开</string>
+    <string name="session_log_error">[错误] %1$s</string>
+    <string name="session_log_joined">[会话] 已加入会话</string>
+    <string name="session_log_left">[会话] 对方离开了会话</string>
+    <string name="session_log_mine">[我] %1$s</string>
+    <string name="session_log_peer">[对方] %1$s</string>
+    <string name="session_log_ping">[心跳] 服务端发起心跳</string>
+    <string name="session_log_pong">[心跳] 服务端已回应</string>
+    <string name="session_log_other">[%1$s]</string>
 
     <string name="action_cancel">取消</string>
     <string name="action_ok">确定</string>

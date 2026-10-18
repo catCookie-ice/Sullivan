@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    拱券卡片：与 an_card 同构，只是上方两角拉到 96dp，做成地铁入口那种新艺术拱门。
+
+    用于角色入口和登录页 —— 那两页是「进门」的隐喻，拱券能让这个隐喻立刻读出来。
+    圆角半径不能超过控件高度的一半，否则 Android 会把角截断成尖角；
+    这类卡片在布局里的高度都 ≥ 200dp，96dp 是安全的。
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:bottom="0dp"
+        android:left="5dp"
+        android:right="0dp"
+        android:top="5dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <stroke
+                android:width="@dimen/an_stroke_hair"
+                android:color="@color/an_line" />
+            <corners
+                android:bottomLeftRadius="@dimen/an_radius_s"
+                android:bottomRightRadius="@dimen/an_radius_l"
+                android:topLeftRadius="@dimen/an_radius_arch"
+                android:topRightRadius="@dimen/an_radius_arch" />
+        </shape>
+    </item>
+
+    <item
+        android:bottom="5dp"
+        android:left="0dp"
+        android:right="5dp"
+        android:top="0dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/an_paper_card" />
+            <stroke
+                android:width="@dimen/an_stroke"
+                android:color="@color/an_gold" />
+            <corners
+                android:bottomLeftRadius="@dimen/an_radius_s"
+                android:bottomRightRadius="@dimen/an_radius_l"
+                android:topLeftRadius="@dimen/an_radius_arch"
+                android:topRightRadius="@dimen/an_radius_arch" />
+        </shape>
+    </item>
+</layer-list>

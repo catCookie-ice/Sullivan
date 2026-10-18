@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    卡片：错位双框 + 不对称圆角。
+
+    两层：
+    ① 「影子框」——整块向右下各推 5dp 的细描边矩形（只有边线，没有面）；
+    ② 主面——从右下方内收 5dp 的实心纸色矩形，古金细描边。
+    主面盖住影子框的左上一侧，只在右下露出一道 5dp 的错位线。这是版画/石印里常见的
+    「套印没对准」效果，也是这套风格在不画曲线的前提下最省的一招。
+
+    四角刻意不同值（左上最圆、右上最小）：新艺术运动厌恶正圆和正交，方框也要「手绘的方」。
+    MaterialCardView 的 cornerRadius 是四角同值的，所以卡片只能用 LinearLayout +
+    android:background 引用本文件，不能拿 MaterialCardView 硬套。
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- ① 错位的影子框：向右下推 5dp -->
+    <item
+        android:bottom="0dp"
+        android:left="5dp"
+        android:right="0dp"
+        android:top="5dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <stroke
+                android:width="@dimen/an_stroke_hair"
+                android:color="@color/an_line" />
+            <corners
+                android:bottomLeftRadius="@dimen/an_radius_s"
+                android:bottomRightRadius="@dimen/an_radius_m"
+                android:topLeftRadius="@dimen/an_radius_l"
+                android:topRightRadius="@dimen/an_radius_xs" />
+        </shape>
+    </item>
+
+    <!-- ② 主面：向左上收 5dp -->
+    <item
+        android:bottom="5dp"
+        android:left="0dp"
+        android:right="5dp"
+        android:top="0dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/an_paper_card" />
+            <stroke
+                android:width="@dimen/an_stroke"
+                android:color="@color/an_gold" />
+            <corners
+                android:bottomLeftRadius="@dimen/an_radius_s"
+                android:bottomRightRadius="@dimen/an_radius_m"
+                android:topLeftRadius="@dimen/an_radius_l"
+                android:topRightRadius="@dimen/an_radius_xs" />
+        </shape>
+    </item>
+</layer-list>

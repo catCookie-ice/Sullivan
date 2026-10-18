@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 主按钮底色：默认浅古金面，按下/聚焦压深一档，禁用褪成纸灰。 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/an_button_disabled" android:state_enabled="false" />
+    <item android:color="@color/an_gold" android:state_pressed="true" />
+    <item android:color="@color/an_gold" android:state_focused="true" />
+    <item android:color="@color/an_gold_pale" />
+</selector>

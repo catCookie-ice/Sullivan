@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    启动图标前景：一条卷须状的 S + 一片叶芽。
+
+    viewport 是 108×108，但自适应图标只有中间 72×72 是安全区（四周 18dp 会被裁成
+    圆形/方形/水滴形）。所以图形全部落在 x∈[39,74]、y∈[24,81] 里。
+
+    背景由 ic_launcher.xml 的 <background> 提供纸色，这里只画前景。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- S 形的鞭线：两段反向的弧，收笔向上甩出 -->
+    <path
+        android:pathData="M69,36 C69,24 45,24 45,38 C45,52 63,52 63,64 C63,78 39,78 39,66"
+        android:strokeColor="@color/an_gold_deep"
+        android:strokeWidth="6.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- 叶芽：压在 S 的右侧腰上，给这个几何形一点生物感 -->
+    <path
+        android:fillColor="@color/an_teal"
+        android:pathData="M69,56 c7,-5 15,-1 15,6 c-7,5 -15,1 -15,-6 z" />
+</vector>

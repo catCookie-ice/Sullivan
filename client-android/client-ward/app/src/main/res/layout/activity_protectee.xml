@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -56,22 +57,18 @@
         -->
         <Button
             android:id="@+id/my_bind_code_button"
-            style="?attr/borderlessButtonStyle"
+            style="@style/Widget.Sullivan.Button.CameraGhost"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:minWidth="0dp"
             android:text="@string/action_my_bind_code"
-            android:textColor="@color/sullivan_accent"
             android:textSize="12sp" />
 
         <Button
             android:id="@+id/pick_model_button"
-            style="?attr/borderlessButtonStyle"
+            style="@style/Widget.Sullivan.Button.CameraGhost"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:minWidth="0dp"
             android:text="@string/action_pick_model"
-            android:textColor="@color/sullivan_accent"
             android:textSize="12sp" />
     </LinearLayout>
 
@@ -110,7 +107,9 @@
                 android:layout_weight="1"
                 android:checked="true"
                 android:text="@string/switch_speech"
-                android:textColor="@color/white" />
+                android:textColor="@color/white"
+                app:thumbTint="@color/an_camera_switch_thumb"
+                app:trackTint="@color/an_camera_switch_track" />
 
             <com.google.android.material.switchmaterial.SwitchMaterial
                 android:id="@+id/haptics_switch"
@@ -119,7 +118,9 @@
                 android:layout_weight="1"
                 android:checked="true"
                 android:text="@string/switch_haptics"
-                android:textColor="@color/white" />
+                android:textColor="@color/white"
+                app:thumbTint="@color/an_camera_switch_thumb"
+                app:trackTint="@color/an_camera_switch_track" />
         </LinearLayout>
 
         <!--
@@ -128,11 +129,11 @@
         -->
         <Button
             android:id="@+id/rate_button"
+            style="@style/Widget.Sullivan.Button.CameraOutline"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="@dimen/an_touch_min"
             android:layout_marginTop="4dp"
-            android:text="@string/rate_standard"
-            android:textSize="16sp" />
+            android:text="@string/rate_standard" />
     </LinearLayout>
 
     <!--
@@ -165,12 +166,11 @@
 
         <Button
             android:id="@+id/alarm_dismiss_button"
+            style="@style/Widget.Sullivan.Button.Alarm"
             android:layout_width="match_parent"
             android:layout_height="72dp"
             android:layout_marginTop="16dp"
-            android:text="@string/action_im_fine"
-            android:textSize="24sp"
-            android:textStyle="bold" />
+            android:text="@string/action_im_fine" />
     </LinearLayout>
 
     <!-- 权限提示，仅在未授权时显示 -->
@@ -195,9 +195,12 @@
 
         <Button
             android:id="@+id/grant_permission_button"
+            style="@style/Widget.Sullivan.Button.Primary"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="@dimen/an_button_height"
             android:layout_marginTop="12dp"
+            android:paddingStart="@dimen/an_space_l"
+            android:paddingEnd="@dimen/an_space_l"
             android:text="@string/prompt_grant" />
     </LinearLayout>
 

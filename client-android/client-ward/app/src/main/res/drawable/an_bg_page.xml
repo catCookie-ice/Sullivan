@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    页面底：羊皮纸。
+
+    三层，从下到上：纯色纸底 → 左上偏古金的光晕 → 右下偏深青的光晕。
+    XML 的 <shape> 只能做圆角矩形和渐变，做不出真正的纸纹，所以用两团极淡的径向渐变
+    （alpha 分别只有 0x1F 和 0x12）假装纸张吸墨不均。半径取 80%p 是为了在大屏上也能铺满，
+    取固定 dp 的话平板上会出现明显的圆形边界。
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/an_paper" />
+
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:centerX="0.14"
+                android:centerY="0.06"
+                android:endColor="@android:color/transparent"
+                android:gradientRadius="80%p"
+                android:startColor="@color/an_page_glow_gold"
+                android:type="radial" />
+        </shape>
+    </item>
+
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:centerX="0.94"
+                android:centerY="0.9"
+                android:endColor="@android:color/transparent"
+                android:gradientRadius="70%p"
+                android:startColor="@color/an_page_glow_teal"
+                android:type="radial" />
+        </shape>
+    </item>
+</layer-list>

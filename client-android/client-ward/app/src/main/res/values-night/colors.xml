@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    夜间色板：同一套语义令牌换一组值。
+
+    只覆盖「an_」前缀的令牌：level_* 是安全语义色，昼夜都必须保持可辨识的红黄绿，
+    不随主题变暗；panel_scrim 画在相机预览上，也保持原值。
+-->
+<resources>
+    <color name="an_paper">#FF1A1712</color>
+    <color name="an_paper_card">#FF241F18</color>
+    <color name="an_paper_deep">#FF332B20</color>
+
+    <color name="an_ink">#FFF1E7D3</color>
+    <color name="an_ink_2">#FFD6C9B0</color>
+    <color name="an_ink_3">#FFA89B84</color>
+
+    <color name="an_gold">#FFC9A24B</color>
+    <color name="an_gold_deep">#FFDFC077</color>
+    <color name="an_gold_pale">#FF8A733F</color>
+
+    <color name="an_teal">#FF4E8A84</color>
+    <color name="an_sage">#FF8A9C6C</color>
+    <color name="an_terracotta">#FFC47458</color>
+    <color name="an_mauve">#FFA07A94</color>
+
+    <color name="an_line">#FF4A4032</color>
+    <color name="an_line_soft">#FF3A3227</color>
+
+    <color name="an_chip_neutral_bg">#33C9A24B</color>
+    <color name="an_chip_success_bg">#338A9C6C</color>
+    <color name="an_chip_warning_bg">#3DC9A24B</color>
+    <color name="an_chip_danger_bg">#33C47458</color>
+
+    <color name="an_page_glow_gold">#1AC9A24B</color>
+    <color name="an_page_glow_teal">#104E8A84</color>
+
+    <!-- 日志面板：夜间只是把底压得更深一点，仍然是深底浅字（理由见 values/colors.xml） -->
+    <color name="an_log_bg">#FF120F0B</color>
+    <color name="an_log_text">#FFE3D7BE</color>
+    <color name="an_log_error">#FFD08A70</color>
+
+    <color name="an_field_fill">#80332B20</color>
+    <color name="an_ripple">#4DC9A24B</color>
+    <color name="an_button_disabled">#FF3A3227</color>
+    <color name="an_scrim">#B31A1712</color>
+</resources>

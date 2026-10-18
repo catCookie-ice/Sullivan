@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    刷新图标：一段圆弧 + 一个箭头尖，笔画按新艺术运动的习惯收细、末端略弯。
+    只用一个 path 族的四条曲线，不引图标库 —— 整包只有一个 FAB 用到它。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <path
+        android:pathData="M19.5,12 A7.5,7.5 0 1,1 17.6,6.9"
+        android:strokeColor="#2B2620"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.8" />
+
+    <path
+        android:pathData="M17.4,3.6 L17.6,7.2 L14.1,8.1"
+        android:strokeColor="#2B2620"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="1.8" />
+</vector>

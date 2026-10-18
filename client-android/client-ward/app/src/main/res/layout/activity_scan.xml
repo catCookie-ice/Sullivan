@@ -71,19 +71,19 @@
 
         <Button
             android:id="@+id/scan_manual_button"
+            style="@style/Widget.Sullivan.Button.Primary"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="@dimen/an_button_height"
             android:layout_marginTop="12dp"
-            android:text="@string/scan_manual_entry"
-            android:textSize="18sp" />
+            android:text="@string/scan_manual_entry" />
 
         <Button
             android:id="@+id/scan_grant_button"
+            style="@style/Widget.Sullivan.Button.Primary"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="@dimen/an_button_height"
             android:layout_marginTop="12dp"
             android:text="@string/scan_grant"
-            android:textSize="18sp"
             android:visibility="gone" />
     </LinearLayout>
 </FrameLayout>

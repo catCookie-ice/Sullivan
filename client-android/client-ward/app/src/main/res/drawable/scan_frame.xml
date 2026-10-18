@@ -1,14 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    取景框：白色描边的空心方框。
+    取景框：白色描边的空心方框，四角各嵌一枚古金空心小圆环。
+
     用 @drawable 而不是 View 的背景色：需要一个只画边、中间透明的形状，
     直接在布局里给 View 设背景色会挡住摄像头画面。
+
+    框线保持纯白 3dp 不动：取景框的首要职责是让用户在晃动的画面上立刻找到它，
+    四角的小环只是让它不像一个纯技术性的对位框。
+
+    <b>四个环的位置是写死的 dp</b>，因为 layer-list 的 inset 不支持百分比。
+    它们对应的控件尺寸是 activity_scan.xml 里的 scan_frame（240dp）：
+    环 36dp、留边 6dp，所以 right/bottom = 240 - 6 - 36 = 198。
+    改框的大小必须同时改这四个 inset，否则环会跑偏。
 -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <stroke
-        android:width="3dp"
-        android:color="@android:color/white" />
-    <corners android:radius="12dp" />
-    <solid android:color="@android:color/transparent" />
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <stroke
+                android:width="3dp"
+                android:color="@android:color/white" />
+            <corners android:radius="12dp" />
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+
+    <item
+        android:bottom="198dp"
+        android:left="6dp"
+        android:right="198dp"
+        android:top="6dp">
+        <shape android:shape="oval">
+            <stroke
+                android:width="2dp"
+                android:color="@color/an_gold_pale" />
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+
+    <item
+        android:bottom="198dp"
+        android:left="198dp"
+        android:right="6dp"
+        android:top="6dp">
+        <shape android:shape="oval">
+            <stroke
+                android:width="2dp"
+                android:color="@color/an_gold_pale" />
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+
+    <item
+        android:bottom="6dp"
+        android:left="6dp"
+        android:right="198dp"
+        android:top="198dp">
+        <shape android:shape="oval">
+            <stroke
+                android:width="2dp"
+                android:color="@color/an_gold_pale" />
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+
+    <item
+        android:bottom="6dp"
+        android:left="198dp"
+        android:right="6dp"
+        android:top="198dp">
+        <shape android:shape="oval">
+            <stroke
+                android:width="2dp"
+                android:color="@color/an_gold_pale" />
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+</layer-list>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 描边按钮的边线：正常古金，按下墨色，禁用淡线。 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/an_line" android:state_enabled="false" />
+    <item android:color="@color/an_ink" android:state_pressed="true" />
+    <item android:color="@color/an_gold" />
+</selector>

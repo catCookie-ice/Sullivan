@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    单选圆点的着色。
+
+    选中态用 an_teal 而不是 an_gold：古金是这套配色的装饰色（描边、分隔线），
+    选中标记需要的是「这里有一个决定」，而深青在羊皮纸上比古金更沉、更像墨。
+    未选中态用 an_ink_3，保证空圈仍然看得见 —— 一个看不见的未选项会让人以为没有别的选择。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/an_teal" android:state_checked="true" />
+    <item android:color="@color/an_ink_3" />
+</selector>

@@ -1,11 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    新艺术运动（Art Nouveau）色板 + 检测结果的三档安全色。
+
+    「an_」前缀是「art nouveau」的缩写，与既有的 sullivan_* 区分开：
+    sullivan_indigo 那一套是骨架期的靛蓝，已在本次改版中停用，但保留定义，
+    以免有布局或深色主题仍在引用时编译失败。
+
+    安全色 level_* **不并入新色板**：它们表达的是「走得过去 / 注意 / 停下」，
+    必须保持绿/黄/红的高辨识度，不能被装饰性的低饱和配色同化。
+-->
 <resources>
-    <!-- Sullivan 主题色。靛蓝沿用骨架里既有的 statusBarColor（#FF1A237E），
-         深色模式用同名 _light 变体，避免深底上对比度不足。 -->
+    <!-- ===== 新艺术色板（日间：羊皮纸 + 古金 + 深青） ===== -->
+    <color name="an_paper">#FFF4EBD9</color>
+    <color name="an_paper_card">#FFFBF5E8</color>
+    <color name="an_paper_deep">#FFEADDC2</color>
+
+    <color name="an_ink">#FF2B2620</color>
+    <color name="an_ink_2">#FF4A4237</color>
+    <color name="an_ink_3">#FF6E6455</color>
+
+    <color name="an_gold">#FFA8832C</color>
+    <color name="an_gold_deep">#FF7C5F1C</color>
+    <color name="an_gold_pale">#FFD9C48A</color>
+
+    <color name="an_teal">#FF2E5A57</color>
+    <color name="an_sage">#FF6B7B52</color>
+    <color name="an_terracotta">#FFA2523B</color>
+    <color name="an_mauve">#FF7A5570</color>
+
+    <color name="an_line">#FFC9B79A</color>
+    <color name="an_line_soft">#FFDED0B6</color>
+
+    <!-- 状态标签底色：半透明，叠在纸面上仍然读得出下面的纹理 -->
+    <color name="an_chip_neutral_bg">#22A8832C</color>
+    <color name="an_chip_success_bg">#226B7B52</color>
+    <color name="an_chip_warning_bg">#26A8832C</color>
+    <color name="an_chip_danger_bg">#22A2523B</color>
+
+    <!--
+        页面的两团「纸面不均匀」光晕，由 an_bg_page 的两个径向渐变取用。
+        必须是颜色资源而不是写死在 drawable 里：夜间模式要把它们换掉，
+        否则深色纸面上会浮出两团亮斑。
+    -->
+    <color name="an_page_glow_gold">#1FA8832C</color>
+    <color name="an_page_glow_teal">#122E5A57</color>
+
+    <!--
+        日志面板（实时会话的消息记录）**在两套主题里都是深底浅字**。
+        因此不能复用 an_ink / an_paper_card —— 那两个令牌在夜间会互相换位，
+        日志面板会跟着翻成「浅底深字」，和它右侧的羊皮纸卡片糊成一片。
+        这里的四个颜色是面板自己的，不随主题反转。
+    -->
+    <color name="an_log_bg">#FF2B2620</color>
+    <color name="an_log_text">#FFF1E7D3</color>
+    <color name="an_log_error">#FFE5A08A</color>
+
+    <!-- 输入框填充与按下涟漪 -->
+    <color name="an_field_fill">#80EADDC2</color>
+    <color name="an_ripple">#33A8832C</color>
+    <color name="an_button_disabled">#FFE7DCC4</color>
+    <color name="an_scrim">#B32B2620</color>
+
+    <!-- 启动图标底色（自适应图标需要 <color> 资源） -->
+    <color name="ic_launcher_background">#FFF4EBD9</color>
+
+    <!-- ===== 停用的骨架期配色（仅保留定义，避免旧引用断链） ===== -->
     <color name="sullivan_indigo">#FF1A237E</color>
     <color name="sullivan_indigo_dark">#FF0D1466</color>
     <color name="sullivan_indigo_light">#FF9FA8DA</color>
-    <color name="sullivan_accent">#FF03DAC5</color>
+    <color name="sullivan_accent">#FFD9C48A</color>
 
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
