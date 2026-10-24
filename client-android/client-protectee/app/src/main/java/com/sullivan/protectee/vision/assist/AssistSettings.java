@@ -26,6 +26,14 @@ public final class AssistSettings {
     private static final String KEY_RATE = "announce_rate";
     private static final String KEY_SPEECH = "speech_enabled";
     private static final String KEY_HAPTICS = "haptics_enabled";
+    /**
+     * 报警后是否自动向监护人依次发起会话。
+     *
+     * <p>本地这份只是**镜像**：真正的口径以服务端 {@code /me/alert-setting} 为准。
+     * 存本地是为了让界面在离线时也能正确显示开关状态，而不是每次进页面都闪一下默认值。
+     * 写入时先改本地再推服务端；服务端失败时本地保留用户的选择，下次同步再补。
+     */
+    private static final String KEY_ALERT_AUTO_SESSION = "alert_auto_session";
 
     private final SharedPreferences preferences;
 
@@ -58,5 +66,17 @@ public final class AssistSettings {
 
     public void setHapticsEnabled(boolean enabled) {
         preferences.edit().putBoolean(KEY_HAPTICS, enabled).apply();
+    }
+
+    /**
+     * 报警后是否自动呼叫监护人。**默认开启** —— 这是产品的默认行为，
+     * 新用户不必先找到开关才算「有守护」。
+     */
+    public boolean isAlertAutoSessionEnabled() {
+        return preferences.getBoolean(KEY_ALERT_AUTO_SESSION, true);
+    }
+
+    public void setAlertAutoSessionEnabled(boolean enabled) {
+        preferences.edit().putBoolean(KEY_ALERT_AUTO_SESSION, enabled).apply();
     }
 }

@@ -54,7 +54,8 @@ public class VolunteerHomeActivity extends AppCompatActivity {
         session = new SessionStore(this);
         if (!session.isLoggedIn()) {
             Toast.makeText(this, R.string.guardian_need_login, Toast.LENGTH_SHORT).show();
-            startActivity(new Intent(this, LoginActivity.class));
+            // 与 GuardianActivity 同口径：回角色入口，而不是叠一个会自动弹回来的登录页。
+            startActivity(LoginActivity.toRoleEntry(this));
             finish();
             return;
         }

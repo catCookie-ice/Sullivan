@@ -103,6 +103,15 @@ public class QrLoginActivity extends AppCompatActivity {
     /** 拿到 exchangeCode 后暂存，避免重复轮询到 CONFIRMED 时反复提交兑换。 */
     @Nullable
     private String consumedExchangeCode;
+    /**
+     * 本次登录的受护人显示名，来自轮询响应的 {@code protecteeName}。
+     *
+     * <p>为什么需要单独存：兑换回来的 {@code TokenResponse} 只有 {@code principalId}，
+     * 没有名字；轮询响应里有名字但没有登录名。两个响应拼起来才够显示，
+     * 所以在这中间把它们接起来 —— 否则主界面只能显示 26 位 ID，或者什么都不显示。
+     */
+    @Nullable
+    private String signedInName;
     private long expiresAtMs;
     private boolean exchanging;
     private boolean finishedLogin;
@@ -270,6 +279,13 @@ public class QrLoginActivity extends AppCompatActivity {
     }
 
     private void onStatus(@NonNull QrDtos.LoginTicketStatusResponse status) {
+        // 记住这次登录的是谁。服务端在 SCANNED 与 CONFIRMED 两个状态都带了
+        // protecteeName，但轮询响应里**没有登录名**（loginName）—— 只有显示名。
+        // 兑换成功后 TokenResponse 也只有 principalId，所以显示用的名字必须
+        // 从这里带过去，否则主界面只能显示一串 26 位 ID，等于没显示。
+        if (!TextUtils.isEmpty(status.protecteeName)) {
+            signedInName = status.protecteeName;
+        }
         switch (status.status == null ? "" : status.status) {
             case "PENDING":
                 statusText.setText(R.string.qrlogin_step_wait);
@@ -324,7 +340,7 @@ public class QrLoginActivity extends AppCompatActivity {
 
                         session.saveLogin(body.accessToken, body.principalId, body.principalType,
                                 body.roles == null ? new HashSet<>() : new HashSet<>(body.roles),
-                                null);
+                                signedInName);
                         // 调用方拿到 RESULT_OK 就可以继续它自己的事了
                         // （「我的绑定码」正是靠这个在登录完成后把码取出来的）。
                         setResult(RESULT_OK);

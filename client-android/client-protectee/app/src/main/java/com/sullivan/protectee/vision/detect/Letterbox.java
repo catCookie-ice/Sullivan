@@ -8,7 +8,7 @@ package com.sullivan.protectee.vision.detect;
  * 训练/推理脚本一致）。
  *
  * <p>这里的宽高都是**画面正立后**的尺寸。检测框从模型坐标还原到归一化坐标时，
- * 用的也是同一套参数，见 {@link YoloV8Detector#decode}。
+ * 用的也是同一套参数，见 {@link Yolo26Detector#detect(Prepared)}。
  */
 public final class Letterbox {
 

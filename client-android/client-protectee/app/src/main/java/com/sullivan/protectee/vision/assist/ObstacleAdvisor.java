@@ -1,9 +1,13 @@
 package com.sullivan.protectee.vision.assist;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
+import com.sullivan.protectee.vision.depth.DepthMap;
+import com.sullivan.protectee.vision.depth.DistancePolicy;
 import com.sullivan.protectee.vision.detect.CocoLabels;
 import com.sullivan.protectee.vision.detect.Detection;
+import com.sullivan.protectee.vision.detect.Letterbox;
 import com.sullivan.protectee.vision.scene.CorridorCoverage;
 
 import java.util.ArrayList;
@@ -76,6 +80,13 @@ public final class ObstacleAdvisor {
         int count;
         /** 组内**任意**一个目标算得上"近"，整组就算近。 */
         boolean near;
+        /**
+         * 组内最近那个目标的米数；没有深度图或取不到有效值时是 {@link Float#NaN}。
+         *
+         * <p>取组内**最小值**而不是平均：一簇里有一个已经贴到跟前，这句话就必须按
+         * 最近的那个说，否则"中央三名行人"会把一个 0.8 米的人稀释成"约 3 米"。
+         */
+        float meters = Float.NaN;
 
         Group(String position, String label) {
             this.position = position;
@@ -125,14 +136,44 @@ public final class ObstacleAdvisor {
      */
     @NonNull
     public Advice advise(@NonNull List<Detection> detections, int maxReported) {
+        return advise(detections, maxReported, null, null);
+    }
+
+    /**
+     * 带深度图的版本：有米数时报米数，没有时与改造前逐字一致。
+     *
+     * @param depth 本帧深度图；{@code null} 表示没有深度模型，全部退回几何启发式
+     */
+    @NonNull
+    public Advice advise(@NonNull List<Detection> detections, int maxReported,
+                         @Nullable DepthMap depth, @Nullable Letterbox box) {
         List<Detection> obstacles = new ArrayList<>();
         for (Detection detection : detections) {
             if (CocoLabels.isObstacle(detection.label) && isRelevant(detection)) {
                 obstacles.add(detection);
             }
         }
-        // 由近到远：框底边越靠下，目标离摄像头越近。
-        obstacles.sort((a, b) -> Float.compare(b.bottom, a.bottom));
+        // 由近到远：有深度时按米数，没有时按框底边（越靠下越近）。
+        // 两种排序必须各自稳定：把两者混在同一比较器里会让"有的有米数、有的没有"
+        // 的帧排出不连贯的顺序，而播报顺序就是用户听到的顺序。
+        if (depth != null) {
+            obstacles.sort((a, b) -> {
+                float ma = DistancePolicy.metersOf(a, depth, box);
+                float mb = DistancePolicy.metersOf(b, depth, box);
+                if (Float.isNaN(ma) && Float.isNaN(mb)) {
+                    return Float.compare(b.bottom, a.bottom);
+                }
+                if (Float.isNaN(ma)) {
+                    return 1;
+                }
+                if (Float.isNaN(mb)) {
+                    return -1;
+                }
+                return Float.compare(ma, mb);
+            });
+        } else {
+            obstacles.sort((a, b) -> Float.compare(b.bottom, a.bottom));
+        }
 
         float freeRatio = computeFreeRatio(obstacles);
 
@@ -145,7 +186,7 @@ public final class ObstacleAdvisor {
                     blocked ? "static:blocked" : "static:clear");
         }
 
-        List<Group> groups = group(obstacles);
+        List<Group> groups = group(obstacles, depth, box);
         boolean danger = freeRatio < BLOCKED_RATIO;
         StringBuilder message = new StringBuilder();
         StringBuilder key = new StringBuilder("static:");
@@ -176,7 +217,8 @@ public final class ObstacleAdvisor {
      * 而且列表已经按距离排好序，簇的先后顺序天然就是"最近的簇先报"。
      */
     @NonNull
-    private static List<Group> group(@NonNull List<Detection> obstacles) {
+    private static List<Group> group(@NonNull List<Detection> obstacles, @Nullable DepthMap depth,
+                                     @Nullable Letterbox box) {
         List<Group> groups = new ArrayList<>();
         for (Detection obstacle : obstacles) {
             String position = positionOf(obstacle);
@@ -193,18 +235,33 @@ public final class ObstacleAdvisor {
                 groups.add(found);
             }
             found.count++;
-            found.near |= isNear(obstacle);
+            found.near |= isNear(obstacle, depth, box);
+            float meters = DistancePolicy.metersOf(obstacle, depth, box);
+            if (!Float.isNaN(meters) && (Float.isNaN(found.meters) || meters < found.meters)) {
+                found.meters = meters;
+            }
         }
         return groups;
     }
 
-    /** 一簇目标的中文描述。只有一个目标时措辞与改造前逐字一致。 */
+    /**
+     * 一簇目标的中文描述。有米数时报米数，没有时与改造前逐字一致。
+     *
+     * <p>米数只在这句话里说一次，且放在最前面 —— 盲人听一句话的注意力集中开头，
+     * "1.5 米处中央有行人"比"中央行人较近，注意，大约 1.5 米"更能决定要不要停下。
+     */
     @NonNull
     private static String describe(@NonNull Group group) {
         String label = CocoLabels.translate(group.label);
+        String meters = DistancePolicy.describeMeters(group.meters);
         if (group.count == 1) {
+            if (meters != null) {
+                return meters + "处" + group.position + label
+                        + (group.near ? "，注意" : "，请注意");
+            }
             return group.position + label + (group.near ? "较近，注意" : "，请注意");
         }
+        // 多目标时不报米数：一簇里各目标距离不同，报哪一个都是错的。
         return group.position + numberWord(group.count) + quantifierOf(group.label) + label + "，注意";
     }
 
@@ -234,9 +291,24 @@ public final class ObstacleAdvisor {
         }
     }
 
-    /** 目标是否离得近。单目画面无法测距，这里只是根据画面中的位置和大小估计。 */
+    /**
+     * 目标是否离得近。
+     *
+     * <p>没有深度图时是**几何启发式**：框下沿够低或面积够大。它没有尺度——同样一个人，
+     * 1 米和 3 米都可能满足或不满足，取决于手机举多高、镜头多广。有深度图时改用米，
+     * 见 {@link DistancePolicy#isNear(Detection, DepthMap)}。
+     */
     public static boolean isNear(@NonNull Detection detection) {
         return isNear(detection.left, detection.top, detection.right, detection.bottom);
+    }
+
+    /**
+     * 有深度图时的"是否算近"。取不到有效深度就退回几何判据 ——
+     * 不能因为深度缺失就一律当"很近"（假紧急）或一律当"很远"（该提示时沉默）。
+     */
+    public static boolean isNear(@NonNull Detection detection, @Nullable DepthMap depth,
+                                 @Nullable Letterbox box) {
+        return DistancePolicy.isNear(detection, depth, box);
     }
 
     /** 同 {@link #isNear(Detection)}，但用拆开的坐标，供只有快照的场景调用。 */

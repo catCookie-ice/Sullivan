@@ -158,6 +158,22 @@ public final class Json {
         return object.get(key);
     }
 
+    /**
+     * 读一个**可选**的浮点字段：键不存在时返回 {@link Float#NaN}，不抛异常。
+     *
+     * <p>只用于后加的字段。{@link #getFloat} 对缺失键会抛异常——那是刻意的，
+     * 否则拼错字段名会静默读成 NaN，直到回放时才发现数据一直是空的。
+     * 但"旧版本日志里没有这个字段"是**预期**情形，不该让解析失败：
+     * 深度的 {@code meters} 就是这种字段（加深度图之前写出的日志没有它）。
+     */
+    public static float getOptionalFloat(@NonNull Map<String, Object> object,
+                                         @NonNull String key) {
+        if (!object.containsKey(key) || object.get(key) == null) {
+            return Float.NaN;
+        }
+        return getFloat(object, key);
+    }
+
     @NonNull
     public static String getString(@NonNull Map<String, Object> object, @NonNull String key) {
         Object value = get(object, key);

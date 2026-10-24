@@ -439,6 +439,77 @@ paths:
       tags: [Realtime]
       summary: 任一方结束会话
 
+  # ============ 报警与位置 (FR-06 / FR-11~FR-13) ============
+  /me/location:
+    put:
+      tags: [Alert]
+      summary: 上报最新位置（覆盖式，只保留最新一条）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [latitude, longitude]
+              properties:
+                latitude: { type: number, format: double, minimum: -90, maximum: 90 }
+                longitude: { type: number, format: double, minimum: -180, maximum: 180 }
+                accuracyM: { type: number, format: double, minimum: 0, description: 定位精度（米） }
+                capturedAt: { type: string, format: date-time, description: 设备采集时刻；缺省按服务端收到时刻计 }
+    get:
+      tags: [Alert]
+      summary: 读取我的最新位置（从未上报过时 404）
+  /alerts:
+    post:
+      tags: [Alert]
+      summary: 创建报警（先落库再路由；存在生效监护人时通知全部监护人）
+      description: |
+        路由规则见 00 §5。报警创建时固化位置快照，并按 alert_setting 的
+        配置在 5 秒后（默认；用户可关闭）按绑定确认时间**依次**向全部 ACTIVE 监护人
+        发起实时会话。同一 (protecteeUid, idempotencyKey) 重复提交返回已有报警。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [alertType, idempotencyKey]
+              properties:
+                alertType: { type: string, enum: [MANUAL, VOICE_HELP, COLLISION] }
+                idempotencyKey: { type: string, maxLength: 100, description: 同一次报警的多次提交必须复用 }
+                note: { type: string, maxLength: 300 }
+    get:
+      tags: [Alert]
+      summary: 我的报警列表（受护人视角，倒序）
+  /alerts/{id}:
+    get:
+      tags: [Alert]
+      summary: 报警详情（仅受护人本人与其生效监护人；其他人一律 404）
+  /alerts/{id}/resolve:
+    post:
+      tags: [Alert]
+      summary: 结束报警（仅受护人本人；同时取消尚未执行的自动呼叫）
+  /me/alert-setting:
+    get:
+      tags: [Alert]
+      summary: 读取报警偏好（从未配置过时返回默认值：开启、5 秒）
+    put:
+      tags: [Alert]
+      summary: 修改报警偏好（关闭时一并取消已排期但尚未执行的自动呼叫）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [autoSessionEnabled]
+              properties:
+                autoSessionEnabled: { type: boolean }
+  /me/alert-guardians:
+    get:
+      tags: [Alert]
+      summary: 报警会依次通知谁（按将要呼叫的顺序返回生效监护人 ID）
+
   /enrollments/{activityId}:
     post:
       tags: [Enrollment]

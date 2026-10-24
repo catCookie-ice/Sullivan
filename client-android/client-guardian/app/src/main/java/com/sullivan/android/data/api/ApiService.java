@@ -1,6 +1,7 @@
 package com.sullivan.android.data.api;
 
 import com.sullivan.android.data.api.dto.ActivityDtos;
+import com.sullivan.android.data.api.dto.AlertDtos;
 import com.sullivan.android.data.api.dto.AuthDtos;
 import com.sullivan.android.data.api.dto.BindingDtos;
 import com.sullivan.android.data.api.dto.LookupDtos;
@@ -201,6 +202,24 @@ public interface ApiService {
             @Query("status") String status,
             @Query("page") long page,
             @Query("size") long size);
+
+    // ------------------------------------------------------------------
+    // 报警（监护人视角）
+    // ------------------------------------------------------------------
+
+    /**
+     * 我能看到的报警：我发起的 + **投递给我的**。
+     *
+     * <p>服务端 {@code AlertService.myAlerts} 这两类都会返回。
+     * 监护人端靠它拿到「谁在求助、他在哪」—— 会话接口只给会话 ID，
+     * 不带位置，两者信息量不同。
+     */
+    @GET("alerts")
+    Call<List<AlertDtos.AlertResponse>> listAlerts();
+
+    /** 单条报警详情。服务端只允许受护人本人与生效监护人读，其余返回 404。 */
+    @GET("alerts/{id}")
+    Call<AlertDtos.AlertResponse> getAlert(@Path("id") String alertId);
 
     // ------------------------------------------------------------------
     // 实时会话（REST 部分；长连接见 RealtimeSocket）

@@ -7,6 +7,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.sullivan.android.R;
+import com.sullivan.android.data.session.SessionStore;
 import com.sullivan.android.ui.login.LoginActivity;
 
 /**
@@ -28,12 +29,31 @@ import com.sullivan.android.ui.login.LoginActivity;
  * （{@code BuildConfig.SERVER_BASE_URL}，见 {@code app/build.gradle.kts}），
  * 不交给用户选择。历史上这里曾有过一个地址入口，已撤销——理由见
  * {@code SessionStore} 的类注释。
+ *
+ * <p><b>已登录就跳过本页</b>：本页是 LAUNCHER，每次冷启动都会先经过它。
+ * 在此之前，已登录的账号也会停在这里被要求再选一次角色，而那张卡片对已登录的账号
+ * **什么也不决定**（{@link LoginActivity#ROLE_HINT_GUARDIAN} 只换标题文案，
+ * 落地页看的是服务端 roles）。于是用户每次重开应用都要先答一道没有作用的题。
+ * 现在改为：本地有令牌就直接进 {@link LoginActivity#homeIntentFor} 算出的主页。
+ *
+ * <p>不在这里判「令牌是否仍然有效」：那需要一次网络请求，而本页的职责只是
+ * 决定先给用户看哪一屏。令牌失效由各页面收到 {@code 401} 时自行处理
+ * （清登录态），与本页无关。
  */
 public class RoleEntryActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // 必须在 setContentView 之前判断：已登录时本页根本不该出现在屏幕上，
+        // 先建视图再跳转会闪一下「选择你的角色」。
+        if (new SessionStore(this).isLoggedIn()) {
+            startActivity(LoginActivity.homeIntentFor(this));
+            finish();
+            return;
+        }
+
         setContentView(R.layout.activity_role_entry);
 
         findViewById(R.id.card_guardian).setOnClickListener(

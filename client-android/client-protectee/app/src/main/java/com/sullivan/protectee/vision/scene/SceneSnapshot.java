@@ -79,11 +79,27 @@ public final class SceneSnapshot {
         public final int hits;
         /** 框底边贴到了画面底部：此时尺度通道失效，只能靠"非常近"处理。 */
         public final boolean clipped;
+        /**
+         * 由深度图得到的距离（米）；没有深度模型或取不到有效值时是 {@link Float#NaN}。
+         *
+         * <p>保留 NaN 而不是填 0 或某个哨兵值：{@code toString()} 与回放脚本靠它区分
+         * "测出来是 0" 和 "没测"，而这个区分正是 {@code DistancePolicy} 决定要不要
+         * 退回几何启发式的依据。
+         */
+        public final float meters;
 
         public TrackSnapshot(int id, @NonNull String label, float score, float left, float top,
                              float right, float bottom, float rate, float rawRate, float ttc,
                              float height, float centerXRate, int samples, int hits,
                              boolean clipped) {
+            this(id, label, score, left, top, right, bottom, rate, rawRate, ttc, height,
+                    centerXRate, samples, hits, clipped, Float.NaN);
+        }
+
+        public TrackSnapshot(int id, @NonNull String label, float score, float left, float top,
+                             float right, float bottom, float rate, float rawRate, float ttc,
+                             float height, float centerXRate, int samples, int hits,
+                             boolean clipped, float meters) {
             this.id = id;
             this.label = label;
             this.score = score;
@@ -99,6 +115,7 @@ public final class SceneSnapshot {
             this.samples = samples;
             this.hits = hits;
             this.clipped = clipped;
+            this.meters = meters;
         }
 
         public float centerX() {
@@ -139,7 +156,8 @@ public final class SceneSnapshot {
                     && Float.compare(rawRate, that.rawRate) == 0
                     && Float.compare(ttc, that.ttc) == 0
                     && Float.compare(height, that.height) == 0
-                    && Float.compare(centerXRate, that.centerXRate) == 0;
+                    && Float.compare(centerXRate, that.centerXRate) == 0
+                    && Float.compare(meters, that.meters) == 0;
         }
 
         @Override
@@ -156,6 +174,7 @@ public final class SceneSnapshot {
             result = 31 * result + Float.hashCode(ttc);
             result = 31 * result + Float.hashCode(height);
             result = 31 * result + Float.hashCode(centerXRate);
+            result = 31 * result + Float.hashCode(meters);
             result = 31 * result + samples;
             result = 31 * result + hits;
             result = 31 * result + (clipped ? 1 : 0);
@@ -219,6 +238,8 @@ public final class SceneSnapshot {
         out.append(",\"samples\":").append(track.samples);
         out.append(",\"hits\":").append(track.hits);
         out.append(",\"clipped\":").append(track.clipped);
+        out.append(",\"meters\":");
+        Json.writeNumber(out, track.meters);
         out.append('}');
     }
 
@@ -247,7 +268,10 @@ public final class SceneSnapshot {
                     Json.getFloat(track, "centerXRate"),
                     Json.getInt(track, "samples"),
                     Json.getInt(track, "hits"),
-                    Json.getBoolean(track, "clipped")));
+                    Json.getBoolean(track, "clipped"),
+                    // 旧日志里没有这个字段（加深度图之前写出的），缺失时读成 NaN，
+                    // 等同"当时没有深度图"，回放脚本不必为版本差异分支。
+                    Json.getOptionalFloat(track, "meters")));
         }
 
         return new SceneSnapshot(

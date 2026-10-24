@@ -9,6 +9,10 @@
     <string name="status_model_ready">模型就绪：%1$s</string>
     <string name="status_model_failed">模型加载失败</string>
     <string name="model_source_imported">自定义模型</string>
+    <!-- 深度模型是可选增强：装了才报米数，没装只影响距离的精度，不影响障碍检测本身。 -->
+    <string name="status_depth_ready"> · 深度测距</string>
+    <string name="action_pick_depth_model">更换深度模型</string>
+    <string name="depth_model_imported">深度模型已更新</string>
 
     <string name="prompt_idle">正在启动摄像头…</string>
     <string name="prompt_no_permission">需要摄像头权限才能进行障碍检测</string>
@@ -29,14 +33,44 @@
     <string name="action_im_fine">我没事</string>
     <string name="hint_no_gyroscope">这台设备没有陀螺仪，剧烈晃动报警不可用</string>
 
-    <string name="hint_model_missing">未找到 YOLO 模型。请把 yolov8n.onnx 放到 app/src/main/assets/ 后重新安装，或点击右上角「更换模型」从手机存储中选择 .onnx 文件。</string>
-    <string name="hint_model_failed">模型加载失败：%1$s\n请确认文件是 ultralytics 导出的 YOLOv8/YOLO11 检测模型。</string>
+    <!-- ===== 报警与位置 ===== -->
+    <string name="action_sos">紧急求助</string>
+    <string name="switch_auto_session">报警后自动呼叫监护人</string>
+    <!-- 报警面板上方的一句状态，说清楚「现在有没有人在赶来」。 -->
+    <string name="alarm_sending">正在发出求助…</string>
+    <string name="alarm_sent_scheduled">已通知监护人，5 秒后自动呼叫</string>
+    <string name="alarm_sent_dispatched">已通知全部监护人</string>
+    <string name="alarm_sent_skipped">已通知监护人（自动呼叫已关闭）</string>
+    <string name="alarm_no_guardian">尚无可通知的监护人，请先完成绑定</string>
+    <!--
+        登录失效导致报警发不出去。这条必须与"发送失败"分开说：
+        "发送失败"暗示再试一次也许能成，而登录失效意味着必须先去重新登录，
+        在此之前每一次求助都不会被任何人看到。
+    -->
+    <string name="alarm_session_expired">登录已失效，报警没有发出。请重新登录后再试</string>
+    <string name="alarm_send_failed">求助发送失败：%1$s</string>
+    <string name="alarm_location_missing">未能获取位置，监护人只能看到报警</string>
+    <string name="sos_confirm">确实要发出紧急求助吗？\n会把当前位置发给你的监护人。</string>
+    <string name="sos_confirm_yes">发出求助</string>
+    <string name="sos_confirm_no">取消</string>
+    <!-- 碰撞自动触发时说一句，让用户知道求助已经替他发出去了。 -->
+    <string name="alarm_collision_sent">检测到碰撞风险，已替你通知监护人</string>
+    <!-- 作为报警的 note 字段上报，监护人看到的是这一句。 -->
+    <string name="alarm_collision_detected">端侧检测到碰撞风险，自动发出求助</string>
+    <string name="auto_session_saved">设置已保存</string>
+    <string name="auto_session_save_failed">设置保存失败：%1$s（已按本机设置生效）</string>
+
+    <string name="hint_model_missing">未找到 YOLO 模型。请把 yolo26n.onnx 放到 app/src/main/assets/ 后重新安装，或点击「更换模型」从手机存储中选择 .onnx 文件。</string>
+    <string name="hint_model_failed">模型加载失败：%1$s\n请确认文件是 ultralytics 导出的 YOLOv8/YOLO11/YOLO26 检测模型。</string>
     <string name="hint_camera_failed">摄像头启动失败：%1$s</string>
     <string name="model_imported">模型已导入，正在加载…</string>
     <string name="model_import_failed">模型导入失败：%1$s</string>
 
     <!-- ===== 账号 ===== -->
     <string name="action_my_bind_code">我的绑定码</string>
+    <!-- 顶部"当前账号"。%1$s 是登录名或显示名。 -->
+    <string name="account_current">当前账号：%1$s</string>
+    <string name="account_unknown">当前账号：已登录</string>
 
     <!-- ===== 扫码登录（受护人出示，监护人扫） ===== -->
     <string name="qrlogin_title">扫码登录</string>

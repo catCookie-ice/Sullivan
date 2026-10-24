@@ -1,6 +1,7 @@
 package com.sullivan.protectee.data.api;
 
 import com.sullivan.protectee.data.api.dto.ActivityDtos;
+import com.sullivan.protectee.data.api.dto.AlertDtos;
 import com.sullivan.protectee.data.api.dto.AuthDtos;
 import com.sullivan.protectee.data.api.dto.BindingDtos;
 import com.sullivan.protectee.data.api.dto.LookupDtos;
@@ -13,6 +14,7 @@ import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
+import retrofit2.http.PUT;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
 
@@ -151,4 +153,55 @@ public interface ApiService {
     /** 任一方结束会话。 */
     @POST("realtime/sessions/{id}/end")
     Call<RealtimeDtos.SessionResponse> endSession(@Path("id") String sessionId);
+
+    // ------------------------------------------------------------------
+    // 报警与位置
+    // ------------------------------------------------------------------
+
+    /**
+     * 上报最新位置（覆盖式，只保留最新一条）。
+     *
+     * <p>受护人端在**进主界面后周期性**上报，而不是只在报警时上报：报警那一刻需要
+     * 立刻知道位置，等到报警再定位，冷启动 GPS 可能要十几秒，那十几秒正是最关键的。
+     */
+    @PUT("me/location")
+    Call<AlertDtos.AlertLocation> reportLocation(@Body AlertDtos.LocationReportRequest request);
+
+    /** 我最近上报的位置；从未上报过时 404。 */
+    @GET("me/location")
+    Call<AlertDtos.AlertLocation> myLocation();
+
+    /**
+     * 创建报警。
+     *
+     * <p>服务端先落库再路由，并在 5 秒后（可由用户关闭）按绑定确认时间依次向全部
+     * 生效监护人发起实时会话，同时附上此刻的位置快照。
+     */
+    @POST("alerts")
+    Call<AlertDtos.AlertResponse> createAlert(@Body AlertDtos.AlertCreateRequest request);
+
+    /** 我的报警列表（受护人视角，倒序）。 */
+    @GET("alerts")
+    Call<List<AlertDtos.AlertResponse>> listAlerts();
+
+    /** 报警详情；服务端限定受护人本人与其生效监护人可读。 */
+    @GET("alerts/{id}")
+    Call<AlertDtos.AlertResponse> getAlert(@Path("id") String alertId);
+
+    /** 结束报警（受护人本人），同时取消尚未执行的自动呼叫。 */
+    @POST("alerts/{id}/resolve")
+    Call<AlertDtos.AlertResponse> resolveAlert(@Path("id") String alertId);
+
+    /** 读取报警偏好；从未配置过时服务端返回默认值（开启、5 秒）。 */
+    @GET("me/alert-setting")
+    Call<AlertDtos.AlertSettingResponse> getAlertSetting();
+
+    /** 修改报警偏好；关闭时会一并取消已排期但尚未执行的自动呼叫。 */
+    @PUT("me/alert-setting")
+    Call<AlertDtos.AlertSettingResponse> updateAlertSetting(
+            @Body AlertDtos.AlertSettingUpdateRequest request);
+
+    /** 报警会依次通知谁（受护人端展示「会通知谁」）。 */
+    @GET("me/alert-guardians")
+    Call<List<String>> alertGuardians();
 }

@@ -2,6 +2,7 @@ package com.sullivan.protectee.vision;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.sullivan.protectee.vision.motion.ShakeDetector;
 
@@ -237,14 +238,53 @@ public class ShakeDetectorTest {
         assertEquals(1, feed(new ShakeDetector(), 0L, 800L, irregularShake()));
     }
 
+    /**
+     * 快速转身不该被当成摔倒。
+     *
+     * <p><b>这条用例是 2026-10-24 那次阈值收紧的直接产物。</b>用户反馈"剧烈晃动的
+     * 判定太过于宽松"，而最可能的误报源就是转身：它的角速度（1.5–3.5 rad/s）
+     * 正好穿过旧的 2.5 门限，而转身是每个人每天做几十次的动作。
+     *
+     * <p>峰值从 2.5 提到 4.0 之后，3.2 rad/s 的转身明确落在门外。这条断言同时
+     * 钉住了"新阈值确实高过转身上沿"这件事 —— 如果谁把常量改回去，这里会红。
+     */
+    @Test
+    public void aFastTurnDoesNotTrigger() {
+        // 3.2 rad/s 恒定峰值，带一点自然抖动，持续 2 秒。
+        Signal turn = sine(AXIS_X, 3.2f, 1.2);
+        assertEquals(0, feed(new ShakeDetector(), 0L, 2000L, turn));
+    }
+
+    /**
+     * 阈值必须"高过日常动作、低过真实撞击"。
+     *
+     * <p>这是关系型断言：单个常量的绝对值看不出对错，只有它落在哪个区间才对。
+     */
+    @Test
+    public void peakThresholdSitsAboveDailyMotionAndBelowImpact() {
+        assertTrue("必须高过快速转身上沿（3.5 rad/s），否则日常转身会误报",
+                ShakeDetector.PEAK_RAD_PER_SEC > 3.5f);
+        assertTrue("必须低于真实撞击下沿（3–8 的下半段），否则真摔倒会被漏掉",
+                ShakeDetector.PEAK_RAD_PER_SEC < 6f);
+        assertTrue("角加速度门限应明显高于正常摆臂（15–25 rad/s²）",
+                ShakeDetector.MIN_JERK_RAD_PER_SEC2 > 25f);
+        assertTrue("不规则度门限应高于量化噪声（约 1.1–1.2）",
+                ShakeDetector.IRREGULARITY_RATIO > 1.2f);
+    }
     /** 冷却期内不重复触发；冷却一过就恢复。 */
     @Test
     public void theCooldownSuppressesARepeat() {
         ShakeDetector detector = new ShakeDetector();
         assertEquals("第一段应当报一次", 1, feed(detector, 0L, 1300L, irregularShake()));
-        assertEquals("2 秒后再晃：还在 6 秒冷却里",
+        assertEquals("2 秒后再晃：还在冷却里",
                 0, feed(detector, 2000L, 1300L, irregularShake()));
-        assertEquals("8 秒后再晃：冷却已过", 1, feed(detector, 8000L, 1300L, irregularShake()));
+        assertEquals("11 秒后再晃：仍在冷却里",
+                0, feed(detector, 11000L, 1300L, irregularShake()));
+        // 冷却在 2026-10-24 从 6 秒提到 15 秒（用户反馈判定过松，见 ShakeDetector 注释）。
+        // 这条用例原本断言"8 秒该报"，那正好落在新冷却期内，所以改成按常量推算。
+        long afterCooldown = ShakeDetector.TRIGGER_COOLDOWN_MS + 1000L;
+        assertEquals("冷却过后再晃：应当报", 1,
+                feed(detector, afterCooldown, 1300L, irregularShake()));
     }
 
     /**

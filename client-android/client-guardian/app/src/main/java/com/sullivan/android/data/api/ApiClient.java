@@ -42,6 +42,52 @@ public final class ApiClient {
 
     private static volatile ApiService service;
 
+    /**
+     * 「登录态失效」的进程级观察点。
+     *
+     * <p><b>为什么放在网络层。</b>修一个真实故障时发现的：令牌过期后，各页面各自
+     * 决定怎么处理 401 —— 有的清会话并提示，有的只把错误塞进页面底部的状态行，
+     * 而 {@code GuardianActivity} 的扫码回调里**一份都没有**。表现是「监护人扫完码
+     * 直接结束，既没有选人列表，受护人端也没登录」，而且毫无提示 ——
+     * 因为那行状态文字在最末尾，用户扫码时根本看不到。
+     *
+     * <p>把判断收拢到唯一一条出口（{@link #attachToken} 已经在拦每一个请求），
+     * 就不会再有"新写的页面忘了处理 401"这种事。界面只需要订阅一次，
+     * 而不必在每个 {@code onError} 里重复判断。
+     *
+     * <p>回调在 **OkHttp 的工作线程**，订阅方要自己切主线程。
+     */
+    public interface LoginExpiredListener {
+        void onLoginExpired();
+    }
+
+    @Nullable
+    private static volatile LoginExpiredListener loginExpiredListener;
+
+    /** 订阅登录失效。传 {@code null} 取消订阅。 */
+    public static void setLoginExpiredListener(@Nullable LoginExpiredListener listener) {
+        loginExpiredListener = listener;
+    }
+
+    /**
+     * 收到 401 时的统一动作：清本地会话 + 通知订阅方。
+     *
+     * <p>**清会话是必须的**：{@code SessionStore.isLoggedIn()} 只看令牌字符串是否非空，
+     * 令牌过期后它仍然返回 true，于是本地一直"以为自己还登着"，
+     * 这是"掉了却没踢下线"的根源。
+     */
+    private static void onUnauthorized(@NonNull SessionStore session) {
+        if (!session.isLoggedIn()) {
+            // 已经是未登录状态（比如刚被别处清过），不重复通知。
+            return;
+        }
+        session.clearLogin();
+        LoginExpiredListener listener = loginExpiredListener;
+        if (listener != null) {
+            listener.onLoginExpired();
+        }
+    }
+
     private ApiClient() {
     }
 
@@ -89,16 +135,22 @@ public final class ApiClient {
         Request request = chain.request();
         // 请求上已经带了 Authorization 就不覆盖：留出「用别人的身份试一下」这种排查余地，
         // 也避免将来某个接口要用临时凭据时被这里悄悄换掉。
-        if (request.header("Authorization") != null) {
-            return chain.proceed(request);
+        String token = request.header("Authorization") != null ? null : session.accessToken();
+        Response response = (token == null)
+                ? chain.proceed(request)
+                : chain.proceed(request.newBuilder()
+                        .header("Authorization", "Bearer " + token)
+                        .build());
+
+        // 401 = 令牌缺失/过期/无效。这里是**唯一**能覆盖每一个请求的地方，
+        // 所以统一在这里收口（理由见 LoginExpiredListener）。
+        //
+        // 判断交给 AuthExpiry：登录接口自己在密码错时也返回 401，那种不该清会话
+        // （它的请求根本没带令牌）。
+        if (AuthExpiry.shouldExpireSession(response.code(), token != null)) {
+            onUnauthorized(session);
         }
-        String token = session.accessToken();
-        if (TextUtils.isEmpty(token)) {
-            return chain.proceed(request);
-        }
-        return chain.proceed(request.newBuilder()
-                .header("Authorization", "Bearer " + token)
-                .build());
+        return response;
     }
 
     /**

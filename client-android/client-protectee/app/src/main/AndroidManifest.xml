@@ -2,16 +2,23 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
-        权限只列本应用真正用到的三项。
+        权限只列本应用真正用到的项。
 
         与 client-guardian 的差别（不是漏抄）：那边还声明了 RECORD_AUDIO 与两个定位权限，
         那是既有欠账 —— 代码里没有任何录音或定位调用（grep AudioRecord / MediaRecorder /
         amap 在 Java 侧零命中），只是 manifest 与依赖在空转。本工程从零写 manifest，
         不把那些没人用的权限带进来：受护人手机上少一项权限申请，
         就少一次被用户当成「为什么一个检测工具要麦克风」的怀疑。
+
+        定位权限是例外：报警要把受护人的位置发给监护人，这是 FR-06 的实体功能，
+        由 LocationReporter 真正调用（getLastKnownLocation / requestLocationUpdates）。
+        声明 ACCESS_COARSE_LOCATION 是必要的：只有精确权限时，Android 12+ 仍然要求
+        两者同时声明才能让用户选择「大概位置」。
     -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <!-- 剧烈晃动报警的振动提示（PromptAnnouncer） -->
     <uses-permission android:name="android.permission.VIBRATE" />
 

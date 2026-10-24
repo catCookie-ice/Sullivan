@@ -175,6 +175,26 @@
                 android:textAppearance="@style/TextAppearance.Sullivan.Section"
                 tools:text="已连接 · 与 u_987 的会话" />
 
+            <!--
+              受护人位置。放在聊天卡片最上面而不是列表里：
+              监护人点进来第一眼要判断的就是"往哪儿去"，
+              埋在任何需要滚动的地方都等于没有。
+
+              默认 gone：普通会话（监护人主动发起的）没有报警，
+              也就没有位置，此时整条不出现，不留空白。
+            -->
+            <TextView
+                android:id="@+id/session_alert_location"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_s"
+                android:background="@drawable/an_log_panel"
+                android:padding="@dimen/an_space_s"
+                android:textAppearance="@style/TextAppearance.Sullivan.Body"
+                android:visibility="gone"
+                tools:text="受护人位置（刚刚）&#10;39.935524, 116.493729&#10;定位精度约 12 米"
+                tools:visibility="visible" />
+
             <TextView
                 android:id="@+id/session_chat_hint"
                 android:layout_width="match_parent"

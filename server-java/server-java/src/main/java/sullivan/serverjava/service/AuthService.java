@@ -47,7 +47,17 @@ public class AuthService {
     }
 
     public TokenResponse login(LoginRequest request) {
-        return switch (request.principalType()) {
+        // principalType 缺失时必须给 401 而不是 500。
+        // 之前是 `switch (request.principalType())`：Java 的 switch 在 null 上直接 NPE，
+        // 于是"忘了传 principalType"这个纯粹的前端疏忽会变成一个 500，
+        // 前端看到的是"服务器坏了"，排查方向从一开始就是错的。
+        // DTO 上已加 @NotNull 让正常路径走到 400，这里再兜一层，
+        // 保证即使校验被绕过（内部调用、将来换校验实现）也不会抛 NPE。
+        String principalType = request.principalType();
+        if (principalType == null) {
+            throw unauthorized();
+        }
+        return switch (principalType) {
             case "USER" -> loginUser(request);
             case "ORGANIZATION" -> loginOrganization(request);
             case "ADMIN" -> loginAdmin(request);

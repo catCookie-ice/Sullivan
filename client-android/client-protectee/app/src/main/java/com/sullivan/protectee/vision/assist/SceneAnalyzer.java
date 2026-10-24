@@ -3,8 +3,11 @@ package com.sullivan.protectee.vision.assist;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.sullivan.protectee.vision.depth.DepthMap;
+import com.sullivan.protectee.vision.depth.DistancePolicy;
 import com.sullivan.protectee.vision.detect.CocoLabels;
 import com.sullivan.protectee.vision.detect.Detection;
+import com.sullivan.protectee.vision.detect.Letterbox;
 import com.sullivan.protectee.vision.scene.SceneSnapshot;
 import com.sullivan.protectee.vision.track.ObjectTracker;
 import com.sullivan.protectee.vision.track.Track;
@@ -116,6 +119,24 @@ public final class SceneAnalyzer {
     @NonNull
     public Decision analyze(@NonNull List<Detection> detections, long capturedAtMs,
                             @NonNull ObjectTracker.FrameEpoch epoch) {
+        return analyze(detections, capturedAtMs, epoch, null, null);
+    }
+
+    /**
+     * 带深度图的版本。
+     *
+     * @param depth     与 {@code detections} **同一帧**的深度图；{@code null} 表示没有深度模型，
+     *                  此时距离判断与文案全部退回改造前的几何启发式
+     * @param letterbox **深度模型自己**的 letterbox 几何，不是检测器的。
+     *                  检测框是相对「内容区」归一化的，而深度图是整张 letterbox 输入
+     *                  （官方权重是 768×768，检测是 640×640 —— 两者不同），
+     *                  换算成深度像素时必须用生成**深度图那一份**参数。
+     *                  传错了不会崩，只会采样到旁边几十像素处、读出错误的距离。
+     */
+    @NonNull
+    public Decision analyze(@NonNull List<Detection> detections, long capturedAtMs,
+                            @NonNull ObjectTracker.FrameEpoch epoch,
+                            @Nullable DepthMap depth, @Nullable Letterbox letterbox) {
         List<Track> confirmed = tracker.update(detections, capturedAtMs, epoch);
 
         List<SceneSnapshot.TrackSnapshot> tracks = new ArrayList<>(confirmed.size());
@@ -127,15 +148,18 @@ public final class SceneAnalyzer {
                 continue;
             }
             Detection box = track.box;
+            float meters = DistancePolicy.metersOf(box, depth, letterbox);
             tracks.add(new SceneSnapshot.TrackSnapshot(track.id, track.label, box.score,
                     box.left, box.top, box.right, box.bottom,
                     track.relativeRate, track.rawRate, track.ttcSeconds,
-                    box.height(), track.lateralRate, track.samples, track.hits, track.clipped));
+                    box.height(), track.lateralRate, track.samples, track.hits, track.clipped,
+                    meters));
             boxBuffer.add(box);
         }
 
         // 静态提示走"已确认的轨迹"而不是本帧原始检测：只露一帧就消失的多半是误检。
-        ObstacleAdvisor.Advice advice = advisor.advise(boxBuffer, rate.maxReported());
+        ObstacleAdvisor.Advice advice =
+                advisor.advise(boxBuffer, rate.maxReported(), depth, letterbox);
 
         SceneSnapshot snapshot = new SceneSnapshot(capturedAtMs, epoch.width, epoch.height,
                 epoch.rotationDegrees, tracker.egoVelocityProxy(), advice.freeRatio, tracks);

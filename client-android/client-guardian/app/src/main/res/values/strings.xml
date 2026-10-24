@@ -87,6 +87,35 @@
     <string name="guardian_logged_out">已退出登录</string>
     <string name="guardian_need_login">请先登录</string>
 
+    <!--
+        登录态失效（401）。
+        用对话框而不是页面底部的状态行：用户扫码时视线不在那一行上，
+        写在底部等于没提示 —— 这正是"扫完直接结束、什么都没发生"的成因。
+    -->
+    <string name="guardian_session_expired_title">登录已失效</string>
+    <string name="guardian_session_expired_message">你的登录已经过期，刚才的操作没有完成。\n\n请重新登录后再扫一次对方的登录码。</string>
+    <string name="guardian_session_expired_action">去重新登录</string>
+
+    <!--
+        有人正在呼叫我。用不可取消的对话框而不是 Toast：
+        受护人端发起的是紧急求助，而监护人很可能没在看屏幕，
+        一个几秒就消失的提示会让他彻底错过。
+    -->
+    <string name="guardian_incoming_call_title">有人正在呼叫你</string>
+    <string name="guardian_incoming_call_message">受护人发起了紧急求助，正在呼叫你。\n\n点「查看」进入会话页面。</string>
+    <string name="guardian_incoming_call_open">查看</string>
+    <string name="guardian_incoming_call_ignore">稍后</string>
+    <!-- 没有位置时必须明确说出来，留白会被理解成"还在加载"。 -->
+    <string name="guardian_incoming_call_no_location">暂未收到受护人的位置</string>
+
+    <!-- 前台服务的常驻通知：平时表示"正在守着"，来电时升级为告警。 -->
+    <string name="incoming_call_channel_name">来电提醒</string>
+    <string name="incoming_call_channel_description">受护人发起紧急求助时提醒你</string>
+    <string name="incoming_call_watching">正在守着</string>
+    <string name="incoming_call_watching_text">受护人求助时会在这里提醒你</string>
+    <string name="incoming_call_title">有人正在呼叫你</string>
+    <string name="incoming_call_text">受护人发起了紧急求助，点开查看</string>
+
     <!-- ===== 志愿者主页 ===== -->
     <!-- 不用 Markdown 的 **强调**：TextView 会原样把星号画出来。 -->
     <string name="volunteer_home_notice">志愿者端目前只有公益活动和实时会话两个功能。\n\n「接收附近的协助请求」「我的报名记录」在网页端也还是占位页 —— 后端没有对应接口，所以这里不放入口。</string>

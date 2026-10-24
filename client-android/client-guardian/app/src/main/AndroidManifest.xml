@@ -9,6 +9,16 @@
     <!-- 剧烈晃动报警的振动提示（PromptAnnouncer） -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!--
+        来电监听前台服务。受护人的求助最可能发生在监护人没打开应用的时候，
+        没有这两项时「服务器建了会话、监护人收不到通知」——
+        这正是用户实测反馈的故障。
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Android 13+ 通知要用户授权，没有它前台服务的通知根本不显示。 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- 受护人端侧检测依赖后置摄像头 -->
     <uses-feature
         android:name="android.hardware.camera.any"
@@ -125,5 +135,24 @@
         <meta-data
             android:name="com.amap.api.v2.apikey"
             android:value="${AMAP_API_KEY}" />
+
+        <!--
+            来电监听：常驻前台服务，5 秒查一次有没有人在呼叫我。
+            exported=false：只由本应用启动。
+
+            foregroundServiceType 用 specialUse 而不是 dataSync：Android 14+
+            对 dataSync 类型限制每天 6 小时，超时会被系统直接杀掉 —— 对一个
+            "全天候守着"的功能来说等于不可用。specialUse 没有这个时限，
+            代价是上架 Google Play 需要单独申报用途（本项目为课程/毕业设计，
+            不上架，故不受此限）。
+        -->
+        <service
+            android:name=".service.call.IncomingCallService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="alert_incoming_call_monitoring" />
+        </service>
     </application>
 </manifest>

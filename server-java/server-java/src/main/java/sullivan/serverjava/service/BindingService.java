@@ -260,7 +260,9 @@ public class BindingService {
                         .eq(GuardianBinding::getProtecteeUid, uidA))) > 0;
     }
 
-    /** 该监护人当前 ACTIVE 绑定的受护人 ID 列表（扫码登录的候选来源）。 */
+    /**
+     * 该监护人当前 ACTIVE 绑定的受护人 ID 列表（扫码登录的候选来源）。
+     */
     public List<String> activeProtecteeIds(String guardianId) {
         return guardianBindingMapper.selectList(Wrappers.<GuardianBinding>lambdaQuery()
                         .eq(GuardianBinding::getGuardianUid, guardianId)
@@ -268,6 +270,29 @@ public class BindingService {
                         .orderByAsc(GuardianBinding::getConfirmedAt)
                         .orderByAsc(GuardianBinding::getId))
                 .stream().map(GuardianBinding::getProtecteeUid).toList();
+    }
+
+    /**
+     * 该受护人当前的**全部**生效监护人 ID（报警路由的唯一入口）。
+     *
+     * <p><b>为什么按 confirmed_at 升序而不是「主监护人优先」。</b>报警要「依次」发起会话，
+     * 这个顺序必须**确定且可复现**：定时任务可能被重试、可能跨实例执行，若顺序依赖
+     * 数据库的返回顺序，同一场报警两次派发会打给不同的人。绑定确认时间是最早把这个人
+     * 变成监护人的时刻，先成为监护人的先被呼叫，语义上也讲得通。
+     *
+     * <p>只返回 ACTIVE：PENDING（对方还没同意）、REJECTED、TERMINATED 都无权知道
+     * 位置，也当然不该在报警时被打扰。
+     *
+     * <p>刻意不返回 {@link GuardianBinding} 实体：调用方只需要 ID 列表，
+     * 交出去整个实体等于把「哪些字段可以被下游改」这个问题敞开。
+     */
+    public List<String> activeGuardianIds(String protecteeId) {
+        return guardianBindingMapper.selectList(Wrappers.<GuardianBinding>lambdaQuery()
+                        .eq(GuardianBinding::getProtecteeUid, protecteeId)
+                        .eq(GuardianBinding::getStatus, "ACTIVE")
+                        .orderByAsc(GuardianBinding::getConfirmedAt)
+                        .orderByAsc(GuardianBinding::getId))
+                .stream().map(GuardianBinding::getGuardianUid).toList();
     }
 
     /**

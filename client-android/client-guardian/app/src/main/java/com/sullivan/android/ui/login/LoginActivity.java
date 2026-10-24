@@ -23,6 +23,8 @@ import com.sullivan.android.ui.auth.ForgotPasswordActivity;
 import com.sullivan.android.ui.auth.RegisterActivity;
 import com.sullivan.android.ui.common.recovery.RecoveryReminderDialog;
 import com.sullivan.android.ui.guardian.home.GuardianActivity;
+import com.sullivan.android.ui.roleentry.HomeRoute;
+import com.sullivan.android.ui.roleentry.RoleEntryActivity;
 import com.sullivan.android.ui.volunteer.home.VolunteerHomeActivity;
 
 import java.util.HashSet;
@@ -51,6 +53,16 @@ public class LoginActivity extends AppCompatActivity {
     /** 角色提示：进登录页前在角色入口选的那一项，只影响文案与落地页。 */
     public static final String EXTRA_ROLE_HINT = "com.sullivan.android.extra.ROLE_HINT";
 
+    /**
+     * 明确要求「显示登录表单」，即使本地还有登录态。
+     *
+     * <p>退出登录时会先清登录态再跳本页，所以正常退出用不到它。
+     * 真正需要的是「换了账号」这个场景：主页在某些页面上看不到退出按钮时
+     * （例如 401 之后留给用户的重登入口），用户需要能主动退回登录页。
+     * 没有这个 extra，本页会把已登录的人直接送进主页，形成「点了登录页又弹回来」。
+     */
+    public static final String EXTRA_FORCE_FORM = "com.sullivan.android.extra.FORCE_FORM";
+
     public static final String ROLE_HINT_GUARDIAN = "GUARDIAN";
     public static final String ROLE_HINT_VOLUNTEER = "VOLUNTEER";
 
@@ -59,29 +71,52 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     /**
-     * 「已登录该去哪」的**唯一**判断点：账密登录、注册后自动登录、已登录直接进主页，
-     * 三条路径都从这里取 Intent，避免出现「从注册进去看到监护人主页、从登录进去看到别的」。
+     * 「我看到令牌失效了，请让我重新登录」：跳到本页并**强制**显示表单。
+     *
+     * <p>注意这里**不清登录态** —— 401 的处理由调用方（各页面的 {@code ResultCallback}）
+     * 负责，本页只负责把登录框摆出来。
+     */
+    @NonNull
+    public static Intent reauthIntentFor(@NonNull Context context) {
+        return new Intent(context, LoginActivity.class).putExtra(EXTRA_FORCE_FORM, true);
+    }
+
+    /**
+     * 「这个账号已经不能用了，回到起点」：回到角色入口页。
+     *
+     * <p>用于主页发现本地没有登录态时。之所以不直接开 {@link LoginActivity}：
+     * 从角色入口进来时（冷启动的落地页现在也会是主页，见 {@code RoleEntryActivity}），
+     * 登录页在栈里是「上一层」，直接再开一个只会叠出一个按返回键也回不去的孤页；
+     * 而 {@code FLAG_ACTIVITY_CLEAR_TOP} 会把那层留在原地的登录页复用为新实例 ——
+     * 那个实例里的角色提示是上一次点的卡片，可能是错的。
+     */
+    @NonNull
+    public static Intent toRoleEntry(@NonNull Context context) {
+        return new Intent(context, RoleEntryActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+    }
+
+    /**
+     * 「已登录该去哪」的**唯一**判断点：账密登录、注册后自动登录、已登录直接进主页、
+     * 冷启动的角色入口，四条路径都从这里取 Intent，避免出现「从注册进去看到监护人主页、
+     * 从登录进去看到别的」。
      *
      * <p><b>按服务端返回的 roles 分流，不看入口提示</b>：{@link #EXTRA_ROLE_HINT} 是用户
-     * 在角色入口点的那一下，而 {@code roles} 是服务端认定的身份。
+     * 在角色入口点的那一下，而 {@code roles} 是服务端认定的身份。判定本身在
+     * {@link HomeRoute#isVolunteerOnly}，由单测钉住。
      *
      * <p>只有「是志愿者且不是监护人」才落到志愿者主页；监护人可以兼任志愿者
      * （{@code roles} 同时含两项），这类账号仍然落到监护人主页 —— 志愿者主页是它的子集，
-     * 而监护人主页上会给出「志愿者申请」入口，两边都能走。
+     * 而监护人主页上有「志愿者申请」与「切到志愿者视角」两个入口，两边都能走。
      */
     @NonNull
     public static Intent homeIntentFor(@NonNull Context context) {
         SessionStore session = new SessionStore(context);
-        Set<String> roles = session.roles();
-        if (roles.contains(ROLE_VOLUNTEER) && !roles.contains(ROLE_GUARDIAN)) {
+        if (HomeRoute.isVolunteerOnly(session.roles())) {
             return new Intent(context, VolunteerHomeActivity.class);
         }
         return new Intent(context, GuardianActivity.class);
     }
-
-    /** 服务端 roles 里的角色代码（与入口提示 {@link #ROLE_HINT_*} 是两回事）。 */
-    private static final String ROLE_VOLUNTEER = "VOLUNTEER";
-    private static final String ROLE_GUARDIAN = "GUARDIAN";
 
     private SessionStore session;
     private TextInputEditText accountInput;
@@ -107,7 +142,10 @@ public class LoginActivity extends AppCompatActivity {
 
         // 已登录过就直接进主页：从主页退出时会清掉令牌，所以这里不会成为
         // 「退出登录又被弹回来」的死循环。
-        if (session.isLoggedIn()) {
+        //
+        // 例外见 EXTRA_FORCE_FORM：带了这个 extra 的调用方明确要求看登录表单，
+        // 必须在建好表单之后才判断（否则跳走时表单还没建，等于什么都没显示）。
+        if (session.isLoggedIn() && !isForceForm()) {
             goHome();
             return;
         }
@@ -117,6 +155,10 @@ public class LoginActivity extends AppCompatActivity {
                 RegisterActivity.intentFor(this, hintOf(this))));
         findViewById(R.id.login_forgot).setOnClickListener(
                 view -> startActivity(ForgotPasswordActivity.intentFor(this)));
+    }
+
+    private boolean isForceForm() {
+        return getIntent() != null && getIntent().getBooleanExtra(EXTRA_FORCE_FORM, false);
     }
 
     /** 把入口提示原样传给注册页，让它预选同一个角色。认不出来的按监护人处理。 */

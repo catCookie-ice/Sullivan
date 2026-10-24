@@ -3,6 +3,7 @@ package sullivan.serverjava.web;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -116,6 +117,7 @@ public final class RegistrationDtos {
     public record LoginRequest(
             @Schema(description = "登录主体类型：USER（自然人）/ ORGANIZATION（机构）/ ADMIN（管理员）",
                     example = "USER", allowableValues = {"USER", "ORGANIZATION", "ADMIN"})
+            @NotNull
             @Pattern(regexp = "USER|ORGANIZATION|ADMIN") String principalType,
             @Schema(description = "登录名", example = "zhangsan")
             @NotBlank String loginName,

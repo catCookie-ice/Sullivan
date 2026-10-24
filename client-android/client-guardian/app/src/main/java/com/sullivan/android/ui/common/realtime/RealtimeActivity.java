@@ -27,8 +27,11 @@ import com.sullivan.android.R;
 import com.sullivan.android.data.api.ApiClient;
 import com.sullivan.android.data.api.ApiException;
 import com.sullivan.android.data.api.ResultCallback;
+import com.sullivan.android.data.api.dto.AlertDtos;
 import com.sullivan.android.data.api.dto.RealtimeDtos;
 import com.sullivan.android.data.session.SessionStore;
+import com.sullivan.android.ui.guardian.call.AlertLocationSummary;
+import com.sullivan.android.ui.guardian.call.AlertQuery;
 import com.sullivan.android.service.websocket.RealtimeSocket;
 import com.sullivan.android.ui.common.components.ServerTime;
 import com.sullivan.android.ui.common.components.StateView;
@@ -83,6 +86,13 @@ public class RealtimeActivity extends AppCompatActivity {
 
     private LinearLayout chatCard;
     private TextView chatTitle;
+    /**
+     * 受护人位置条。普通会话（监护人主动发起的）没有报警，整条 gone。
+     *
+     * <p>位置放在这里而不是会话列表的某一行：列表是"选一条会话"的地方，
+     * 而位置是"我已经决定要看这个人了，他到底在哪"的信息。
+     */
+    private TextView alertLocationView;
     private TextView logView;
     private ScrollView logScroll;
     private ScrollView pageScroll;
@@ -125,6 +135,7 @@ public class RealtimeActivity extends AppCompatActivity {
 
         chatCard = findViewById(R.id.session_chat);
         chatTitle = findViewById(R.id.session_chat_title);
+        alertLocationView = findViewById(R.id.session_alert_location);
         logView = findViewById(R.id.session_log);
         logScroll = findViewById(R.id.session_log_scroll);
         pageScroll = findViewById(R.id.session_page);
@@ -380,10 +391,58 @@ public class RealtimeActivity extends AppCompatActivity {
         renderLog();
         chatCard.setVisibility(View.VISIBLE);
         messageInput.setText("");
+        // 位置先清空再异步查：否则上一通会话的位置会短暂留在下一条会话上，
+        // 那是**错误的信息** —— 会把人指向另一个地点。
+        showAlertLocation(null);
+        loadAlertLocation(item.id);
         // 会话面板在页面下方，连接成功后滚过去 —— 不滚的话，用户在页面上半部分
         // 看到的是「什么都没发生」，而实际上连接已经建立了。
         chatCard.post(() -> pageScroll.smoothScrollTo(0, chatCard.getTop()));
         socket.connect(session.baseUrl(), tokenOrEmpty(), item.id, myUid, listener);
+    }
+
+    /**
+     * 查这条会话对应的报警位置并显示。
+     *
+     * <p>会话响应里没有 {@code alertId}，关联是
+     * {@code alert_delivery.session_id → realtime_session.id}，
+     * 客户端靠「投递给我的报警」列表反查（见 {@code AlertQuery}）。
+     *
+     * <p>查不到就保持隐藏。**不要显示"位置加载中"之类的占位**：
+     * 普通会话永远不会有位置，占位会一直挂在那里变成一个假承诺。
+     */
+    private void loadAlertLocation(@NonNull String sessionId) {
+        ApiClient.get(this).listAlerts()
+                .enqueue(new ResultCallback<List<AlertDtos.AlertResponse>>() {
+                    @Override
+                    public void onSuccess(@Nullable List<AlertDtos.AlertResponse> body) {
+                        // 会话可能在请求飞行途中就换了，别把旧结果显示到新会话上。
+                        if (connected == null || !sessionId.equals(connected.id)) {
+                            return;
+                        }
+                        showAlertLocation(AlertQuery.locationForSession(body, sessionId));
+                    }
+
+                    @Override
+                    public void onError(@NonNull ApiException error) {
+                        // 位置是增强信息，失败不打扰用户。
+                    }
+                });
+    }
+
+    /** 把位置渲染到位置条；null 则整条隐藏。 */
+    private void showAlertLocation(@Nullable AlertDtos.AlertLocation location) {
+        if (alertLocationView == null) {
+            return;
+        }
+        String detail = AlertLocationSummary.detail(location);
+        if (detail == null) {
+            alertLocationView.setVisibility(View.GONE);
+            return;
+        }
+        String headline = AlertLocationSummary.headline(location);
+        alertLocationView.setText(headline == null ? detail : headline + "\n" + detail);
+        alertLocationView.setVisibility(View.VISIBLE);
     }
 
     private final RealtimeSocket.Listener listener = new RealtimeSocket.Listener() {
