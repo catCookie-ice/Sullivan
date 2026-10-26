@@ -95,7 +95,11 @@ public final class AlertDtos {
             @Schema(description = "经度", example = "116.493729") BigDecimal longitude,
             @Schema(description = "定位精度（米）", example = "12.5") BigDecimal accuracyM,
             @Schema(description = "采集时刻", example = "2026-10-24T14:00:00") LocalDateTime capturedAt,
-            @Schema(description = "距今秒数；越大越不可信", example = "3") Long ageSeconds) {
+            @Schema(description = "距今秒数；越大越不可信", example = "3") Long ageSeconds,
+            @Schema(description = "逆地理编码地名（服务端在报警创建时解析）；解析失败或未配置高德 Web Key 时为 null",
+                    example = "浙江省杭州市西湖区文三路 100 号") String address,
+            @Schema(description = "true = 服务端在时限内没完成解析，报警未等待直接转发；接收方应使用本端解析兜底",
+                    example = "false") Boolean addressPending) {
     }
 
     /** 一个接收人的派发结果。 */

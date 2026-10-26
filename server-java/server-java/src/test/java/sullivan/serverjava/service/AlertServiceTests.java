@@ -56,6 +56,7 @@ class AlertServiceTests {
     private LocationService locationService;
     private AlertSettingService settingService;
     private RealtimeAlertDispatcher dispatcher;
+    private AmapGeocodeService geocodeService;
     private AlertService service;
 
     @BeforeAll
@@ -77,8 +78,12 @@ class AlertServiceTests {
         locationService = mock(LocationService.class);
         settingService = mock(AlertSettingService.class);
         dispatcher = mock(RealtimeAlertDispatcher.class);
+        // 逆地理编码 mock 默认返回 NONE（无 Key / 解析失败的常态路径）。
+        geocodeService = mock(AmapGeocodeService.class);
+        when(geocodeService.resolve(any(), any()))
+                .thenReturn(AmapGeocodeService.GeoResolution.NONE);
         service = new AlertService(alertMapper, deliveryMapper, notificationMapper,
-                bindingService, locationService, settingService, dispatcher);
+                bindingService, locationService, settingService, dispatcher, geocodeService);
 
         when(settingService.isAutoSessionEnabled(PROTECTEE)).thenReturn(true);
         when(settingService.effectiveDelaySeconds(PROTECTEE))
@@ -128,6 +133,58 @@ class AlertServiceTests {
         // 没有收件人就不该产生任何投递记录与通知。
         verify(deliveryMapper, never()).insert(any(AlertDelivery.class));
         verify(notificationMapper, never()).insert(any(Notification.class));
+    }
+
+    /**
+     * 报警携带位置时，服务端解析出的地名要随报警一起落库。
+     * 解析失败（mock 返回 NONE）落 NULL，绝不能因为地名挂掉报警。
+     */
+    @Test
+    void alertLocationAddressIsResolvedAndStored() {
+        when(bindingService.activeGuardianIds(PROTECTEE)).thenReturn(List.of(GUARDIAN_A));
+        when(geocodeService.resolve(
+                java.math.BigDecimal.valueOf(39.935524),
+                java.math.BigDecimal.valueOf(116.493729)))
+                .thenReturn(new AmapGeocodeService.GeoResolution("浙江省杭州市西湖区文三路", false));
+        AlertDtos.AlertCaptureRequest location = new AlertDtos.AlertCaptureRequest(
+                java.math.BigDecimal.valueOf(39.935524),
+                java.math.BigDecimal.valueOf(116.493729), null, null);
+
+        service.create(PROTECTEE, new AlertDtos.AlertCreateRequest(
+                "MANUAL", "k3", null, location));
+
+        ArgumentCaptor<Alert> captor = ArgumentCaptor.forClass(Alert.class);
+        verify(alertMapper).insert(captor.capture());
+        Alert saved = captor.getValue();
+        assertThat(saved.getLocationAddress()).isEqualTo("浙江省杭州市西湖区文三路");
+        // 解析成功不是超时：pending 必须为 false。
+        assertThat(saved.getLocationAddressPending()).isFalse();
+    }
+
+    /**
+     * 解析超时（PENDING）：报警**照常落库转发**，带 pending 标识、地址为空 ——
+     * 「把求助送出去」优先于「把地名查出来」，接收方见到标识自行兜底解析。
+     */
+    @Test
+    void geocodeTimeoutMarksPendingButStillDispatches() {
+        when(bindingService.activeGuardianIds(PROTECTEE)).thenReturn(List.of(GUARDIAN_A));
+        when(geocodeService.resolve(any(), any()))
+                .thenReturn(AmapGeocodeService.GeoResolution.PENDING);
+        AlertDtos.AlertCaptureRequest location = new AlertDtos.AlertCaptureRequest(
+                java.math.BigDecimal.valueOf(39.9),
+                java.math.BigDecimal.valueOf(116.4), null, null);
+
+        service.create(PROTECTEE, new AlertDtos.AlertCreateRequest(
+                "MANUAL", "k4", null, location));
+
+        ArgumentCaptor<Alert> captor = ArgumentCaptor.forClass(Alert.class);
+        verify(alertMapper).insert(captor.capture());
+        Alert saved = captor.getValue();
+        // 报警没有被地名卡住：状态正常推进到 DISPATCHED（而不是被拖死或失败）。
+        assertThat(saved.getStatus()).isEqualTo(AlertService.STATUS_DISPATCHED);
+        assertThat(saved.getLatitude()).isEqualByComparingTo("39.9");
+        assertThat(saved.getLocationAddress()).isNull();
+        assertThat(saved.getLocationAddressPending()).isTrue();
     }
 
     /** 用户关掉开关：报警照常路由，但不排期自动呼叫。 */

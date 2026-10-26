@@ -66,11 +66,12 @@ public class AlertService {
     private final LocationService locationService;
     private final AlertSettingService settingService;
     private final RealtimeAlertDispatcher dispatcher;
+    private final AmapGeocodeService geocodeService;
 
     public AlertService(AlertMapper alertMapper, AlertDeliveryMapper deliveryMapper,
                         NotificationMapper notificationMapper, BindingService bindingService,
                         LocationService locationService, AlertSettingService settingService,
-                        RealtimeAlertDispatcher dispatcher) {
+                        RealtimeAlertDispatcher dispatcher, AmapGeocodeService geocodeService) {
         this.alertMapper = alertMapper;
         this.deliveryMapper = deliveryMapper;
         this.notificationMapper = notificationMapper;
@@ -78,6 +79,7 @@ public class AlertService {
         this.locationService = locationService;
         this.settingService = settingService;
         this.dispatcher = dispatcher;
+        this.geocodeService = geocodeService;
     }
 
     /**
@@ -120,6 +122,13 @@ public class AlertService {
                 alert.setLocationCapturedAt(latest.getCapturedAt());
             }
         }
+        // 地名在创建时解析，但有**硬时限**（AmapGeocodeService.resolve 内部控制）：
+        // 到点没结果就带 PENDING 标识继续走，报警的落库与转发绝不等地名。
+        // 客户端见到 pending 标识会用自己的 Android Key 本端解析兜底。
+        AmapGeocodeService.GeoResolution geo =
+                geocodeService.resolve(alert.getLatitude(), alert.getLongitude());
+        alert.setLocationAddress(geo.address());
+        alert.setLocationAddressPending(geo.pending());
 
         route(alert);
         scheduleAutoSession(alert);
@@ -384,7 +393,8 @@ public class AlertService {
                     : Math.max(0L, java.time.Duration.between(
                     alert.getLocationCapturedAt(), LocalDateTime.now()).getSeconds());
             location = new AlertLocation(alert.getLatitude(), alert.getLongitude(),
-                    null, alert.getLocationCapturedAt(), age);
+                    null, alert.getLocationCapturedAt(), age, alert.getLocationAddress(),
+                    alert.getLocationAddressPending());
         }
         return new AlertResponse(alert.getId(), alert.getStatus(), alert.getAlertType(),
                 alert.getRouteType(), alert.getRouteNote(), alert.getProtecteeUid(),

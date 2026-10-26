@@ -115,8 +115,10 @@ public class LocationService {
     private AlertLocation toView(LatestLocation location) {
         long ageSeconds = Math.max(0L,
                 Duration.between(location.getCapturedAt(), LocalDateTime.now()).getSeconds());
+        // address 恒为 null / pending 恒为 false：latest_location 只是缓存视图，
+        // 地名只在报警创建时解析一次并随 alert 定格（见 AmapGeocodeService），这里不做二次解析。
         return new AlertLocation(location.getLatitude(), location.getLongitude(),
-                location.getAccuracyM(), location.getCapturedAt(), ageSeconds);
+                location.getAccuracyM(), location.getCapturedAt(), ageSeconds, null, false);
     }
 
     /** 供报警服务在同一个事务里直接读实体（避免二次查询）。 */

@@ -62,6 +62,30 @@ OpenAPI JSON: http://localhost:8080/v3/api-docs
 
 完整的已注册路由列表不在启动时打印，改为开发环境的调试接口 `GET /dev/routes`（仅 `APP_ENV=dev` 时注册，返回 `[{method, path, handler}]` 列表；生产环境该接口不存在）。
 
+## 高德 API Key 与双端经纬度解析
+
+系统把「经纬度 → 地名」（逆地理编码）做在**两端**，各用一把高德 Key。两把 Key 的真实值都放在**不入库**的本地文件里（`.env` / `local.properties`），仓库只保留机制：
+
+| 端 | Key 类型 | 注入位置 | 用途 |
+|---|---|---|---|
+| 服务端（Java） | **Web 服务** | `server-java/server-java/.env` 的 `AMAP_WEB_KEY` | 报警创建时把坐标解析成地名，随报警落库下发（`AmapGeocodeService`） |
+| 监护人端（Android） | **Android 平台** | `client-android/client-guardian/local.properties` 的 `amapApiKey` | App 内高德搜索 SDK 兜底解析（`PlaceNameResolver`），绑定包名 `com.sullivan.android` + 签名 SHA1 |
+
+### 为什么必须准备双端两把 Key
+
+**1. 高德的 Key 按调用通道分型，互相不可替代。** 服务端走 `restapi.amap.com`（HTTP REST），高德只认「Web 服务」类型的 Key；App 内走高德 Android SDK（搜索/定位），只认绑定包名 + 签名 SHA1 的「Android 平台」Key。同一个高德账号下两类 Key 分别创建，不存在「一把 Key 两头用」的选项——这不是设计冗余，是上游的硬约束。
+
+**2. 服务端解析是主路径，但带硬时限；客户端解析是兜底。** 报警位置的地名要在监护人端**三处**展示（来电通知、报警弹窗、会话页位置条）。服务端在报警创建时解析**一次**，随 `alert.location_address` 落库定格并随位置快照下发——报警是历史证据，当时解析出的地名应当与坐标一起定格，而不是每次查看都重新解析（高德地址库会变，Key 配额也可能当天耗尽）。三处展示直接读字段，不再各发一次请求。
+
+   **解析绝不拖慢求助转发**：解析跑在独立线程里，报警创建最多等 `AMAP_GEOCODE_DEADLINE_MS`（默认 1000 毫秒）。到点没结果就放弃等待，报警照常落库转发，并带上 `location_address_pending = 1` 标识随快照下发（`AlertLocation.addressPending`）——接收方见到标识即知服务端没来得及解析，于是调用自己内置的解析（Android Key）兜底补显地名。「把求助送出去」永远优先于「把地名查出来」。
+
+**3. 兜底保证降级可用。** 以下情况报警里没有服务端地名（`address` 为 null）：服务端没配 `AMAP_WEB_KEY`、配额耗尽、外部调用超时，以及**升级前创建的旧报警**（该列是 V10 迁移新增的）。此时监护人端用自己的 Android Key 现场解析（`PlaceNameResolver`），保证「显示坐标」至少升级为「显示地名」。两端 Key 的失效域互不重叠：服务端 Key 出问题不影响 App 内解析，反之亦然。
+
+### 配置与生效
+
+- 服务端：在 `.env` 中设置 `AMAP_WEB_KEY=你的Web服务Key`，**重启生效**。留空 = 功能关闭，不发起任何外部请求；Web Key 建议在高德控制台配置 IP 白名单（只放行部署服务器的出口 IP）。
+- 监护人端：在 `local.properties` 中设置 `amapApiKey=你的Android平台Key` 后重新出包（构建期注入 manifest，随 APK 分发——Android Key 的防盗用机制是包名 + SHA1 绑定，本就设计为打进包里）。
+
 ## 注册接口
 
 | 接口 | 说明 |

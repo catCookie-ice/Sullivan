@@ -32,6 +32,17 @@ public class Alert {
     private BigDecimal latitude;
     private BigDecimal longitude;
     private LocalDateTime locationCapturedAt;
+    /**
+     * 报警位置的逆地理编码地名（服务端在报警创建时解析一次并定格）。
+     * NULL = 解析失败或未配置高德 Web Key；客户端自行回落到坐标展示。
+     */
+    private String locationAddress;
+    /**
+     * true = 到达解析时限还没拿到地名，报警**没有等待**、直接转发出去了。
+     * 接收方看到该标识应使用本端解析兜底（Android Key）。时限内成功、
+     * 确定失败（无 Key 等）均为 false——后者的 address 为 null，客户端同样兜底。
+     */
+    private Boolean locationAddressPending;
     private LocalDateTime resolvedAt;
 
     /** 计划自动发起会话的时刻；{@code null} = 未安排。 */
