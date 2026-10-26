@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * <pre>
  *   COS_SECRET_ID=...
  *   COS_SECRET_KEY=...
- *   COS_REGION=ap-chengdu
+ *   COS_REGION=ap-guangzhou
  *   COS_BUCKET=sullivan-&lt;APPID&gt;
  *   COS_PREFIX=a              # 可选，建议指定，避免污染桶根目录
  * </pre>
