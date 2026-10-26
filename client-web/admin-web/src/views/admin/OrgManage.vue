@@ -59,6 +59,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { listOrganizations, deleteOrganization, reviewOrganization } from '@/api/admin'
 import type { AdminOrgResponse } from '@/types/api'
 
+import { errorMessage } from '@/utils/error'
 const rows = ref<AdminOrgResponse[]>([])
 const total = ref(0)
 const loading = ref(false)
@@ -93,7 +94,7 @@ async function load(page?: number) {
     rows.value = res.records
     total.value = res.total
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '加载失败')
+    ElMessage.error(errorMessage(e, '加载失败'))
   } finally {
     loading.value = false
   }
@@ -141,7 +142,7 @@ async function handleDelete(row: AdminOrgResponse) {
     ElMessage.success('机构已删除')
     load()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '删除失败')
+    ElMessage.error(errorMessage(e, '删除失败'))
   }
 }
 

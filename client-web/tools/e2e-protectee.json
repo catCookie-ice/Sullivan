@@ -1,0 +1,27 @@
+{
+  "baseUrl": "http://localhost:5177",
+  "prefix": "protectee",
+  "principalType": "USER",
+  "settleMs": 3200,
+  "checkNarrow": "/bindings",
+  "pages": [
+    {
+      "path": "/bindings",
+      "name": "bindings",
+      "selector": ".page-card",
+      "mustContain": [
+        "绑定"
+      ]
+    },
+    {
+      "path": "/realtime",
+      "name": "realtime",
+      "selector": ".page-card"
+    },
+    {
+      "path": "/voice",
+      "name": "voice",
+      "selector": ".page-card"
+    }
+  ]
+}

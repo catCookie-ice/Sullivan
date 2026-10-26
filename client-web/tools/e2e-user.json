@@ -1,0 +1,41 @@
+{
+  "baseUrl": "http://localhost:5175",
+  "prefix": "user",
+  "principalType": "USER",
+  "settleMs": 3200,
+  "checkNarrow": "/guardian/alerts",
+  "pages": [
+    {
+      "path": "/guardian/bindings",
+      "name": "bindings",
+      "selector": ".page-card",
+      "mustContain": [
+        "绑定"
+      ]
+    },
+    {
+      "path": "/guardian/alerts",
+      "name": "alerts",
+      "selector": ".page-card",
+      "mustContain": [
+        "报警",
+        "待处理"
+      ]
+    },
+    {
+      "path": "/guardian/realtime",
+      "name": "realtime",
+      "selector": ".page-card"
+    },
+    {
+      "path": "/guardian/voice",
+      "name": "voice",
+      "selector": ".page-card"
+    },
+    {
+      "path": "/volunteer/activities",
+      "name": "activities",
+      "selector": ".page-card"
+    }
+  ]
+}

@@ -54,6 +54,7 @@ import KeepAutoForm from '@shared/keep-auto/KeepAutoForm.vue'
 import KeepAutoFormItem from '@shared/keep-auto/KeepAutoFormItem.vue'
 import type { VolunteerApplicationResponse } from '@/types/api'
 
+import { errorMessage } from '@/utils/error'
 const form = reactive({ reason: '' })
 const applications = ref<VolunteerApplicationResponse[]>([])
 const loading = ref(false)
@@ -66,7 +67,7 @@ async function load() {
   try {
     applications.value = await getMyVolunteerApplications()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '加载失败')
+    ElMessage.error(errorMessage(e, '加载失败'))
   } finally {
     loading.value = false
   }
@@ -81,7 +82,7 @@ async function submit() {
     form.reason = ''
     await load()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '提交失败')
+    ElMessage.error(errorMessage(e, '提交失败'))
   } finally {
     loading.value = false
   }
@@ -94,7 +95,7 @@ async function cancel(applicationId: string) {
     ElMessage.success('已撤销')
     await load()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '撤销失败')
+    ElMessage.error(errorMessage(e, '撤销失败'))
   } finally {
     loading.value = false
   }

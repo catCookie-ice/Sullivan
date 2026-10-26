@@ -55,6 +55,7 @@ import { ElMessage } from 'element-plus'
 import { listPublicActivities } from '@/api/activity'
 import type { ActivityResponse } from '@/types/api'
 
+import { errorMessage } from '@/utils/error'
 const rows = ref<ActivityResponse[]>([])
 const status = ref<string>('')
 const page = ref(1)
@@ -71,7 +72,7 @@ async function reload() {
     rows.value = res.records
     total.value = res.total
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '加载失败')
+    ElMessage.error(errorMessage(e, '加载失败'))
   } finally {
     loading.value = false
   }

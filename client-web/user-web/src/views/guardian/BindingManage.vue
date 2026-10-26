@@ -128,6 +128,7 @@ import type { BindingResponse, UserLookupResponse } from '@/types/api'
 import { useAuthStore } from '@/stores/auth'
 import { personLabel, personSubLabel } from '@/utils/display'
 
+import { errorMessage } from '@/utils/error'
 const auth = useAuthStore()
 // uid 只用于判断「我是这条绑定的哪一方」，不出现在界面上
 const myUid = auth.principalId
@@ -146,7 +147,7 @@ async function load() {
   try {
     bindings.value = await listMyBindings()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '加载失败')
+    ElMessage.error(errorMessage(e, '加载失败'))
   } finally {
     loading.value = false
   }
@@ -204,21 +205,21 @@ async function handle(row: BindingResponse, action: 'accept' | 'reject' | 'cance
         ElMessage.success('已拒绝')
       }
     } catch (e: any) {
-      ElMessage.error(e.response?.data?.error || '操作失败')
+      ElMessage.error(errorMessage(e, '操作失败'))
     }
   } else if (action === 'accept') {
     try {
       const res = await acceptBinding(row.id)
       ElMessage.success(`已确认，状态：${statusText(res.status)}，主绑定：${res.primary ? '是' : '否'}`)
     } catch (e: any) {
-      ElMessage.error(e.response?.data?.error || '确认失败')
+      ElMessage.error(errorMessage(e, '确认失败'))
     }
   } else {
     try {
       await cancelBinding(row.id)
       ElMessage.success('已取消')
     } catch (e: any) {
-      ElMessage.error(e.response?.data?.error || '取消失败')
+      ElMessage.error(errorMessage(e, '取消失败'))
     }
   }
   await load()
@@ -254,7 +255,7 @@ async function handleRequest() {
     if (res) await load()
     tab.value = 'list'
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '发起失败')
+    ElMessage.error(errorMessage(e, '发起失败'))
   } finally {
     loading.value = false
   }
@@ -268,7 +269,7 @@ async function handleLookup() {
     looked.value = await getUserByLoginName(login)
   } catch (e: any) {
     looked.value = null
-    ElMessage.error(e.response?.data?.error || '查找失败')
+    ElMessage.error(errorMessage(e, '查找失败'))
   } finally {
     loading.value = false
   }

@@ -47,6 +47,7 @@ import { ElMessage } from 'element-plus'
 import { registerOrganization } from '@/api/auth'
 import KeepAutoForm from '@shared/keep-auto/KeepAutoForm.vue'
 
+import { errorMessage } from '@/utils/error'
 const router = useRouter()
 const keepFormRef = ref<{ clearCache: () => void } | null>(null)
 const form = reactive({
@@ -89,7 +90,7 @@ async function handleRegister() {
     keepFormRef.value?.clearCache()
     router.push('/login')
   } catch (e: any) {
-    error.value = e.response?.data?.error || '注册失败'
+    error.value = errorMessage(e, '注册失败')
   } finally {
     loading.value = false
   }

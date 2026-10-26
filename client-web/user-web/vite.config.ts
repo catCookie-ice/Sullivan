@@ -12,8 +12,14 @@ const apiTarget = 'http://127.0.0.1:8642'
 export default defineConfig({
   plugins: [
     vue(),
-    AutoImport({ resolvers: [ElementPlusResolver()] }),
-    Components({ resolvers: [ElementPlusResolver()] }),
+    // importStyle: false —— 消除 Element Plus 的双份样式。
+    //
+    // 现状：各端 main.ts 已全量引入 element-plus/dist/index.css，而 resolver 默认还会
+    // 按组件再注入一份 el-xxx.css。结果是「全量 367 kB + 每个组件几 kB」两套并存，
+    // 既增加体积，也让样式顺序变得不可控（组件级样式在 JS chunk 里，可能晚于 global.scss
+    // 执行，从而盖掉主题变量覆写）。这里关掉按组件注入，让 index.css 成为唯一来源。
+    AutoImport({ resolvers: [ElementPlusResolver({ importStyle: false })] }),
+    Components({ resolvers: [ElementPlusResolver({ importStyle: false })] }),
   ],
   resolve: {
     alias: {

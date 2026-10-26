@@ -31,7 +31,7 @@
           <template #default="{ row }">{{ format(row.applicantCreatedAt) }}</template>
         </el-table-column>
         <el-table-column label="注册天数" width="90">
-          <template #default="{ row }">{{ daysSince(row.applicantCreatedAt) }}</template>
+          <template #default="{ row }">{{ daysSinceLabel(row.applicantCreatedAt) }}</template>
         </el-table-column>
         <el-table-column label="申请时间" width="180">
           <template #default="{ row }">{{ format(row.createdAt) }}</template>
@@ -74,7 +74,9 @@ import {
   rejectVolunteerApplication,
 } from '@/api/admin'
 import type { VolunteerApplicationAdminResponse } from '@/types/api'
+import { daysSince, formatDateTime } from '@/utils/display'
 
+import { errorMessage } from '@/utils/error'
 const rows = ref<VolunteerApplicationAdminResponse[]>([])
 const status = ref<string>('PENDING')
 const page = ref(1)
@@ -91,7 +93,7 @@ async function reload() {
     rows.value = res.records
     total.value = res.total
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '加载失败')
+    ElMessage.error(errorMessage(e, '加载失败'))
   } finally {
     loading.value = false
   }
@@ -108,7 +110,7 @@ async function approve(row: VolunteerApplicationAdminResponse) {
     ElMessage.success(`已通过，状态：${res.status}`)
     reload()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '审核失败')
+    ElMessage.error(errorMessage(e, '审核失败'))
   }
 }
 
@@ -123,19 +125,19 @@ async function reject(row: VolunteerApplicationAdminResponse) {
     ElMessage.success(`已拒绝，状态：${res.status}`)
     reload()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '审核失败')
+    ElMessage.error(errorMessage(e, '审核失败'))
   }
 }
 
-function daysSince(iso: string) {
-  if (!iso) return '—'
-  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
-  return `${days} 天`
+function daysSinceLabel(iso: string) {
+  // 用显式解析而不是 new Date(iso)：服务端的 `yyyy-MM-dd HH:mm:ss` 在 Safari 是 NaN、
+  // 在 Chrome 按本地时区解释，直接算天数会得到「NaN 天」或偏差一天。
+  const days = daysSince(iso)
+  return days == null ? '—' : `${days} 天`
 }
 
 function format(iso: string) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString()
+  return formatDateTime(iso)
 }
 
 function statusTag(s: string) {

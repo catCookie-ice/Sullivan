@@ -159,6 +159,7 @@ import {
   personSubLabel,
 } from '@/utils/display'
 
+import { errorMessage } from '@/utils/error'
 const myUid = localStorage.getItem('principal_id') || ''
 
 /**
@@ -281,7 +282,7 @@ async function load() {
   try {
     messages.value = await listVoiceMessages()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '加载留言失败')
+    ElMessage.error(errorMessage(e, '加载留言失败'))
   } finally {
     loading.value = false
   }
@@ -426,7 +427,7 @@ async function upload() {
     discardRecording()
     await load()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '上传失败')
+    ElMessage.error(errorMessage(e, '上传失败'))
   } finally {
     uploading.value = false
   }
@@ -484,7 +485,7 @@ async function markListened(row: VoiceMessageResponse) {
     ElMessage.success('已标记为已听')
     await load()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '标记失败')
+    ElMessage.error(errorMessage(e, '标记失败'))
   }
 }
 
@@ -499,7 +500,7 @@ async function remove(row: VoiceMessageResponse) {
     ElMessage.success('已删除')
     await load()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '删除失败')
+    ElMessage.error(errorMessage(e, '删除失败'))
   }
 }
 

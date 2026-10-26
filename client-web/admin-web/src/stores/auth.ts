@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { TokenResponse } from '@/types/api'
+import { clearAuthStorage } from '@/utils/session'
 
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref(localStorage.getItem('access_token') || '')
@@ -32,7 +33,8 @@ export const useAuthStore = defineStore('auth', () => {
     principalType.value = ''
     roles.value = []
     permissions.value = []
-    localStorage.clear()
+    // 只清登录态；localStorage.clear() 会连 @shared/keep-auto 的表单草稿一起抹掉。
+    clearAuthStorage()
   }
 
   return { accessToken, principalId, principalType, roles, permissions, setLogin, hasPermission, logout }

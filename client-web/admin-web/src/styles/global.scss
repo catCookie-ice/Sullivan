@@ -39,6 +39,11 @@
   /* —— 字体栈 —— */
   --font-hand: 'ZCOOL KuaiLe', 'Ma Shan Zheng', -apple-system, 'PingFang SC',
     'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', sans-serif;
+  /* 数字专用栈。用于「数字本身就是内容」的场景（统计大数、图表刻度、金额）。
+     ZCOOL KuaiLe 的 0 是一个细长的空心方框，30px 以上非常像缺字形的豆腐块，
+     表格里连续读数时也容易与 8/9 混淆；这类位置改用无歧义的系统数字字体。 */
+  --font-num: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue',
+    Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
     'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', sans-serif;
   --font-code: 'SF Mono', Menlo, Consolas, 'Courier New', monospace;
@@ -587,4 +592,15 @@ body .el-loading-mask { background-color: rgba(255, 253, 248, 0.72); }
 /* ============ 工具类 ============ */
 .page-card {
   margin: 16px;
+}
+
+/* —— 数字字体工具类 ——
+   手写体的 0 是细长空心方框，在统计大数、表格数值这类「要读数」的位置
+   既不清晰也易与 8/9 混淆。加上 .num 即切换到无歧义的数字字体，
+   并用 font-variant-numeric 让数字等宽，纵向对齐时不会左右跳动。 */
+.num,
+.font-num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }

@@ -47,6 +47,7 @@ import { createRegistrationCode } from '@/api/admin'
 import KeepAutoForm from '@shared/keep-auto/KeepAutoForm.vue'
 import type { AdminCodeResponse } from '@/types/api'
 
+import { errorMessage } from '@/utils/error'
 const form = reactive<{ initialRoleCode: string; expiresAt: string }>({
   initialRoleCode: '',
   expiresAt: '',
@@ -69,7 +70,7 @@ async function handleCreate() {
     ElMessage.success('注册码已生成')
     keepFormRef.value?.clearCache()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '生成失败')
+    ElMessage.error(errorMessage(e, '生成失败'))
   } finally {
     loading.value = false
   }

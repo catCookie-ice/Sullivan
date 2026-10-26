@@ -1,0 +1,183 @@
+// Sullivan 无障碍与响应式补充样式 —— 墨线笔记本手绘主题的加固层。
+// 说明：本文件为四个前端项目（admin/org/user/protectee）逐字节一致的副本。
+// 与 global.scss 分开是刻意的：那张表只负责「长得像手绘笔记本」，
+// 这里只负责「键盘能用、读屏能读、窄屏不溢出」，改一处不影响另一处。
+// 加载顺序必须在 global.scss 之后（见各端 main.ts）。
+
+/* ============ 1. 键盘焦点可见 ============ */
+
+/*
+ * 墨线主题大量使用手绘边框与 box-shadow 做「纸感」，而 Element Plus 默认的
+ * outline 在多数组件上被 box-shadow 替代，导致纯键盘用户看不出焦点在哪。
+ * 这里统一给可交互元素一个高对比度、不依赖颜色的焦点环（描边 + 外扩白边，
+ * 在任何纸色背景上都可见），并且只对键盘焦点生效（:focus-visible），
+ * 鼠标点击不出现双层框。
+ */
+
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--mist-dark, #4c6176);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Element Plus 的输入类组件把可见焦点画在包裹层上，这里补到包裹层。 */
+body .el-input__wrapper:has(:focus-visible),
+body .el-select__wrapper:has(:focus-visible),
+body .el-textarea__inner:focus-visible {
+  outline: 2px solid var(--mist-dark, #4c6176);
+  outline-offset: 2px;
+}
+
+/* 抽屉/弹窗打开时，把焦点环放在容器上，便于用户确认「我进到一个新层面了」。 */
+body .el-dialog:focus-visible,
+body .el-drawer:focus-visible {
+  outline: 2px solid var(--mist-dark, #4c6176);
+}
+
+/* ============ 2. 读屏器专用文本 ============ */
+
+/*
+ * 视觉上不可见的辅助说明（例如「完整地址建议：…，按 Tab 补全」）。
+ * 不能用 display:none / visibility:hidden —— 那会把内容从无障碍树里一并移除。
+ * 这是 WCAG 推荐的 clip 方案。
+ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 跳至主内容：键盘用户按第一个 Tab 就能跳过导航直达内容 */
+.skip-to-content {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 9999;
+  padding: 10px 16px;
+  background: var(--paper-card, #fffdf8);
+  border: 2px solid var(--mist-dark, #4c6176);
+  border-radius: 0 0 8px 0;
+  font-family: var(--font-hand, sans-serif);
+  color: var(--ink, #3f3a32);
+  text-decoration: none;
+}
+.skip-to-content:focus {
+  left: 0;
+}
+
+/* ============ 3. 响应式：窄屏不溢出 ============ */
+
+/*
+ * 现状：横向便签菜单在窄屏没有折叠，el-table 列多时被裁切，
+ * 登录/注册卡片宽度写死 px。三处一起处理。
+ */
+
+/* 宽表格允许横向滚动，而不是把内容压扁或裁掉。 */
+.el-table {
+  max-width: 100%;
+}
+
+/* 窄屏：页面留白收紧，卡片旋转取消（小屏上旋转会明显降低可读性）。 */
+@media (max-width: 768px) {
+  .page-card {
+    margin: 10px 8px;
+  }
+
+  body .el-card__body {
+    padding: 12px;
+  }
+
+  body .login-card,
+  body .register-card,
+  body .forgot-card {
+    transform: none;
+  }
+
+  /* 表单标签改为顶部对齐：窄屏下左侧固定宽度标签会把输入框挤到几十像素。 */
+  body .el-form-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  body .el-form-item__label {
+    justify-content: flex-start;
+    text-align: left;
+    padding: 0 0 4px !important;
+    width: auto !important;
+    /* el-form-item 的 label-width 是通过 style 内联给的，此处用 !important 覆盖。 */
+    max-width: 100% !important;
+    flex-basis: auto !important;
+  }
+  body .el-form-item__content {
+    margin-left: 0 !important;
+  }
+
+  /* 内联表单（筛选条）在窄屏改成块级堆叠，避免控件互相挤压。 */
+  body .el-form--inline .el-form-item {
+    display: flex;
+    margin-right: 0;
+    width: 100%;
+  }
+  body .el-form--inline .el-form-item__content {
+    width: 100%;
+  }
+  body .el-form--inline .el-input,
+  body .el-form--inline .el-select {
+    width: 100% !important;
+  }
+
+  /* 弹窗/抽屉在小屏上留出边距，不要贴边。 */
+  body .el-dialog {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px);
+    margin: 12px auto !important;
+  }
+
+  /* 描述列表在窄屏强制单列，否则 label 与内容会挤成两行断字。 */
+  body .el-descriptions__table {
+    table-layout: fixed;
+  }
+
+  /* 分页条窄屏改为紧凑布局，避免页码溢出容器。 */
+  body .el-pagination {
+    justify-content: center !important;
+    flex-wrap: wrap;
+  }
+}
+
+/* 触屏设备：所有主要按钮保证 ≥44px 高，方便视障用户点按。 */
+@media (pointer: coarse) {
+  body .el-button {
+    min-height: 44px;
+  }
+  body .el-button--small {
+    min-height: 40px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+/* ============ 4. 尊重「减少动效」系统偏好 ============ */
+
+/*
+ * 前庭功能敏感的用户会因动效不适。这套主题本身动效不多（页面向下滚动时
+ * 卡片轻微位移、按钮 hover 位移），关掉后不影响任何功能。
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  body .el-button:not(.is-disabled):hover {
+    transform: none;
+  }
+}

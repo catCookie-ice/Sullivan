@@ -35,7 +35,9 @@
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'ENABLED' ? 'success' : 'danger'">{{ row.status }}</el-tag>
+            <!-- 不能直接显示 row.status：那是 ENABLED / DISABLED 之类的后端枚举，
+                 对使用者没有意义，而且在窄列里会被截断成 "ENABLED …"。 -->
+            <el-tag :type="statusTag(row.status)">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="注册时间" width="170" />
@@ -66,6 +68,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { listUsers, deleteUser } from '@/api/admin'
 import type { AdminUserResponse } from '@/types/api'
 
+import { errorMessage } from '@/utils/error'
 const rows = ref<AdminUserResponse[]>([])
 const total = ref(0)
 const loading = ref(false)
@@ -89,7 +92,7 @@ async function load(page?: number) {
     rows.value = res.records
     total.value = res.total
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '加载失败')
+    ElMessage.error(errorMessage(e, '加载失败'))
   } finally {
     loading.value = false
   }
@@ -110,9 +113,24 @@ async function handleDelete(row: AdminUserResponse) {
     ElMessage.success(res.message)
     load()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '删除失败')
+    ElMessage.error(errorMessage(e, '删除失败'))
   }
 }
 
 onMounted(() => load(1))
+
+/** 账号状态：后端只下发 ENABLED / DISABLED，界面用中文说明。 */
+function statusText(status: string): string {
+  const map: Record<string, string> = {
+    ENABLED: '正常',
+    DISABLED: '已禁用',
+  }
+  return map[status] || status
+}
+
+function statusTag(status: string): 'success' | 'danger' | 'info' {
+  if (status === 'ENABLED') return 'success'
+  if (status === 'DISABLED') return 'danger'
+  return 'info'
+}
 </script>

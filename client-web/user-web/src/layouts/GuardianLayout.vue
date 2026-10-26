@@ -1,20 +1,8 @@
 <template>
   <div class="layout-guardian">
-    <div class="layout-nav">
-      <span class="layout-brand">Sullivan 监护与志愿者端</span>
-      <el-menu :router="true" mode="horizontal" class="nav-menu">
-      <el-menu-item index="/guardian/bindings">绑定管理</el-menu-item>
-      <el-menu-item index="/guardian/protectees">创建受护人</el-menu-item>
-      <el-menu-item index="/guardian/locations">位置查看</el-menu-item>
-      <el-menu-item index="/guardian/alerts">报警</el-menu-item>
-      <el-menu-item index="/guardian/services">公益服务</el-menu-item>
-      <el-menu-item v-if="!isVolunteer" index="/guardian/volunteer-apply">志愿者申请</el-menu-item>
-      <el-menu-item index="/guardian/realtime">实时会话</el-menu-item>
-      <el-menu-item index="/guardian/voice">语音留言</el-menu-item>
-      <el-menu-item style="float: right" @click="handleLogout">退出登录</el-menu-item>
-      </el-menu>
-    </div>
-    <main class="content">
+    <a class="skip-to-content" href="#main-content">跳至主要内容</a>
+    <AppNav brand="Sullivan 监护与志愿者端" :items="navItems" @logout="handleLogout" />
+    <main id="main-content" class="content">
       <router-view />
     </main>
   </div>
@@ -23,11 +11,37 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import AppNav from '@shared/nav/AppNav.vue'
+import type { NavItem } from '@shared/nav/types'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
 const isVolunteer = computed(() => auth.roles.includes('VOLUNTEER'))
+const isGuardian = computed(() => auth.roles.includes('GUARDIAN'))
+
+/**
+ * 监护人端菜单。
+ *
+ * 按角色裁剪：
+ *   - 「志愿者申请」只在还不是志愿者时出现（已是志愿者就没什么可申请的）；
+ *   - 「切换到志愿者端」只在同时具备 GUARDIAN 与 VOLUNTEER 时出现。
+ *
+ * 「位置查看」与「公益服务」暂时隐藏：前者依赖的 GET /guardians/locations/{uid}
+ * 与后者依赖的 /services 都尚未在服务端实现（见 /v3/api-docs），
+ * 按 00 §6.2 第 3 条不展示不可用入口。页面文件保留，后端就绪后把 show 改回 true。
+ */
+const navItems = computed<NavItem[]>(() => [
+  { index: '/guardian/bindings', label: '绑定管理' },
+  { index: '/guardian/protectees', label: '创建受护人' },
+  { index: '/guardian/locations', label: '位置查看', show: false },
+  { index: '/guardian/alerts', label: '报警' },
+  { index: '/guardian/services', label: '公益服务', show: false },
+  { index: '/guardian/volunteer-apply', label: '志愿者申请', show: !isVolunteer.value },
+  { index: '/guardian/realtime', label: '实时会话' },
+  { index: '/guardian/voice', label: '语音留言' },
+  { index: '/volunteer/activities', label: '志愿者端', show: isVolunteer.value && isGuardian.value },
+])
 
 function handleLogout() {
   auth.logout()
@@ -38,48 +52,6 @@ function handleLogout() {
 <style scoped>
 .layout-guardian {
   min-height: 100vh;
-}
-.layout-nav {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 16px 8px 20px;
-  background: var(--paper-deep);
-  border-bottom: 1px dashed var(--line);
-}
-.layout-brand {
-  font-family: var(--font-hand);
-  font-size: 20px;
-  color: var(--ink);
-  white-space: nowrap;
-  position: relative;
-  padding-right: 8px;
-}
-.layout-brand::before {
-  content: "";
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border: 1.5px solid var(--mist);
-  border-radius: 50% 45% 55% 40% / 50% 60% 40% 55%;
-  margin-right: 8px;
-  transform: rotate(-15deg);
-}
-.layout-brand::after {
-  content: "";
-  position: absolute;
-  left: 24px;
-  right: 4px;
-  bottom: -2px;
-  height: 5px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='6' viewBox='0 0 12 6'%3E%3Cpath d='M0 3 Q3 0 6 3 T12 3' fill='none' stroke='%235f7a92' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E")
-    repeat-x left bottom / 12px 6px;
-}
-.nav-menu {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border-bottom: none;
 }
 .content {
   min-height: calc(100vh - 61px);

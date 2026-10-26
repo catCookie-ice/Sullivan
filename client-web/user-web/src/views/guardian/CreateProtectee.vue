@@ -32,6 +32,7 @@ import { createProtectee } from '@/api/guardian'
 import KeepAutoForm from '@shared/keep-auto/KeepAutoForm.vue'
 import type { RegistrationResponse } from '@/types/api'
 
+import { errorMessage } from '@/utils/error'
 const form = reactive({
   loginName: '',
   password: '',
@@ -67,7 +68,7 @@ async function handleCreate() {
     form.displayName = ''
     form.emergencyNote = ''
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '创建失败')
+    ElMessage.error(errorMessage(e, '创建失败'))
   } finally {
     loading.value = false
   }

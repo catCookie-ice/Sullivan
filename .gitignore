@@ -39,6 +39,13 @@ node_modules/
 dist/
 .vite/
 
+# 前端本地联调产物（tools/ 下脚本生成的运行配置含真实 JWT，截图含账号数据，均不入库）
+client-web/tools/*.run.json
+client-web/tools/*.i18n.json
+# e2e-admin.json 含真实 superadmin 密码，与 .env 同级敏感，永不入库
+client-web/tools/e2e-admin.json
+client-web/.shots/
+
 # Android（两个独立工程：监护人端 client-guardian，受护人端 client-protectee）
 client-android/client-guardian/.idea/
 client-android/client-guardian/app/release/

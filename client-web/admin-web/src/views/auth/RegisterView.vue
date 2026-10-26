@@ -37,6 +37,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { registerAdmin } from '@/api/auth'
 
+import { errorMessage } from '@/utils/error'
 const router = useRouter()
 const form = reactive({
   loginName: '',
@@ -68,7 +69,7 @@ async function handleRegister() {
     ElMessage.success('管理员注册成功，请登录')
     router.push('/login')
   } catch (e: any) {
-    error.value = e.response?.data?.error || '注册失败，请检查注册码'
+    error.value = errorMessage(e, '注册失败，请检查注册码')
   } finally {
     loading.value = false
   }

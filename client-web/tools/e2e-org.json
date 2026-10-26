@@ -1,0 +1,31 @@
+{
+  "baseUrl": "http://localhost:5174",
+  "prefix": "org",
+  "principalType": "ORGANIZATION",
+  "settleMs": 3200,
+  "checkNarrow": "/activities",
+  "pages": [
+    {
+      "path": "/profile",
+      "name": "profile",
+      "selector": ".page-card"
+    },
+    {
+      "path": "/activities",
+      "name": "activities",
+      "selector": ".page-card",
+      "mustContain": [
+        "志愿活动管理",
+        "朝阳公园视障徒步陪伴"
+      ]
+    },
+    {
+      "path": "/activities/create",
+      "name": "create",
+      "selector": ".page-card",
+      "mustContain": [
+        "活动"
+      ]
+    }
+  ]
+}

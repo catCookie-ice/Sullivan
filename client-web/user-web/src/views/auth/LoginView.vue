@@ -60,6 +60,7 @@ import { loginUser, recoveryDismiss, recoveryRemindLater, setRecoveryContact } f
 import { useAuthStore } from '@/stores/auth'
 import type { TokenResponse } from '@/types/api'
 
+import { errorMessage } from '@/utils/error'
 const router = useRouter()
 const auth = useAuthStore()
 const loginName = ref('')
@@ -94,7 +95,7 @@ async function handleLogin() {
       goHome(token)
     }
   } catch (e: any) {
-    error.value = e.response?.data?.error || '登录失败，请检查账号密码'
+    error.value = errorMessage(e, '登录失败，请检查账号密码')
   } finally {
     loading.value = false
   }
@@ -142,7 +143,7 @@ async function onSaveSet() {
     reminderVisible.value = false
     if (pendingToken.value) goHome(pendingToken.value)
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '设置失败')
+    ElMessage.error(errorMessage(e, '设置失败'))
   } finally {
     setting.value = false
   }

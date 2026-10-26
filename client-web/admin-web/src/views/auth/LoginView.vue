@@ -28,6 +28,7 @@ import { ElMessage } from 'element-plus'
 import { loginAdmin } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
 
+import { errorMessage } from '@/utils/error'
 const router = useRouter()
 const auth = useAuthStore()
 const loginName = ref('')
@@ -48,7 +49,7 @@ async function handleLogin() {
     ElMessage.success('登录成功')
     router.push('/')
   } catch (e: any) {
-    error.value = e.response?.data?.error || '登录失败，请检查账号密码'
+    error.value = errorMessage(e, '登录失败，请检查账号密码')
   } finally {
     loading.value = false
   }

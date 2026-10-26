@@ -66,6 +66,7 @@ import { useRouter } from 'vue-router'
 import { passwordRecoveryStart, passwordRecoveryVerify } from '@/api/auth'
 import type { RecoveryMethod } from '@/types/api'
 
+import { errorMessage } from '@/utils/error'
 const router = useRouter()
 const step = ref<'login' | 'methods' | 'result'>('login')
 const stepActive = computed(() => (step.value === 'login' ? 0 : step.value === 'methods' ? 1 : 2))
@@ -97,7 +98,7 @@ async function handleStart() {
     verifyError.value = ''
     step.value = 'methods'
   } catch (e: any) {
-    startError.value = e.response?.data?.error || '查找失败'
+    startError.value = errorMessage(e, '查找失败')
   } finally {
     starting.value = false
   }
@@ -127,7 +128,7 @@ async function handleVerify() {
       verifyError.value = '联系方式不匹配，请检查后重试'
     }
   } catch (e: any) {
-    verifyError.value = e.response?.data?.error || '验证失败'
+    verifyError.value = errorMessage(e, '验证失败')
   } finally {
     verifying.value = false
   }

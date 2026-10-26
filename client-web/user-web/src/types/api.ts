@@ -18,6 +18,37 @@ export interface RegistrationResponse {
   roles: string[]
 }
 
+// 分页（MyBatis-Plus 结构）
+export interface PageResult<T> {
+  records: T[]
+  total: number
+  size: number
+  current: number
+  pages?: number
+}
+
+// 公益活动（GET /activities）
+export interface ActivityResponse {
+  id: string
+  // RECRUITING / IN_PROGRESS / ENDED / CANCELLED
+  status: string
+  organizationId: string
+  organizationPublicName?: string | null
+  title: string
+  description: string
+  locationText: string
+  locationLng?: number | null
+  locationLat?: number | null
+  startsAt: string
+  endsAt: string
+  registrationStartsAt: string
+  registrationEndsAt: string
+  maxVolunteers: number
+  approvedCount: number
+  createdAt: string
+}
+
+
 // 绑定关系（创建受护人 / 发起绑定 / 接受绑定）
 export interface BindingResponse {
   id: string
@@ -132,3 +163,50 @@ export interface RecoveryStatusResponse {
   remindRequired: boolean
   methods: RecoveryMethod[]
 }
+
+// ============ 报警（GET /alerts 等） ============
+
+/** 报警时的位置快照。ageSeconds 越大越不可信，界面要显式提示「多久之前」。 */
+export interface AlertLocation {
+  latitude: number
+  longitude: number
+  accuracyM: number | null
+  capturedAt: string | null
+  ageSeconds: number | null
+}
+
+/** 单个接收人的派发结果。 */
+export interface AlertDelivery {
+  receiverUid: string
+  dispatchOrder: number
+  // PENDING / SENT / DELIVERED / ACKNOWLEDGED / FAILED
+  status: string
+  sessionId: string | null
+  failureReason: string | null
+}
+
+export interface AlertResponse {
+  id: string
+  // CREATED / DISPATCHING / DISPATCHED / ACKNOWLEDGED / RESOLVED / NO_RECIPIENT / DISPATCH_FAILED
+  status: string
+  // MANUAL / VOICE_HELP / COLLISION
+  alertType: string
+  // ALL_GUARDIANS / NEARBY_VOLUNTEERS / NONE
+  routeType: string
+  routeNote: string | null
+  // 受护人 uid：只用于和当前登录人比对「这是我自己发的还是别人发给我的」，不显示。
+  protecteeUid: string
+  location: AlertLocation | null
+  createdAt: string
+  resolvedAt: string | null
+  // NONE / SCHEDULED / RUNNING / SKIPPED / DONE
+  autoSessionState: string
+  autoSessionDueAt: string | null
+  deliveries: AlertDelivery[]
+}
+
+export interface AlertSettingResponse {
+  autoSessionEnabled: boolean
+  delaySeconds: number
+}
+

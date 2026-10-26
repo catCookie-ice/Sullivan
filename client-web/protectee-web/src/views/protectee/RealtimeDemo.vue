@@ -218,6 +218,7 @@ import {
   sessionTypeTagType,
 } from '@/utils/display'
 
+import { errorMessage } from '@/utils/error'
 // 受护人端永远是「受护人」视角：CAMERA 会话里由受护人上传摄像头画面与声音
 const {
   sessions,
@@ -415,7 +416,7 @@ async function onEndRow(row: RealtimeSessionResponse) {
     await endRealtimeSession(row.id)
     ElMessage.success('已结束')
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '结束失败')
+    ElMessage.error(errorMessage(e, '结束失败'))
   }
   await refresh()
 }

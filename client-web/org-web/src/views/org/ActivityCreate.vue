@@ -14,8 +14,23 @@
           <div class="location-combo">
             <el-input ref="locationInputRef" v-model="form.locationText" maxlength="300"
                       placeholder="地点文本，如：朝阳公园南门"
-                      @input="onLocationTextInput" @keydown.tab.prevent="onLocationTab" />
-            <span v-if="locationHint" class="location-hint" :style="{ left: locationHintLeft }" aria-hidden="true">{{ locationHint }}</span>
+                      aria-describedby="location-hint-live"
+                      @input="onLocationTextInput" @keydown.tab.prevent="onLocationTab"
+                      @keydown.esc="onLocationDismiss" @blur="onLocationDismiss" />
+            <!-- 半透明补全提示：显示建议地址里「用户还没输入」的剩余部分。
+                 aria-hidden 是因为它只是视觉补全；完整建议另由下方 #location-hint-live 播报给读屏器。 -->
+            <span v-if="locationHint" class="location-hint" :style="{ left: locationHintLeft }"
+                  aria-hidden="true">{{ locationHint }}</span>
+          </div>
+          <!-- 读屏器专用：补全建议通过 aria-live 播报，Tab 才可补全。替代纯视觉的半透明文字。 -->
+          <span id="location-hint-live" class="sr-only" aria-live="polite">
+            {{ locationHint ? `完整地址建议：${locationSuggestion}，按 Tab 补全` : '' }}
+          </span>
+          <!-- 可见提示：输入框行内空间不足时（长地名）半透明补全会被裁掉，
+               这里给出完整建议原文，保证任何情况下都能先「看见」完整地址再决定是否 Tab。 -->
+          <div v-if="locationHint" class="location-tip">
+            完整地址：<span class="location-tip-addr">{{ locationSuggestion }}</span>
+            <span class="location-tip-key">按 <kbd>Tab</kbd> 使用，<kbd>Esc</kbd> 保持原文</span>
           </div>
         </el-form-item>
 
@@ -75,6 +90,7 @@ import AmapPicker from '@/components/AmapPicker.vue'
 import KeepAutoForm from '@shared/keep-auto/KeepAutoForm.vue'
 import type { ActivityCreateRequest } from '@/types/api'
 
+import { errorMessage } from '@/utils/error'
 const router = useRouter()
 const loading = ref(false)
 const keepFormRef = ref<{ clearCache: () => void } | null>(null)
@@ -86,8 +102,18 @@ const amapPickerRef = ref<{
 
 // 输入框 → 地图：防抖 300ms，避免每次按键都地理编码。
 const locationInputTimer = ref<ReturnType<typeof setTimeout> | null>(null)
-// 程序回填输入框时置位，抑制随后的 @input 触发（防止"地图→输入框"再编码死循环）。
-let suppressLocationInput = false
+/**
+ * 「程序回填」的哨兵值。
+ *
+ * 取代原先的 `suppressLocationInput` 布尔开关。那个开关是**粘滞**的：它只在
+ * `@input` 里被复位，而程序化改 `form.locationText` 并不会触发原生 input 事件，
+ * 于是开关一旦置位就再没人复位——用户**下一次真实按键会被当成回显吞掉**，
+ * 既不地理编码也不出补全，表现为「输入后没有任何反应」。
+ *
+ * 改成记录「上一次由程序写进去的文本」：只有当输入框当前值与它完全相等时，
+ * 才认定为回显；比完即清空，天然不会跨按键残留。
+ */
+let lastProgrammaticText = ''
 // geocodeText 设置 location 时置位，抑制 watch(location) 回填输入框（否则会覆盖用户原文）。
 let suppressWatchBackfill = false
 
@@ -101,15 +127,21 @@ const locationHint = computed(() => {
   if (!sug || !text || sug === text) return ''
   return sug.startsWith(text) ? sug.slice(text.length) : ''
 })
-// 提示文本的左偏移 = 输入框内边距 + 已输入文本的像素宽度（用 canvas 测量，中文按 1 字符宽）。
+// 复用的 canvas 2d 上下文：measureText 每敲一个字都会调用，不宜每次 new 一个 canvas。
+let measureCtx: CanvasRenderingContext2D | null = null
+// 提示文本的左偏移 = 输入框内边距 + 已输入文本的像素宽度。
 const locationHintLeft = computed(() => {
-  const text = form.locationText.trim()
+  const text = form.locationText
   if (!text) return '11px'
-  const measure = document.createElement('canvas').getContext('2d')
-  if (measure) {
-    measure.font = '14px sans-serif'
-    return `${11 + measure.measureText(text).width}px`
+  if (typeof document === 'undefined') return '11px'
+  if (!measureCtx) {
+    measureCtx = document.createElement('canvas').getContext('2d')
+    if (measureCtx) measureCtx.font = '14px sans-serif'
   }
+  if (measureCtx) {
+    return `${11 + measureCtx.measureText(text).width}px`
+  }
+  // 极端兜底：中文按 14px 估宽。
   return `${11 + text.length * 14}px`
 })
 
@@ -130,11 +162,14 @@ const location = ref<{ lng?: number; lat?: number; address?: string }>({})
 
 /** 输入框 @input：防抖后对文本地理编码，命中则让地图跳转到该地点。 */
 function onLocationTextInput() {
-  // 程序回填（地图→输入框方向）抑制：不把回填当成用户输入去编码，避免死循环。
-  if (suppressLocationInput) {
-    suppressLocationInput = false
+  // 程序回填（地图→输入框方向）：不把回显当成用户输入去编码，避免死循环。
+  // 只在「当前值与上次程序写入的完全一致」时认定回显，并且比完立刻清空哨兵，
+  // 保证用户随后的真实按键一定走正常路径（见 lastProgrammaticText 的注释）。
+  if (lastProgrammaticText && form.locationText === lastProgrammaticText) {
+    lastProgrammaticText = ''
     return
   }
+  lastProgrammaticText = ''
   const text = form.locationText.trim()
   // 用户继续输入、与建议前缀不一致时清掉建议；为空也清。
   if (!text || !locationSuggestion.value.startsWith(text)) {
@@ -149,8 +184,13 @@ function onLocationTextInput() {
 function onLocationTab() {
   const sug = locationSuggestion.value
   if (!sug || !locationHint.value) return
-  suppressLocationInput = true
+  lastProgrammaticText = sug
   form.locationText = sug
+  locationSuggestion.value = ''
+}
+
+/** Esc / 失焦：放弃补全建议，保留用户原文。 */
+function onLocationDismiss() {
   locationSuggestion.value = ''
 }
 
@@ -161,6 +201,9 @@ function geocodeText(text: string) {
   AMap.plugin('AMap.Geocoder', () => {
     const geocoder = new AMap.Geocoder({ city: '全国' })
     geocoder.getLocation(text, (status: string, result: any) => {
+      // 请求在途期间用户又改了文本：这次结果已经过期，直接丢弃。
+      // 不丢的话，旧结果会把补全建议盖回用户早已改掉的内容。
+      if (form.locationText.trim() !== text) return
       if (status !== 'complete' || !result?.geocodes?.length) {
         // 未命中不强行改 location，避免误清空已选点；失败多为 INVALID_USER_SCODE（安全密钥）。
         console.warn('[ActivityCreate] 地理编码失败 status=', status, 'info=', result?.info, '文本=', text)
@@ -199,8 +242,9 @@ watch(
     // 逆地理编码可能失败（address 为 undefined），此时回填坐标作为可读文本，保证输入框有变化。
     const text = loc.address || `${loc.lng.toFixed(6)}, ${loc.lat.toFixed(6)}`
     if (text !== form.locationText) {
-      suppressLocationInput = true
       locationSuggestion.value = ''
+      // 记录回显文本，让随后可能触发的 @input 识别为「程序写入」而不是用户输入。
+      lastProgrammaticText = text
       form.locationText = text
     }
   },
@@ -244,7 +288,7 @@ async function submit() {
     keepFormRef.value?.clearCache()
     router.push('/activities')
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '发布失败')
+    ElMessage.error(errorMessage(e, '发布失败'))
   } finally {
     loading.value = false
   }
@@ -270,5 +314,35 @@ async function submit() {
   max-width: calc(100% - 24px);
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 完整建议行：半透明补全被裁掉时的兜底，也承载「Tab / Esc 怎么用」的说明。 */
+.location-tip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.6;
+}
+.location-tip-addr {
+  color: var(--ink-2);
+  word-break: break-all;
+}
+.location-tip-key {
+  color: var(--ink-4);
+}
+.location-tip kbd {
+  display: inline-block;
+  padding: 0 4px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--paper-tint);
+  font-family: var(--font-code);
+  font-size: 11px;
+  color: var(--ink-2);
 }
 </style>

@@ -224,6 +224,7 @@ import {
   sessionTypeTagType,
 } from '@/utils/display'
 
+import { errorMessage } from '@/utils/error'
 // 监护人端永远是「监护人」视角：CAMERA 会话里监护人只看受护人上传的画面，绝不采集自己的摄像头
 const {
   sessions,
@@ -422,7 +423,7 @@ async function onEndRow(row: RealtimeSessionResponse) {
     await endRealtimeSession(row.id)
     ElMessage.success('已结束')
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error || '结束失败')
+    ElMessage.error(errorMessage(e, '结束失败'))
   }
   await refresh()
 }

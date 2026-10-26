@@ -33,6 +33,7 @@ import type {
 import { personLabel } from '@/utils/display'
 import type { ClientRealtimeSessionType, RealtimeSessionResponse } from '@/types/api'
 
+import { errorMessage } from '@/utils/error'
 /** 界面阶段：CallPhase 之外还有「没有通话」「纯文本会话」两种。 */
 export type UiPhase = CallPhase | 'idle' | 'texting'
 
@@ -147,7 +148,7 @@ export function useCallSession(side: MediaSide) {
     try {
       sessions.value = await listMyRealtimeSessions()
     } catch (e: any) {
-      ElMessage.error(e.response?.data?.error || '加载会话列表失败')
+      ElMessage.error(errorMessage(e, '加载会话列表失败'))
     } finally {
       loading.value = false
     }
@@ -230,7 +231,7 @@ export function useCallSession(side: MediaSide) {
       }
       beginWaiting(session, displayName)
     } catch (e: any) {
-      ElMessage.error(e.response?.data?.error || '发起会话失败')
+      ElMessage.error(errorMessage(e, '发起会话失败'))
     } finally {
       creating.value = false
     }
@@ -392,7 +393,7 @@ export function useCallSession(side: MediaSide) {
       await endRealtimeSession(session.id)
       ElMessage.success('已取消呼叫')
     } catch (e: any) {
-      ElMessage.error(e.response?.data?.error || '取消失败')
+      ElMessage.error(errorMessage(e, '取消失败'))
     }
     phase.value = 'idle'
     activeSession.value = null
@@ -408,7 +409,7 @@ export function useCallSession(side: MediaSide) {
       await joinSession(accepted)
       await refresh()
     } catch (e: any) {
-      ElMessage.error(e.response?.data?.error || '接受会话失败')
+      ElMessage.error(errorMessage(e, '接受会话失败'))
       await refresh()
     }
   }
@@ -419,7 +420,7 @@ export function useCallSession(side: MediaSide) {
       ElMessage.success('已拒绝')
       await refresh()
     } catch (e: any) {
-      ElMessage.error(e.response?.data?.error || '拒绝失败')
+      ElMessage.error(errorMessage(e, '拒绝失败'))
     }
   }
 
