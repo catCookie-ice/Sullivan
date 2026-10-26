@@ -4,11 +4,10 @@
     <!--
         权限只列本应用真正用到的项。
 
-        与 client-guardian 的差别（不是漏抄）：那边还声明了 RECORD_AUDIO 与两个定位权限，
-        那是既有欠账 —— 代码里没有任何录音或定位调用（grep AudioRecord / MediaRecorder /
-        amap 在 Java 侧零命中），只是 manifest 与依赖在空转。本工程从零写 manifest，
-        不把那些没人用的权限带进来：受护人手机上少一项权限申请，
-        就少一次被用户当成「为什么一个检测工具要麦克风」的怀疑。
+        与 client-guardian 的差别（不是漏抄）：RECORD_AUDIO 曾经也是这里刻意
+        不声明的一项 —— 那时代码里确实没有任何录音调用；现在「语音留言」
+        （VoiceMessageActivity + VoiceRecorder）用 MediaRecorder 录音，
+        它成了实体功能，必须声明并在运行时向用户申请。
 
         定位权限是例外：报警要把受护人的位置发给监护人，这是 FR-06 的实体功能，
         由 LocationReporter 真正调用（getLastKnownLocation / requestLocationUpdates）。
@@ -17,10 +16,31 @@
     -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!--
+        WebRTC 建第一条 PeerConnection 时会启动 NetworkMonitor，它要读网络状态；
+        没有这一项，实时通话一发起就触发
+        java.lang.SecurityException → libjingle network_thread 直接 abort，
+        表现是「一点连接就闪回首页、会话永远停在正在接通」。
+        INTERNET 不覆盖它 —— 这是两个独立的权限。
+    -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <!-- 剧烈晃动报警的振动提示（PromptAnnouncer） -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- 语音留言的录音（VoiceRecorder / MediaRecorder），运行时向用户申请 -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!--
+        来电监听前台服务。对方发起实时会话时，受护人多半没打开应用 ——
+        没有这两项「服务器建了会话、受护人收不到通知」。
+        与监护人端 IncomingCallService 的选型一致：specialUse 而不是 dataSync，
+        后者 Android 14+ 限制每天 6 小时，对"全天候守着"等于不可用。
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Android 13+ 通知要用户授权，没有它前台服务的通知根本不显示。 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- 本应用的全部价值都在后置摄像头上，没有相机就不该装 -->
     <uses-feature
@@ -107,5 +127,28 @@
             android:name=".ui.common.realtime.RealtimeActivity"
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize" />
+
+        <!--
+            语音留言：录音、发送、收听已绑定对方留下的音频。
+            **不在这里写会直接导致点击「语音留言」卡就闪退**：
+            startActivity 指向未注册的 Activity 会抛 ActivityNotFoundException。
+            录音权限在页内第一次点「开始录音」时申请（见 VoiceMessageActivity）。
+        -->
+        <activity
+            android:name=".ui.common.voice.VoiceMessageActivity"
+            android:screenOrientation="portrait" />
+
+        <!--
+            来电监听：常驻前台服务，5 秒查一次有没有人在呼叫我。
+            exported=false：只由本应用启动。登录后由受护人主页启动，退出即停。
+        -->
+        <service
+            android:name=".service.call.IncomingCallService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="alert_incoming_call_monitoring" />
+        </service>
     </application>
 </manifest>

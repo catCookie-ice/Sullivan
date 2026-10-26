@@ -37,6 +37,7 @@ import com.sullivan.android.ui.guardian.binding.CreateProtecteeActivity;
 import com.sullivan.android.ui.guardian.call.AlertLocationSummary;
 import com.sullivan.android.ui.guardian.call.AlertQuery;
 import com.sullivan.android.ui.guardian.call.IncomingCallFilter;
+import com.sullivan.android.ui.guardian.call.PlaceNameResolver;
 import com.sullivan.android.ui.guardian.volunteer.VolunteerApplyActivity;
 import com.sullivan.android.ui.login.LoginActivity;
 
@@ -450,15 +451,38 @@ public class GuardianActivity extends AppCompatActivity {
             message = message + "\n\n" + getString(R.string.guardian_incoming_call_no_location);
         }
 
-        new AlertDialog.Builder(this)
+        AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(R.string.guardian_incoming_call_title)
                 .setMessage(message)
                 .setCancelable(false)
-                .setPositiveButton(R.string.guardian_incoming_call_open,
-                        (dialog, which) -> startActivity(
-                                RealtimeActivity.intentFor(this)))
+                // 「接听」直接带着会话 ID 进实时会话页：页面会自动接受并接通，
+                // 不再让用户进列表里找到那一行再点一次。
+                .setPositiveButton(R.string.incoming_call_action_accept,
+                        (dialogButton, which) -> startActivity(
+                                RealtimeActivity.intentFor(this, call.id)))
                 .setNegativeButton(R.string.guardian_incoming_call_ignore, null)
                 .show();
+
+        // 地名补显：服务端在报警创建时已解析好就直接用（同步，零等待）；
+        // 没有服务端地名才异步走本端高德解析 —— 对话框先带坐标立即弹出，
+        // 解析回来再刷新一行，看得懂的地名比裸坐标先到不亏。
+        if (location != null) {
+            // message 在上面被重新赋值过，lambda 捕获要求事实终值，复制一份。
+            String messageWithCoords = message;
+            String serverAddress = AlertLocationSummary.serverAddress(location);
+            if (serverAddress != null) {
+                dialog.setMessage(messageWithCoords + "\n\n" + serverAddress);
+            } else {
+                PlaceNameResolver.resolve(this, location.latitude, location.longitude,
+                        name -> {
+                            if (name == null || isFinishing() || isDestroyed()
+                                    || !dialog.isShowing()) {
+                                return;
+                            }
+                            dialog.setMessage(messageWithCoords + "\n\n" + name);
+                        });
+            }
+        }
     }
 
     /** 本页是否处于「用户正看着」的状态。用于决定弹窗还是 Toast。 */

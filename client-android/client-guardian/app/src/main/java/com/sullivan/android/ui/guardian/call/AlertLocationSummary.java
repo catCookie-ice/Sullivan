@@ -69,6 +69,23 @@ public final class AlertLocationSummary {
     }
 
     /**
+     * 服务端已解析好的地名；没有则返回 null，调用方此时必须走本端
+     * {@link PlaceNameResolver} 兜底解析。
+     *
+     * <p>没有的两种情形：{@code addressPending} 为 true（服务端在时限内没解析完，
+     * 报警没等它直接转发——这正是本端兜底存在的意义）；或旧报警 / 服务端没配 Key /
+     * 解析确定失败。两种情形客户端动作相同，标识只是把「为什么没有」说清楚。
+     */
+    @Nullable
+    public static String serverAddress(@Nullable AlertDtos.AlertLocation location) {
+        if (location == null || location.address == null) {
+            return null;
+        }
+        String address = location.address.trim();
+        return address.isEmpty() ? null : address;
+    }
+
+    /**
      * 坐标是否可用。
      *
      * <p>(0, 0) 被当作不可用：那是"几内亚湾"，但实践中它几乎总是

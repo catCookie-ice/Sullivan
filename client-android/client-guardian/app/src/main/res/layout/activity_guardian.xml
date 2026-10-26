@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    监护人主页。两个扫码入口并排放在最上面，因为它们就是这一端存在的理由；
-    账号信息与退出登录放底部，避免误触。
+    监护人主页。
 
-    其余入口（绑定管理 / 创建受护人 / 公益活动 / 实时会话 / 志愿者申请）
-    随对应界面逐个加进来，加一个接一个 —— 不留「点了没反应」的卡片。
+    入口按使用频率与心智模型分成三组，不再是「所有卡片排队往下堆」：
+    ① 扫码区（并排两张）—— 当面用一下的高频动作，这一端存在的理由；
+    ② 守护与沟通 —— 实时会话 / 语音留言；
+    ③ 账号与关系 —— 绑定管理 / 创建受护人 / 公益活动 / 志愿者申请，两两并排。
+    受护人端主页保持极简，不做同样的分栏（那边只有一张主卡）。
 -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
@@ -69,65 +71,160 @@
             android:scaleType="fitXY"
             android:src="@drawable/an_divider_vine" />
 
+        <!--
+            第一组：扫码区。两个扫码入口并排放最上面 —— 它们是这一端存在的理由，
+            属于「当面用一下」的高频动作；并排而不是上下堆叠，
+            是为了主页一屏能看到下面的所有分组。
+        -->
         <LinearLayout
-            android:id="@+id/guardian_card_scan_bind"
-            style="@style/Widget.Sullivan.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/an_space_l"
-            android:clickable="true"
-            android:contentDescription="@string/guardian_action_scan_bind_desc"
-            android:focusable="true"
-            android:minHeight="96dp"
-            android:orientation="vertical">
+            android:baselineAligned="false"
+            android:orientation="horizontal">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/guardian_action_scan_bind"
-                android:textAppearance="@style/TextAppearance.Sullivan.Title" />
+            <LinearLayout
+                android:id="@+id/guardian_card_scan_bind"
+                style="@style/Widget.Sullivan.Card"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="@dimen/an_space_s"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:contentDescription="@string/guardian_action_scan_bind_desc"
+                android:focusable="true"
+                android:minHeight="104dp"
+                android:orientation="vertical">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/an_space_s"
-                android:text="@string/guardian_action_scan_bind_desc"
-                android:textAppearance="@style/TextAppearance.Sullivan.Body" />
-        </LinearLayout>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/guardian_action_scan_bind"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Title" />
 
-        <LinearLayout
-            android:id="@+id/guardian_card_scan_login"
-            style="@style/Widget.Sullivan.Card"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/an_space_m"
-            android:clickable="true"
-            android:contentDescription="@string/guardian_action_scan_login_desc"
-            android:focusable="true"
-            android:minHeight="96dp"
-            android:orientation="vertical">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_s"
+                    android:text="@string/guardian_action_scan_bind_desc"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+            </LinearLayout>
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/guardian_action_scan_login"
-                android:textAppearance="@style/TextAppearance.Sullivan.Title" />
+            <LinearLayout
+                android:id="@+id/guardian_card_scan_login"
+                style="@style/Widget.Sullivan.Card"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/an_space_s"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:contentDescription="@string/guardian_action_scan_login_desc"
+                android:focusable="true"
+                android:minHeight="104dp"
+                android:orientation="vertical">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/an_space_s"
-                android:text="@string/guardian_action_scan_login_desc"
-                android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/guardian_action_scan_login"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Title" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_s"
+                    android:text="@string/guardian_action_scan_login_desc"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+            </LinearLayout>
         </LinearLayout>
 
         <!--
-            第二组入口：账号与关系管理。
+            第二组：守护与沟通。和受护人说话的两条路（会话 / 留言），
+            与下面的账号管理是不同的心智模型，用分组标题隔开。
+        -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_xl"
+            android:text="@string/guardian_section_talk"
+            android:textAppearance="@style/TextAppearance.Sullivan.Section" />
 
-            与上面两张扫码卡在视觉上分开，是因为它们属于不同的心智模型 ——
-            上面是「当面用一下」，下面这些是「坐下来收拾账号」。
-            逐步加卡片，每加一张都必须同时接好点击事件；
-            不留「点了没反应」的卡片。
+        <ImageView
+            android:layout_width="120dp"
+            android:layout_height="12dp"
+            android:layout_marginTop="@dimen/an_space_s"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:scaleType="fitXY"
+            android:src="@drawable/an_section_rule" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_m"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@+id/guardian_card_realtime"
+                style="@style/Widget.Sullivan.Card"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="@dimen/an_space_s"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:contentDescription="@string/guardian_action_realtime_desc"
+                android:focusable="true"
+                android:minHeight="104dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/guardian_action_realtime"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Title" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_s"
+                    android:text="@string/guardian_action_realtime_desc"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+            </LinearLayout>
+
+            <!-- 语音留言：不需要对方同时在场，所以单独一张卡，不并到实时会话里。 -->
+            <LinearLayout
+                android:id="@+id/guardian_card_voice"
+                style="@style/Widget.Sullivan.Card"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/an_space_s"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:contentDescription="@string/guardian_action_voice_desc"
+                android:focusable="true"
+                android:minHeight="104dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/guardian_action_voice"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Title" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_s"
+                    android:text="@string/guardian_action_voice_desc"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!--
+            第三组：账号与关系管理。这些是「坐下来收拾账号」的低频动作，
+            放在最后并两两并排；公益活动与志愿者申请是「偶尔看看」的入口，
+            与账号操作同属一个优先级档。
         -->
         <TextView
             android:layout_width="match_parent"
@@ -146,161 +243,128 @@
             android:src="@drawable/an_section_rule" />
 
         <LinearLayout
-            android:id="@+id/guardian_card_bindings"
-            style="@style/Widget.Sullivan.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/an_space_m"
-            android:clickable="true"
-            android:contentDescription="@string/guardian_action_bindings_desc"
-            android:focusable="true"
-            android:minHeight="96dp"
-            android:orientation="vertical">
+            android:baselineAligned="false"
+            android:orientation="horizontal">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/guardian_action_bindings"
-                android:textAppearance="@style/TextAppearance.Sullivan.Title" />
+            <LinearLayout
+                android:id="@+id/guardian_card_bindings"
+                style="@style/Widget.Sullivan.Card"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="@dimen/an_space_s"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:contentDescription="@string/guardian_action_bindings_desc"
+                android:focusable="true"
+                android:minHeight="104dp"
+                android:orientation="vertical">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/an_space_s"
-                android:text="@string/guardian_action_bindings_desc"
-                android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/guardian_action_bindings"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Title" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_s"
+                    android:text="@string/guardian_action_bindings_desc"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/guardian_card_create_protectee"
+                style="@style/Widget.Sullivan.Card"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/an_space_s"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:contentDescription="@string/guardian_action_create_protectee_desc"
+                android:focusable="true"
+                android:minHeight="104dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/guardian_action_create_protectee"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Title" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_s"
+                    android:text="@string/guardian_action_create_protectee_desc"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+            </LinearLayout>
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/guardian_card_create_protectee"
-            style="@style/Widget.Sullivan.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/an_space_m"
-            android:clickable="true"
-            android:contentDescription="@string/guardian_action_create_protectee_desc"
-            android:focusable="true"
-            android:minHeight="96dp"
-            android:orientation="vertical">
+            android:baselineAligned="false"
+            android:orientation="horizontal">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/guardian_action_create_protectee"
-                android:textAppearance="@style/TextAppearance.Sullivan.Title" />
+            <LinearLayout
+                android:id="@+id/guardian_card_activities"
+                style="@style/Widget.Sullivan.Card"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="@dimen/an_space_s"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:contentDescription="@string/guardian_action_activities_desc"
+                android:focusable="true"
+                android:minHeight="104dp"
+                android:orientation="vertical">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/an_space_s"
-                android:text="@string/guardian_action_create_protectee_desc"
-                android:textAppearance="@style/TextAppearance.Sullivan.Body" />
-        </LinearLayout>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/guardian_action_activities"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Title" />
 
-        <LinearLayout
-            android:id="@+id/guardian_card_activities"
-            style="@style/Widget.Sullivan.Card"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/an_space_m"
-            android:clickable="true"
-            android:contentDescription="@string/guardian_action_activities_desc"
-            android:focusable="true"
-            android:minHeight="96dp"
-            android:orientation="vertical">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_s"
+                    android:text="@string/guardian_action_activities_desc"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+            </LinearLayout>
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/guardian_action_activities"
-                android:textAppearance="@style/TextAppearance.Sullivan.Title" />
+            <!-- 志愿者申请：只对「还不是志愿者」的账号显示，由代码按 roles 置可见性。 -->
+            <LinearLayout
+                android:id="@+id/guardian_card_volunteer_apply"
+                style="@style/Widget.Sullivan.Card"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/an_space_s"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:contentDescription="@string/guardian_action_volunteer_apply_desc"
+                android:focusable="true"
+                android:minHeight="104dp"
+                android:orientation="vertical">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/an_space_s"
-                android:text="@string/guardian_action_activities_desc"
-                android:textAppearance="@style/TextAppearance.Sullivan.Body" />
-        </LinearLayout>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/guardian_action_volunteer_apply"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Title" />
 
-        <LinearLayout
-            android:id="@+id/guardian_card_realtime"
-            style="@style/Widget.Sullivan.Card"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/an_space_m"
-            android:clickable="true"
-            android:contentDescription="@string/guardian_action_realtime_desc"
-            android:focusable="true"
-            android:minHeight="96dp"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/guardian_action_realtime"
-                android:textAppearance="@style/TextAppearance.Sullivan.Title" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/an_space_s"
-                android:text="@string/guardian_action_realtime_desc"
-                android:textAppearance="@style/TextAppearance.Sullivan.Body" />
-        </LinearLayout>
-
-        <!-- 语音留言：不需要对方同时在场，所以单独一张卡，不并到实时会话里。 -->
-        <LinearLayout
-            android:id="@+id/guardian_card_voice"
-            style="@style/Widget.Sullivan.Card"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/an_space_m"
-            android:clickable="true"
-            android:contentDescription="@string/guardian_action_voice_desc"
-            android:focusable="true"
-            android:minHeight="96dp"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/guardian_action_voice"
-                android:textAppearance="@style/TextAppearance.Sullivan.Title" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/an_space_s"
-                android:text="@string/guardian_action_voice_desc"
-                android:textAppearance="@style/TextAppearance.Sullivan.Body" />
-        </LinearLayout>
-
-        <!-- 志愿者申请：只对「还不是志愿者」的账号显示，由代码按 roles 置可见性。 -->
-        <LinearLayout
-            android:id="@+id/guardian_card_volunteer_apply"
-            style="@style/Widget.Sullivan.Card"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/an_space_m"
-            android:clickable="true"
-            android:contentDescription="@string/guardian_action_volunteer_apply_desc"
-            android:focusable="true"
-            android:minHeight="96dp"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/guardian_action_volunteer_apply"
-                android:textAppearance="@style/TextAppearance.Sullivan.Title" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/an_space_s"
-                android:text="@string/guardian_action_volunteer_apply_desc"
-                android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_s"
+                    android:text="@string/guardian_action_volunteer_apply_desc"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+            </LinearLayout>
         </LinearLayout>
 
         <TextView

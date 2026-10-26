@@ -158,6 +158,7 @@ public final class RealtimeCall {
             return;
         }
         if (!ensureFactory()) {
+            post(() -> listener.onError("本机无法初始化通话组件"));
             return;
         }
         List<PeerConnection.IceServer> servers = buildIceServers(iceServers);
@@ -481,12 +482,25 @@ public final class RealtimeCall {
     // ------------------------------------------------------------------
 
     private boolean ensureFactory() {
+        return ensureFactoryReady();
+    }
+
+    /**
+     * 进程级工厂 + EGL 环境就绪。
+     *
+     * <p><b>必须是 static</b>：{@link #attachRenderer} 在页面 onCreate 里就要用
+     * EGL 上下文，而那时进程里往往还没有建过任何通话（工厂不存在）。
+     * 旧实现里渲染器拿到 null 上下文会**跳过 init**，之后远端画面没有地方渲染
+     * —— 视频通话只看到一块黑屏，且不报任何错误。
+     */
+    public static boolean ensureFactoryReady() {
         if (sharedFactory != null) {
             return true;
         }
         if (!factoryInitialized) {
             PeerConnectionFactory.initialize(
-                    PeerConnectionFactory.InitializationOptions.builder(appContext)
+                    PeerConnectionFactory.InitializationOptions.builder(
+                                    appContextForInit())
                             .createInitializationOptions());
             factoryInitialized = true;
         }
@@ -497,11 +511,13 @@ public final class RealtimeCall {
                 .setVideoDecoderFactory(new DefaultVideoDecoderFactory(
                         sharedEglBase.getEglBaseContext()))
                 .createPeerConnectionFactory();
-        if (sharedFactory == null) {
-            post(() -> listener.onError("本机无法初始化通话组件"));
-            return false;
-        }
-        return true;
+        return sharedFactory != null;
+    }
+
+    /** 初始化只需要应用上下文；静态方法拿不到实例字段，从 Application 取进程级上下文。 */
+    @NonNull
+    private static Context appContextForInit() {
+        return com.sullivan.android.SullivanApp.appContext();
     }
 
     // ------------------------------------------------------------------
@@ -623,6 +639,9 @@ public final class RealtimeCall {
 
     /** 渲染器的统一初始化：参数写死在这里，省得每个页面各配一遍还配不一样。 */
     public static void attachRenderer(@NonNull SurfaceViewRenderer renderer) {
+        // 先确保工厂与 EGL 存在：第一次进页面时它们还不存在，
+        // 拿 null 上下文 init 会被跳过，之后画面永远是黑的。
+        ensureFactoryReady();
         EglBase.Context egl = eglContext();
         if (egl != null) {
             renderer.init(egl, null);

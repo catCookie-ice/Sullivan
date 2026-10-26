@@ -254,6 +254,17 @@
     <string name="session_contact_unnamed">已绑定的对方</string>
     <string name="session_calling">已呼叫%1$s，等待对方接听…</string>
     <string name="session_no_answer">对方没有接听。可以稍后再试，或改用语音留言。</string>
+    <!-- ===== 来电监听（前台服务 + 通知，与监护人端同名机制对齐） ===== -->
+    <string name="incoming_call_channel_name">来电提醒</string>
+    <string name="incoming_call_channel_description">对方发起实时会话时提醒你</string>
+    <string name="incoming_call_watching">守护在线</string>
+    <string name="incoming_call_watching_text">有人呼叫你时会在这里提醒你</string>
+    <string name="incoming_call_title">有人正在呼叫你</string>
+    <string name="incoming_call_text">对方发起了实时会话，点「接听」即可通话</string>
+    <string name="incoming_call_action_accept">接听</string>
+    <string name="incoming_call_dialog_message">%1$s邀请你%2$s，对方正在等待你的回应。</string>
+    <!-- 通话缺摄像头/麦克风运行时权限时的提示。 -->
+    <string name="session_need_media_permission">需要「麦克风」或「摄像头」权限才能进行通话，请在系统设置里允许。</string>
     <string name="session_type_label">通话方式</string>
     <string name="session_type_voice">语音通话（只听声音）</string>
     <string name="session_type_video">视频通话（互为对方显示画面）</string>
@@ -262,7 +273,7 @@
     <string name="session_type_voice_short">语音通话</string>
     <string name="session_type_video_short">视频通话</string>
     <string name="session_type_camera_short">共享画面</string>
-    <string name="session_type_emergency_short">紧急视频</string>
+    <string name="session_type_emergency_short">紧急呼叫</string>
     <string name="session_call_connecting">正在接通…</string>
     <string name="session_call_no_ice">没有取到中转服务器配置，跨网络可能无法接通</string>
     <string name="session_call_video_desc">对方画面</string>
@@ -275,6 +286,7 @@
     <string name="voice_record_title">录一条留言</string>
     <string name="voice_record_to_label">发给谁</string>
     <string name="voice_no_contact">还没有已生效的绑定关系。请先在「绑定管理」里完成绑定。</string>
+    <string name="voice_need_mic_permission">需要「麦克风」权限才能录音。请在系统设置里允许本应用使用麦克风。</string>
     <string name="voice_need_contact">请先选择要发给谁</string>
     <string name="voice_contact_unnamed">已绑定的对方</string>
     <string name="voice_action_start">开始录音</string>

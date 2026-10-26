@@ -1,7 +1,9 @@
 package com.sullivan.protectee.ui.common.voice;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.os.Bundle;
@@ -17,9 +19,12 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import com.sullivan.protectee.R;
 import com.sullivan.protectee.data.api.ApiClient;
@@ -80,6 +85,8 @@ public class VoiceMessageActivity extends AppCompatActivity {
     private Button refreshButton;
 
     private VoiceRecorder recorder;
+    /** 录音是「开始录音」那一刻才需要的权限，所以推迟到第一次点按钮时申请。 */
+    private ActivityResultLauncher<String> micPermissionLauncher;
     /** 刚录好、还没发出去的文件。 */
     @Nullable
     private File pendingFile;
@@ -135,6 +142,15 @@ public class VoiceMessageActivity extends AppCompatActivity {
         refreshButton = findViewById(R.id.voice_refresh);
 
         recorder = new VoiceRecorder();
+
+        micPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(), granted -> {
+                    if (granted) {
+                        startRecording();
+                    } else {
+                        showStatus(getString(R.string.voice_need_mic_permission), true);
+                    }
+                });
 
         recordToggle.setOnClickListener(view -> toggleRecording());
         recordSend.setOnClickListener(view -> sendRecording());
@@ -237,6 +253,16 @@ public class VoiceMessageActivity extends AppCompatActivity {
             showStatus(getString(R.string.voice_no_contact), true);
             return;
         }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+            return;
+        }
+        startRecording();
+    }
+
+    /** 权限与联系人都已就绪，真正开始录音。 */
+    private void startRecording() {
         File dir = new File(getCacheDir(), "voice");
         String error = recorder.start(dir);
         if (error != null) {

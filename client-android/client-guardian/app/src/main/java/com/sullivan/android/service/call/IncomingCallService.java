@@ -1,5 +1,6 @@
 package com.sullivan.android.service.call;
 
+import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -13,13 +14,16 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.NotificationCompat;
 
 import com.sullivan.android.R;
+import com.sullivan.android.SullivanApp;
 import com.sullivan.android.data.api.ApiClient;
 import com.sullivan.android.data.api.ApiException;
 import com.sullivan.android.data.api.ResultCallback;
@@ -30,6 +34,7 @@ import com.sullivan.android.ui.common.realtime.RealtimeActivity;
 import com.sullivan.android.ui.guardian.call.AlertLocationSummary;
 import com.sullivan.android.ui.guardian.call.AlertQuery;
 import com.sullivan.android.ui.guardian.call.IncomingCallFilter;
+import com.sullivan.android.ui.guardian.call.PlaceNameResolver;
 
 import java.util.HashSet;
 import java.util.List;
@@ -83,6 +88,12 @@ public final class IncomingCallService extends Service {
     private SessionStore session;
     /** startForeground 是否成功。失败时退化为普通后台服务，仍尽量轮询。 */
     private boolean foregroundReady;
+
+    /**
+     * 已经弹过应用内弹窗的会话 ID。
+     * 轮询每 5 秒一轮，没有它的话用户还没来得及选，「来电弹窗」就会一直反复弹。
+     */
+    private static final Set<String> PROMPTED = new HashSet<>();
 
     /**
      * 进程级的「这个来电已经在什么时刻提醒过」记录。
@@ -298,6 +309,8 @@ public final class IncomingCallService extends Service {
                                 IncomingCallFilter.pending(body, session.principalId());
                         if (pending.isEmpty()) {
                             // 没有待接受的来电了（已被处理或已过期）。
+                            // 清掉弹窗去重记录，同一方下次再呼才能再弹。
+                            PROMPTED.clear();
                             // 如果此前报过警，把通知恢复成"正在守着"——
                             // 否则状态栏会一直显示"有人正在呼叫你"，那是假消息。
                             if (hasAlerts()) {
@@ -311,6 +324,9 @@ public final class IncomingCallService extends Service {
                             // 前台轮询已经提醒过了，这里不重复。
                             return;
                         }
+                        // 应用在前台：直接在当前页面上弹「接听 / 拒绝」对话框，
+                        // 像主流聊天应用一样一次点击完成处理。
+                        showInAppPrompt(call);
                         // 位置在报警上、不在会话上，所以要多查一次。
                         // 拿不到就照常提示来电（位置是增强，呼叫才是主功能）。
                         loadLocationThenNotify(call.id);
@@ -323,6 +339,79 @@ public final class IncomingCallService extends Service {
                         Log.w(TAG, "查询来电失败：" + error.getMessage());
                     }
                 });
+    }
+
+    // ------------------------------------------------------------------
+    // 应用内来电弹窗
+    // ------------------------------------------------------------------
+
+    /**
+     * 在当前前台页面上弹「接听 / 拒绝」对话框。
+     *
+     * <p>接听 = 带着会话 ID 打开实时会话页，页面自动接受并接通；
+     * 拒绝 = 直接调服务端拒绝接口。两条路都不需要用户再进列表找那一行。
+     *
+     * <p>应用在后台时弹不了对话框（Service 没有 UI 上下文），
+     * 这种情况交给带「接听」按钮的通知。
+     */
+    private void showInAppPrompt(@NonNull RealtimeDtos.SessionResponse call) {
+        Activity current = SullivanApp.currentActivity();
+        if (current == null || current.isFinishing() || current.isDestroyed()) {
+            return;
+        }
+        if (!PROMPTED.add(call.id)) {
+            // 这条来电已经弹过窗了，用户还没选；不要 5 秒弹一次。
+            return;
+        }
+
+        String who = !TextUtils.isEmpty(call.initiatorName) ? call.initiatorName
+                : !TextUtils.isEmpty(call.initiatorLoginName) ? call.initiatorLoginName
+                : getString(R.string.session_contact_unnamed);
+
+        new AlertDialog.Builder(current)
+                .setTitle(R.string.incoming_call_title)
+                .setMessage(getString(R.string.incoming_call_dialog_message, who,
+                        typeLabelOf(call.sessionType)))
+                .setCancelable(false)
+                .setPositiveButton(R.string.incoming_call_action_accept,
+                        (dialog, which) -> {
+                            PROMPTED.remove(call.id);
+                            current.startActivity(
+                                    RealtimeActivity.intentFor(current, call.id));
+                        })
+                .setNegativeButton(R.string.session_action_reject,
+                        (dialog, which) -> {
+                            PROMPTED.remove(call.id);
+                            ApiClient.get(current).rejectSession(call.id)
+                                    .enqueue(new ResultCallback<RealtimeDtos.SessionResponse>() {
+                                        @Override
+                                        public void onSuccess(
+                                                @Nullable RealtimeDtos.SessionResponse body) {
+                                            // 拒绝成功，无需提示。
+                                        }
+
+                                        @Override
+                                        public void onError(@NonNull ApiException error) {
+                                            // 静默：下一轮轮询看到它还是 REQUESTED 时会再弹。
+                                            PROMPTED.remove(call.id);
+                                        }
+                                    });
+                        })
+                .show();
+    }
+
+    @NonNull
+    private String typeLabelOf(@Nullable String sessionType) {
+        if (sessionType == null) {
+            return getString(R.string.session_type_basic);
+        }
+        return switch (sessionType.toUpperCase()) {
+            case "VOICE" -> getString(R.string.session_type_voice_short);
+            case "VIDEO" -> getString(R.string.session_type_video_short);
+            case "CAMERA" -> getString(R.string.session_type_camera_short);
+            case "EMERGENCY" -> getString(R.string.session_type_emergency_short);
+            default -> getString(R.string.session_type_basic);
+        };
     }
 
     // ------------------------------------------------------------------
@@ -387,15 +476,41 @@ public final class IncomingCallService extends Service {
                 .enqueue(new ResultCallback<List<AlertDtos.AlertResponse>>() {
                     @Override
                     public void onSuccess(@Nullable List<AlertDtos.AlertResponse> body) {
-                        postNotification(AlertQuery.locationForSession(body, sessionId));
+                        resolveAndPost(sessionId,
+                                AlertQuery.locationForSession(body, sessionId));
                     }
 
                     @Override
                     public void onError(@NonNull ApiException error) {
                         // 查不到位置不影响呼叫提醒。
-                        postNotification(null);
+                        resolveAndPost(sessionId, null);
                     }
                 });
+    }
+
+    /**
+     * 先把坐标解析成地名，再发通知。
+     *
+     * <p>监护人这一刻要判断的是「往哪儿去」：地名是主要信息，
+     * 坐标是长按复制的兜底。解析走高德逆地理编码，失败不阻塞 ——
+     * 通知照发，只是那一行显示坐标。
+     */
+    private void resolveAndPost(@NonNull String sessionId,
+                                @Nullable AlertDtos.AlertLocation location) {
+        if (location == null) {
+            postNotification(sessionId, null, null);
+            return;
+        }
+        // 服务端在报警创建时限内解析好就直接用，不再发起本端请求；
+        // 没有服务端地名（解析超时 pending / 旧报警 / 服务端没配 Key）时，
+        // 服务端已把报警先行转发，这里用本端高德解析兜底补上地名。
+        String serverAddress = AlertLocationSummary.serverAddress(location);
+        if (serverAddress != null) {
+            postNotification(sessionId, location, serverAddress);
+            return;
+        }
+        PlaceNameResolver.resolve(this, location.latitude, location.longitude,
+                name -> postNotification(sessionId, location, name));
     }
 
 
@@ -408,8 +523,15 @@ public final class IncomingCallService extends Service {
      * 表现就是"通知栏闪一下又变回『正在守着』"，用户反而错过。
      * 所以这里只做一次，且用的是来电内容。
      */
-    private void postNotification(@Nullable AlertDtos.AlertLocation location) {
-        Notification incoming = buildNotification(true, location);
+    private void postNotification(@Nullable String sessionId,
+                                  @Nullable AlertDtos.AlertLocation location) {
+        postNotification(sessionId, location, null);
+    }
+
+    private void postNotification(@Nullable String sessionId,
+                                  @Nullable AlertDtos.AlertLocation location,
+                                  @Nullable String placeName) {
+        Notification incoming = buildNotification(true, sessionId, location, placeName);
         // 前台服务的通知内容也要跟着改，否则状态栏两条说法不一致。
         // startForeground 对同一个 id 再次调用就是"更新"，不会新增一条。
         try {
@@ -431,14 +553,18 @@ public final class IncomingCallService extends Service {
     }
 
     private Notification buildNotification(boolean isIncomingCall) {
-        return buildNotification(isIncomingCall, null);
+        return buildNotification(isIncomingCall, null, null, null);
     }
 
     /**
-     * @param location 受护人位置；为 null 表示没有（或还没查到）
+     * @param sessionId 来电的会话 ID；「接听」按钮需要它直达那条会话，null 表示没有
+     * @param location  受护人位置；为 null 表示没有（或还没查到）
+     * @param placeName 受护人坐标解析出的地名；null 表示解析失败（回落到坐标展示）
      */
     private Notification buildNotification(boolean isIncomingCall,
-                                           @Nullable AlertDtos.AlertLocation location) {
+                                           @Nullable String sessionId,
+                                           @Nullable AlertDtos.AlertLocation location,
+                                           @Nullable String placeName) {
         Intent open = RealtimeActivity.intentFor(this);
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -452,13 +578,19 @@ public final class IncomingCallService extends Service {
 
         if (isIncomingCall) {
             // 位置直接写进通知正文。监护人解锁手机时一眼就能看到"往哪儿去"，
-            // 不需要点进应用再找。BigTextStyle 让长内容（坐标 + 精度）
+            // 不需要点进应用再找。BigTextStyle 让长内容（地名 + 坐标 + 精度）
             // 展开后能完整显示，而不是被截断成"受护人位置（刚刚）…"。
             String detail = AlertLocationSummary.detail(location);
             if (detail != null) {
                 String headline = AlertLocationSummary.headline(location);
-                text = (headline == null ? "" : headline) + "\n"
-                        + detail.replace("\n", " · ");
+                // 地名优先：地名是"往哪儿去"的主要信息；坐标整段放后面，长按可复制。
+                String body = detail.replace("\n", " · ");
+                if (placeName != null) {
+                    text = (headline == null ? "" : headline + "\n")
+                            + placeName + "\n" + body;
+                } else {
+                    text = (headline == null ? "" : headline + "\n") + body;
+                }
             } else {
                 text = text + " · " + getString(R.string.guardian_incoming_call_no_location);
             }
@@ -480,6 +612,24 @@ public final class IncomingCallService extends Service {
                 .setOnlyAlertOnce(!isIncomingCall);
         if (isIncomingCall) {
             builder.setStyle(new NotificationCompat.BigTextStyle().bigText(text));
+            // 紧急来电全屏展示：锁屏或后台时直接弹出通话页，而不是一条
+            // 一闪而过的横幅 —— 报警求助等不起用户「恰好看到通知」。
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                    && sessionId != null) {
+                Intent fullScreen = RealtimeActivity.intentFor(this, sessionId);
+                PendingIntent fullScreenIntent = PendingIntent.getActivity(
+                        this, 2, fullScreen, flags);
+                builder.setFullScreenIntent(fullScreenIntent, true);
+            }
+            if (sessionId != null) {
+                // 通知上直接给「接听」：点一下就接受这条会话并进入通话，
+                // 不用先打开应用、在列表里找到那一行、再点一次接受。
+                Intent accept = RealtimeActivity.intentFor(this, sessionId);
+                PendingIntent acceptIntent = PendingIntent.getActivity(
+                        this, 1, accept, flags);
+                builder.addAction(0, getString(R.string.incoming_call_action_accept),
+                        acceptIntent);
+            }
         }
         return builder.build();
     }

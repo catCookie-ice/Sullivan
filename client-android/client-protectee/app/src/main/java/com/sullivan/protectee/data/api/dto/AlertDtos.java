@@ -36,6 +36,10 @@ public final class AlertDtos {
         public String capturedAt;
         /** 距今秒数；越大越不可信。 */
         public Long ageSeconds;
+        /** 服务端解析好的地名（逆地理编码）；没配 Key 或解析失败时为 null。 */
+        public String address;
+        /** true = 服务端解析超时未完成，报警未等待直接转发（接收方本端兜底解析）。 */
+        public Boolean addressPending;
     }
 
     /**

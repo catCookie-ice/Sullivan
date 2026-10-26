@@ -64,6 +64,7 @@
     <string name="guardian_action_scan_bind_desc">扫描受护人出示的绑定码，扫到即完成绑定</string>
     <string name="guardian_action_scan_login">扫受护人登录码</string>
     <string name="guardian_action_scan_login_desc">扫描受护人的登录码，选一位受护人授权对方设备登录</string>
+    <string name="guardian_section_talk">守护与沟通</string>
     <string name="guardian_section_account">账号与关系</string>
     <string name="guardian_action_bindings">绑定管理</string>
     <string name="guardian_action_bindings_desc">查看并进行中的绑定关系、发起绑定、按登录名查人</string>
@@ -115,6 +116,12 @@
     <string name="incoming_call_watching_text">受护人求助时会在这里提醒你</string>
     <string name="incoming_call_title">有人正在呼叫你</string>
     <string name="incoming_call_text">受护人发起了紧急求助，点开查看</string>
+    <!-- 来电通知上的动作按钮：一次点击完成「接受这条会话并进入通话」。 -->
+    <string name="incoming_call_action_accept">接听</string>
+    <!-- 应用内来电弹窗（来电监听服务在当前页面上直接弹）。 -->
+    <string name="incoming_call_dialog_message">%1$s邀请你%2$s，对方正在等待你的回应。</string>
+    <!-- 通话缺摄像头/麦克风运行时权限时的提示。 -->
+    <string name="session_need_media_permission">需要「麦克风」或「摄像头」权限才能进行通话，请在系统设置里允许。</string>
 
     <!-- ===== 志愿者主页 ===== -->
     <!-- 不用 Markdown 的 **强调**：TextView 会原样把星号画出来。 -->
@@ -380,7 +387,7 @@
     <string name="session_type_voice_short">语音通话</string>
     <string name="session_type_video_short">视频通话</string>
     <string name="session_type_camera_short">查看摄像头</string>
-    <string name="session_type_emergency_short">紧急视频</string>
+    <string name="session_type_emergency_short">紧急呼叫</string>
     <string name="session_call_connecting">正在接通…</string>
     <string name="session_call_no_ice">没有取到中转服务器配置，跨网络可能无法接通</string>
     <string name="session_call_video_desc">对方画面</string>
@@ -393,6 +400,7 @@
     <string name="voice_record_title">录一条留言</string>
     <string name="voice_record_to_label">发给谁</string>
     <string name="voice_no_contact">还没有已生效的绑定关系。请先在「绑定管理」里完成绑定。</string>
+    <string name="voice_need_mic_permission">需要「麦克风」权限才能录音。请在系统设置里允许本应用使用麦克风。</string>
     <string name="voice_need_contact">请先选择要发给谁</string>
     <string name="voice_contact_unnamed">已绑定的对方</string>
     <string name="voice_action_start">开始录音</string>

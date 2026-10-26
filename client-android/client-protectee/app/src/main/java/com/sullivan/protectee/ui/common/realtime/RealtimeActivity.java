@@ -1,7 +1,9 @@
 package com.sullivan.protectee.ui.common.realtime;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
@@ -19,10 +21,13 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -76,9 +81,21 @@ public class RealtimeActivity extends AppCompatActivity {
     private static final String STATUS_REQUESTED = "REQUESTED";
     private static final String STATUS_ACTIVE = "ACTIVE";
 
+    /** 通知「接听」按钮带来的额外参数：要立刻接受的那条会话 ID。 */
+    public static final String EXTRA_AUTO_ACCEPT_SESSION = "auto_accept_session";
+
     @NonNull
     public static Intent intentFor(@NonNull Context context) {
         return new Intent(context, RealtimeActivity.class);
+    }
+
+    /** 从「接听」通知进来：记住要接的会话，列表取回来后立即接受并接通。 */
+    @NonNull
+    public static Intent intentFor(@NonNull Context context,
+                                   @Nullable String autoAcceptSessionId) {
+        Intent intent = intentFor(context);
+        intent.putExtra(EXTRA_AUTO_ACCEPT_SESSION, autoAcceptSessionId);
+        return intent;
     }
 
     private SessionStore session;
@@ -119,6 +136,18 @@ public class RealtimeActivity extends AppCompatActivity {
     /** 我发起的、还在等对方接听的那条会话。超时后置空。 */
     @Nullable
     private String ringingSessionId;
+
+    /**
+     * 从通知「接听」按钮进来时要立即接受的那条会话。
+     * 接受（或发现它已不是待接受状态）后置空，只生效一次。
+     */
+    @Nullable
+    private String autoAcceptSessionId;
+
+    /** 等媒体权限授权期间挂起的会话；授权回调里拿它继续连接。 */
+    @Nullable
+    private RealtimeDtos.SessionResponse pendingConnectItem;
+    private ActivityResultLauncher<String[]> mediaPermissionLauncher;
 
     /** 日志行。带颜色，所以不能只存一个 String 直接往上拼。 */
     private final List<LogLine> logLines = new ArrayList<>();
@@ -183,6 +212,29 @@ public class RealtimeActivity extends AppCompatActivity {
         socket = new RealtimeSocket();
         RealtimeCall.attachRenderer(remoteVideo);
 
+        mediaPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestMultiplePermissions(), result -> {
+                    RealtimeDtos.SessionResponse pending = pendingConnectItem;
+                    pendingConnectItem = null;
+                    if (pending == null) {
+                        return;
+                    }
+                    boolean allGranted = true;
+                    for (Boolean granted : result.values()) {
+                        if (granted == null || !granted) {
+                            allGranted = false;
+                            break;
+                        }
+                    }
+                    if (allGranted) {
+                        connect(pending);
+                    } else {
+                        // 缺权限就不该再走连接流程：连上了也只有黑屏与无声，
+                        // 那比直接说清楚要糟糕得多。
+                        showStatus(getString(R.string.session_need_media_permission), true);
+                    }
+                });
+
         // 默认语音：三种形态里最省权限、最不容易失败的一种。
         // 默认给视频会让没有摄像头权限的用户第一次点下去就撞在权限弹窗上。
         typeGroup.check(R.id.session_type_voice);
@@ -195,6 +247,9 @@ public class RealtimeActivity extends AppCompatActivity {
             hangupCurrent();
             toast(getString(R.string.session_disconnected));
         });
+
+        autoAcceptSessionId = getIntent() == null ? null
+                : getIntent().getStringExtra(EXTRA_AUTO_ACCEPT_SESSION);
 
         load();
         loadContacts();
@@ -333,6 +388,9 @@ public class RealtimeActivity extends AppCompatActivity {
             return;
         }
         stateView.hide();
+        if (tryAutoAccept(items)) {
+            return;
+        }
         LayoutInflater inflater = LayoutInflater.from(this);
         for (RealtimeDtos.SessionResponse item : items) {
             View row = inflater.inflate(R.layout.row_session, listContainer, false);
@@ -340,6 +398,34 @@ public class RealtimeActivity extends AppCompatActivity {
             listContainer.addView(row);
         }
         listContainer.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * 从「接听」通知进来：找到那条会话就立即接受并接通，一次点击完成，
+     * 不再让用户进列表里自己找那一行。找不到或它已不是待接受状态
+     * （已被处理 / 已超时结束）就安静落回普通列表，不重复动作。
+     *
+     * @return true 表示已接管去接受，本次列表不必再画
+     */
+    private boolean tryAutoAccept(@NonNull List<RealtimeDtos.SessionResponse> items) {
+        String target = autoAcceptSessionId;
+        if (target == null) {
+            return false;
+        }
+        autoAcceptSessionId = null;
+        for (RealtimeDtos.SessionResponse item : items) {
+            if (!target.equals(item.id)) {
+                continue;
+            }
+            boolean requestedToMe = STATUS_REQUESTED.equalsIgnoreCase(item.status)
+                    && !myUid.equals(item.initiatorUid);
+            if (requestedToMe) {
+                acceptAndConnect(item);
+                return true;
+            }
+            break;
+        }
+        return false;
     }
 
     private void bindRow(@NonNull View row, @NonNull RealtimeDtos.SessionResponse item) {
@@ -577,6 +663,13 @@ public class RealtimeActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * 当前选中的会话类型。
+     *
+     * <p>VIDEO 与 CAMERA 的分支目前**不可达**：布局里这两个选项已随
+     * 「TURN 中继未部署」暂时下架（见 docs/final/22-待办-中继服务器.md）。
+     * 分支保留不删 —— 22 号待办落地后恢复布局里的两个选项即可直接使用。
+     */
     @NonNull
     private String selectedType() {
         int checked = typeGroup.getCheckedRadioButtonId();
@@ -595,6 +688,13 @@ public class RealtimeActivity extends AppCompatActivity {
 
     private void connect(@NonNull RealtimeDtos.SessionResponse item) {
         if (pendingCall != null) {
+            return;
+        }
+        // 视频要摄像头、声音要麦克风；缺权限时先去要，
+        // 授权回来由回调带着这条会话重新进来。
+        RealtimeCall.Mode wanted = mediaModeOf(item);
+        if (wanted != null && !ensureMediaPermissions(wanted)) {
+            pendingConnectItem = item;
             return;
         }
         releaseConnected();
@@ -651,7 +751,12 @@ public class RealtimeActivity extends AppCompatActivity {
         boolean iAmGuardian = !myUid.equals(item.initiatorUid);
         return switch (type) {
             case "VOICE" -> RealtimeCall.Mode.VOICE;
-            case "VIDEO", "EMERGENCY" -> RealtimeCall.Mode.VIDEO;
+            case "VIDEO" -> RealtimeCall.Mode.VIDEO;
+            // 紧急呼叫暂时按语音接通：TURN 中继未部署（docs/final/22-待办-中继服务器.md），
+            // 跨网视频只有黑屏；报警求助等不起，语音在同一带宽下稳定可用。
+            // 会话在服务端仍是 EMERGENCY 类型，语义不变；22 号待办落地后
+            // 把这一行合并回 VIDEO 分支即可恢复紧急视频。
+            case "EMERGENCY" -> RealtimeCall.Mode.VOICE;
             // 本端是受护人端，CAMERA 会话里本机通常是拍摄方。
             // 但会话类型是双向的：如果这条 CAMERA 会话的对端也是受护人（理论上不会），
             // 就按「谁是监护人」来定，避免两个人都开摄像头。
@@ -664,6 +769,33 @@ public class RealtimeActivity extends AppCompatActivity {
     /** 哪些形态需要一块画面。纯语音只出状态文字，一块黑框没有意义。 */
     private boolean wantsVideoView(@NonNull RealtimeCall.Mode mode) {
         return mode != RealtimeCall.Mode.VOICE;
+    }
+
+    /**
+     * 通话前确认运行时权限。返回 false 表示已经发起授权请求，
+     * 结果回调里会带着同一条会话重新调用 {@link #connect}。
+     *
+     * <p>「查看摄像头」（CAMERA_RECEIVE）只收不发，不需要任何设备权限；
+     * 其余形态都要麦克风，开镜头的还要摄像头。缺权限时 WebRTC 不会报错
+     * —— 它只是安静地产出黑屏与无声，那正是用户投诉的样子。
+     */
+    private boolean ensureMediaPermissions(@NonNull RealtimeCall.Mode mode) {
+        List<String> needed = new ArrayList<>();
+        if (mode != RealtimeCall.Mode.CAMERA_RECEIVE
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                        != PackageManager.PERMISSION_GRANTED) {
+            needed.add(Manifest.permission.RECORD_AUDIO);
+        }
+        if ((mode == RealtimeCall.Mode.VIDEO || mode == RealtimeCall.Mode.CAMERA_SEND)
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                        != PackageManager.PERMISSION_GRANTED) {
+            needed.add(Manifest.permission.CAMERA);
+        }
+        if (needed.isEmpty()) {
+            return true;
+        }
+        mediaPermissionLauncher.launch(needed.toArray(new String[0]));
+        return false;
     }
 
     /**
@@ -895,18 +1027,41 @@ public class RealtimeActivity extends AppCompatActivity {
     }
 
     /**
-     * 挂断：先告诉对方，再释放媒体，最后收面板。
+     * 挂断：先告诉对方，再释放媒体，最后**结束会话**并收面板。
      *
      * <p>顺序不能反。先关 PeerConnection 再发 hangup，那条 hangup 就没有通道了，
      * 对方会一直等到 ICE 自己超时（几十秒），期间他以为自己还在通话中。
+     *
+     * <p><b>挂断 = 结束会话</b>：此前本地断开只放了媒体，服务端那条会话还是
+     * ACTIVE，对方的页面停留在「已接通」的假象里，列表里也永远挂着一条。
+     * 现在挂断会顺手调用结束接口 —— 对方收到 {@code session.ended} 推送，
+     * 界面自动收起；「一方挂断，双方都退出」。
      */
     private void hangupCurrent() {
-        if (call != null && connected != null) {
+        RealtimeDtos.SessionResponse current = connected;
+        if (call != null && current != null) {
             JsonObject payload = new JsonObject();
             payload.addProperty("kind", "hangup");
-            socket.sendSignal(peerUidOf(connected), payload);
+            socket.sendSignal(peerUidOf(current), payload);
         }
         disconnect();
+        if (current != null && current.id != null) {
+            ApiClient.get(this).endSession(current.id)
+                    .enqueue(new ResultCallback<RealtimeDtos.SessionResponse>() {
+                        @Override
+                        public void onSuccess(@Nullable RealtimeDtos.SessionResponse body) {
+                            load();
+                        }
+
+                        @Override
+                        public void onError(@NonNull ApiException error) {
+                            handleUnauthorized(error);
+                            load();
+                        }
+                    });
+        } else {
+            load();
+        }
     }
 
     /** 收起来：断开通话与连接，并把会话面板整个隐藏（消息不留存，留着反而误导）。 */

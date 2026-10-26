@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- WebRTC NetworkMonitor 需要：缺了它一发起实时通话就 native abort（见受护人端同名注释）。 -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- 剧烈晃动报警的振动提示（PromptAnnouncer） -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
@@ -18,6 +20,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <!-- Android 13+ 通知要用户授权，没有它前台服务的通知根本不显示。 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!--
+        紧急呼叫全屏提醒：受护人报警时监护人可能正锁着屏。
+        没有它，来电只能以横幅形式一闪而过；有它，锁屏上直接展示通话页。
+    -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <!-- 受护人端侧检测依赖后置摄像头 -->
     <uses-feature
@@ -119,6 +126,17 @@
             android:name=".ui.common.realtime.RealtimeActivity"
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize" />
+
+        <!--
+            语音留言：录音、发送、收听已绑定对方留下的音频。
+            **不在这里写会直接导致点击「语音留言」卡就闪退**：
+            startActivity 指向未注册的 Activity 会抛 ActivityNotFoundException。
+            RECORD_AUDIO 已在上方声明；运行时权限在页内第一次点「开始录音」时申请
+            （见 VoiceMessageActivity）。
+        -->
+        <activity
+            android:name=".ui.common.voice.VoiceMessageActivity"
+            android:screenOrientation="portrait" />
 
         <!-- 通用扫码页：不透明全屏主题；自己申请 CAMERA 权限（监护人可能是全新安装）。 -->
         <activity

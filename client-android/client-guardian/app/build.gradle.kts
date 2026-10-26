@@ -29,6 +29,12 @@ val serverBaseUrl: String = (project.findProperty("serverBaseUrl") as String?)
     ?: localProperties.getProperty("serverBaseUrl")
     ?: ""
 
+// 高德 Android Key 的取值顺序与 serverBaseUrl 一致：先 Gradle 属性，再 local.properties。
+// Key 与签名 SHA1、包名绑定，属于环境信息，不入库（gradle.properties 是入库文件）。
+val amapApiKey: String = (project.findProperty("amapApiKey") as String?)
+    ?: localProperties.getProperty("amapApiKey")
+    ?: ""
+
 android {
     namespace = "com.sullivan.android"
     compileSdk = 35
@@ -42,8 +48,12 @@ android {
 
         // 高德定位 API Key。受护人端侧检测用不到高德，但 Manifest 里声明了该 meta-data，
         // 占位符不满足会让 manifest merger 直接失败。从 local.properties / gradle 属性读，缺省空串。
-        manifestPlaceholders["AMAP_API_KEY"] =
-            (project.findProperty("amapApiKey") as String?) ?: ""
+        // **当前值为空串**：本工程尚未在高德开放平台创建过应用。空 Key 不会让应用崩 ——
+        // 依赖高德的功能（如报警位置的逆地理编码地名）解析失败后回落坐标展示。
+        // 申请步骤见 PlaceNameResolver / 本文件 amap-search 去重注释：console.amap.com
+        // 创建「Android 平台」Key，包名 com.sullivan.android + 签名 SHA1，
+        // 然后把 Key 写进 local.properties：amapApiKey=你的Key
+        manifestPlaceholders["AMAP_API_KEY"] = amapApiKey
 
         // 后端基地址（SessionStore 读 BuildConfig.SERVER_BASE_URL）。
         // 缺省是**空串而不是模拟器地址**：给一个看似可用的默认值（10.0.2.2）
@@ -93,6 +103,15 @@ dependencies {
     implementation(libs.okhttp.logging)
 
     implementation(libs.amap.location)
+    // 逆地理编码（坐标 → 地名）：报警里受护人的位置要显示成地名，不是裸经纬度。
+    // **为什么是 libs 下的去重 jar 而不是 libs.amap.search**：
+    // com.amap.api:search（含 9.7.1，Central 上最后一个 release）与
+    // com.amap.api:location 都内嵌了 com.amap.apis.utils.core.api 两个工具类，
+    // AGP 的 duplicate class 检查直接判死，两边的版本对怎么换都冲突。
+    // 处理：取官方 search-9.7.1.jar，剔除与 location 重复的两个工具类
+    // （运行时统一用 location 侧的），得到本目录下的 amap-search-9.7.1-noutils.jar。
+    // 升级 location / search 时必须重新做一遍这个去重。
+    implementation(files("libs/amap-search-9.7.1-noutils.jar"))
 
     implementation(libs.appcompat)
     implementation(libs.material)

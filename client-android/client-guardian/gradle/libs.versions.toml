@@ -5,6 +5,10 @@ okhttp = "4.12.0"
 # 高德定位 SDK。com.amap.api:location 没有 10.x 版本（10.0.0 是 com.amap.api:3dmap 的号段，
 # 此前写的 10.0.0 从未解析成功过），当前 release 为 11.3.000。
 amap = "11.3.000"
+# 逆地理编码（坐标 → 地名）本想用 com.amap.api:search，但它与 location 内嵌了
+# 同一对工具类，duplicate class 检查两边怎么配都冲突 —— 最终改为引用
+# app/libs/amap-search-9.7.1-noutils.jar（官方 search-9.7.1.jar 剔除重复类，
+# 详见 app/build.gradle.kts 内注释），这里不留用不上的死条目。
 
 # 这几个版本沿用受护人端侧障碍检测时期（移植自「参考1」）在真机验证过的组合：
 # camera 必须留在 1.4.x —— 1.5.x 需要 compileSdk 36 / AGP 8.9+，会连带撬动整条工具链。

@@ -202,4 +202,27 @@ public class AlertLocationSummaryTest {
         loc.accuracyM = 12.5;
         assertTrue(AlertLocationSummary.detail(loc).contains("13 米"));
     }
+
+    // ------------------------------------------------------------------
+    // AlertLocationSummary：服务端地名
+    // ------------------------------------------------------------------
+
+    /** 服务端解析好的地名原样返回，调用方据此跳过本端二次解析。 */
+    @Test
+    public void serverAddressIsPassedThrough() {
+        AlertDtos.AlertLocation loc = location(39.9, 116.4, 1L);
+        loc.address = "浙江省杭州市西湖区文三路";
+        assertEquals("浙江省杭州市西湖区文三路",
+                AlertLocationSummary.serverAddress(loc));
+    }
+
+    /** 没有服务端地名（旧报警 / Key 未配 / 解析失败）返回 null，走本端解析兜底。 */
+    @Test
+    public void missingServerAddressYieldsNull() {
+        assertNull(AlertLocationSummary.serverAddress(null));
+        assertNull(AlertLocationSummary.serverAddress(location(39.9, 116.4, 1L)));
+        AlertDtos.AlertLocation blank = location(39.9, 116.4, 1L);
+        blank.address = "   ";
+        assertNull(AlertLocationSummary.serverAddress(blank));
+    }
 }

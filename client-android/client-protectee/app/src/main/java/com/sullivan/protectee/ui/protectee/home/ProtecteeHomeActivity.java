@@ -1,7 +1,10 @@
 package com.sullivan.protectee.ui.protectee.home;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -13,9 +16,11 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import com.sullivan.protectee.R;
 import com.sullivan.protectee.data.session.SessionStore;
+import com.sullivan.protectee.service.call.IncomingCallService;
 import com.sullivan.protectee.ui.common.realtime.RealtimeActivity;
 import com.sullivan.protectee.ui.common.voice.VoiceMessageActivity;
 import com.sullivan.protectee.ui.common.binding.BindingListActivity;
@@ -52,6 +57,7 @@ public class ProtecteeHomeActivity extends AppCompatActivity {
     private View guestPanel;
     private View memberPanel;
     private ActivityResultLauncher<Intent> loginLauncher;
+    private ActivityResultLauncher<String> notificationPermissionLauncher;
 
     /** 登录成功后要去的目的地；用户中途放弃则为 null。 */
     @Nullable
@@ -84,10 +90,19 @@ public class ProtecteeHomeActivity extends AppCompatActivity {
         findViewById(R.id.protectee_home_login).setOnClickListener(
                 view -> loginLauncher.launch(QrLoginActivity.intentFor(this, false)));
         findViewById(R.id.protectee_home_logout).setOnClickListener(view -> {
+            // 退出登录先停掉来电监听：它用旧令牌轮询只会一直 401，
+            // 状态栏那条常驻通知也会让人以为还在被守着。
+            IncomingCallService.stop(this);
             session.clearLogin();
             refreshAccount();
             Toast.makeText(this, R.string.protectee_home_logged_out, Toast.LENGTH_SHORT).show();
         });
+
+        notificationPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(), granted -> {
+                    // 拒绝也不影响前台功能：实时会话页仍能手动接听，
+                    // 只是退到后台收不到来电通知。
+                });
 
         bindMemberCard(R.id.protectee_card_bind_code, BindCodeActivity.class);
         bindMemberCard(R.id.protectee_card_bindings, BindingListActivity.class);
@@ -124,6 +139,13 @@ public class ProtecteeHomeActivity extends AppCompatActivity {
         guestPanel.setVisibility(loggedIn ? View.GONE : View.VISIBLE);
         memberPanel.setVisibility(loggedIn ? View.VISIBLE : View.GONE);
 
+        // 登录后常驻来电监听：对方发起实时会话时本页多半不在前台，
+        // 没有它受护人永远不知道有人在呼叫，只能靠反复打开「实时会话」页碰运气。
+        if (loggedIn) {
+            requestNotificationPermissionIfNeeded();
+            IncomingCallService.start(this);
+        }
+
         String label = session.accountLabel();
         if (!loggedIn) {
             accountText.setText(R.string.protectee_home_account_guest);
@@ -134,5 +156,22 @@ public class ProtecteeHomeActivity extends AppCompatActivity {
         } else {
             accountText.setText(getString(R.string.guardian_account, label));
         }
+    }
+
+    /**
+     * 申请通知权限（Android 13+）。
+     *
+     * <p>没有它，来电监听服务的通知**完全不显示** —— 「对方发起、我点一次接听」
+     * 的体验就退化回「自己反复刷列表」。拒绝不阻断其它功能。
+     */
+    private void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return;
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
     }
 }

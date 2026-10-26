@@ -32,6 +32,21 @@ public final class AlertDtos {
          * 这种明显错误的提示。服务端的时钟是唯一基准。
          */
         public Long ageSeconds;
+        /**
+         * 服务端在报警创建时解析好的地名（高德逆地理编码）。
+         *
+         * <p>有它就不再用本端的 {@code PlaceNameResolver} 二次解析 ——
+         * 一次解析随报警定格，三处展示（通知/弹窗/会话页）直接用。
+         * NULL = 服务端没解析出来（没配 Web Key、失败，或超时——见
+         * {@link #addressPending}），此时才走本端解析兜底。
+         */
+        public String address;
+        /**
+         * true = 服务端在时限内（默认 1 秒）没完成解析，报警**未等待**直接转发。
+         * 这是服务端与接收方之间的明确分工信号：见到它就必须本端解析，
+         * 而不是等下一轮刷新碰运气。false/null = 不是超时（成功或确定失败）。
+         */
+        public Boolean addressPending;
     }
 
     /** 一个接收人的派发结果。监护人可用它拿到自己那条会话的 id。 */

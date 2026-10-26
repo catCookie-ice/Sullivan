@@ -133,16 +133,24 @@
                     android:layout_height="@dimen/an_touch_min"
                     android:text="@string/session_type_voice" />
 
+                <!--
+                    视频通话与单方面画面共享暂时下架（visibility="gone"）：
+                    跨网络的媒体需要 TURN 中继转发，而中继服务器尚未部署
+                    （见 docs/final/22-待办-中继服务器.md），没有它这两类会话
+                    只有黑屏与无声。22 号待办落地后删掉两行 visibility 即可恢复。
+                -->
                 <RadioButton
                     android:id="@+id/session_type_video"
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/an_touch_min"
+                    android:visibility="gone"
                     android:text="@string/session_type_video" />
 
                 <RadioButton
                     android:id="@+id/session_type_camera"
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/an_touch_min"
+                    android:visibility="gone"
                     android:text="@string/session_type_camera" />
             </RadioGroup>
 
