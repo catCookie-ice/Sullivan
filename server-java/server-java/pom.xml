@@ -98,6 +98,14 @@
             <artifactId>minio</artifactId>
             <version>8.5.12</version>
         </dependency>
+        <!-- 腾讯云 COS（app.media.store=cos 时启用）。国内部署选它而不是 MinIO：
+             自建 MinIO 要自己保证可用性与备份，而语音留言是**用户真实的声音**，
+             丢了找不回来。 -->
+        <dependency>
+            <groupId>com.qcloud</groupId>
+            <artifactId>cos_api</artifactId>
+            <version>5.6.246.3</version>
+        </dependency>
         <!-- OpenAPI 接口文档：http://localhost:8080/swagger-ui.html -->
         <dependency>
             <groupId>org.springdoc</groupId>
