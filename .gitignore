@@ -1,5 +1,7 @@
 # 环境与密钥
 .env
+# 后端运行时环境变量（含 COS 密钥等），只提交 .example 模板
+deploy/server-java.env
 *.pem
 *.key
 *.jks
