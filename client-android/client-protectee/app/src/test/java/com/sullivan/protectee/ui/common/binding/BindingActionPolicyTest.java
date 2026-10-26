@@ -124,4 +124,33 @@ public class BindingActionPolicyTest {
         assertNull(BindingActionPolicy.counterpartId(binding, "u_stranger"));
         assertNull(BindingActionPolicy.counterpartId(null, ME));
     }
+
+    /**
+     * 对方的可显示名字：显示名优先，回落到登录名。
+     *
+     * <p>这条规则的反面就是“把 uid 显示出来”，所以这里额外钉一下
+     * “两个都没有时志必须返回 null”—— 调用方宁可显示占位符，
+     * 也不能拿 ID 顶上去。
+     */
+    @Test
+    public void counterpartLabelPrefersDisplayNameThenLoginNameAndNeverFallsBackToId() {
+        BindingDtos.BindingResponse binding = binding("ACTIVE", OTHER, false);
+        binding.guardianLoginName = "guardian01";
+        binding.guardianName = "张三";
+        binding.protecteeLoginName = "protectee01";
+        binding.protecteeName = "李四";
+
+        assertEquals("李四", BindingActionPolicy.counterpartLabel(binding, "u_guardian"));
+        assertEquals("张三", BindingActionPolicy.counterpartLabel(binding, "u_protectee"));
+
+        // 显示名缺失时用登录名，而不是用 uid。
+        binding.protecteeName = null;
+        assertEquals("protectee01", BindingActionPolicy.counterpartLabel(binding, "u_guardian"));
+        binding.protecteeLoginName = "   ";
+        assertNull(BindingActionPolicy.counterpartLabel(binding, "u_guardian"));
+
+        assertNull(BindingActionPolicy.counterpartLabel(binding, "u_stranger"));
+        assertNull(BindingActionPolicy.counterpartLabel(null, ME));
+        assertNull(BindingActionPolicy.counterpartLabel(binding, null));
+    }
 }

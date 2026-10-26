@@ -731,7 +731,7 @@ CREATE TABLE realtime_session (
   version BIGINT UNSIGNED NOT NULL DEFAULT 0,
   initiator_uid CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '发起方（监护人或受护人）',
   target_uid CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '接收方',
-  session_type VARCHAR(16) NOT NULL DEFAULT 'BASIC' COMMENT '会话类型：BASIC；VOICE/CAMERA/LOCATION 为 FULL-RESERVED',
+  session_type VARCHAR(16) NOT NULL DEFAULT 'BASIC' COMMENT '会话类型：BASIC/VOICE/VIDEO/CAMERA/EMERGENCY（LOCATION 为 FULL 预留）',
   accepted_at DATETIME(3) NULL,
   ended_at DATETIME(3) NULL,
   ended_by_uid CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NULL,
@@ -741,8 +741,8 @@ CREATE TABLE realtime_session (
   CONSTRAINT fk_realtime_target FOREIGN KEY (target_uid) REFERENCES user_account(id),
   CONSTRAINT ck_realtime_distinct CHECK (initiator_uid <> target_uid),
   CONSTRAINT ck_realtime_status CHECK (status IN ('REQUESTED', 'ACTIVE', 'REJECTED', 'ENDED')),
-  CONSTRAINT ck_realtime_type CHECK (session_type IN ('BASIC'))
-) ENGINE=InnoDB COMMENT='监护-受护实时会话（长连接消息中继）';
+  CONSTRAINT ck_realtime_type CHECK (session_type IN ('BASIC', 'VOICE', 'VIDEO', 'CAMERA', 'EMERGENCY'))
+) ENGINE=InnoDB COMMENT='监护-受护实时会话（长连接消息中继；语音/视频媒体走 WebRTC，媒体不入库）';
 CREATE INDEX ix_realtime_initiator ON realtime_session (initiator_uid, status, created_at);
 CREATE INDEX ix_realtime_target ON realtime_session (target_uid, status, created_at);
 
@@ -795,3 +795,36 @@ CREATE TABLE qr_login_ticket (
   CONSTRAINT ck_qr_login_ticket_status CHECK (status IN ('PENDING', 'SCANNED', 'CONFIRMED', 'CONSUMED', 'EXPIRED'))
 ) ENGINE=InnoDB COMMENT='扫码登录票据；监护人确认后由出示设备换取受护人令牌';
 CREATE INDEX ix_qr_login_ticket_status ON qr_login_ticket (status, expires_at);
+
+-- =============================================================
+-- 语音留言（V8）
+--
+-- 只存元数据，音频本体进 MinIO。对象键由服务端生成、客户端拿不到，
+-- 取回必须经鉴权端点 —— 让「知道 ID 就能下载别人的录音」变成不可能。
+-- 通知只携带短时一次性取回凭据，音频本体不经通知下发。
+-- =============================================================
+
+CREATE TABLE voice_message (
+  id CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  sender_uid CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '发送方',
+  receiver_uid CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '接收方',
+  session_id CHAR(26) CHARACTER SET ascii COLLATE ascii_bin NULL COMMENT '来源会话（可选；会话结束后仍可保留该值）',
+  status VARCHAR(16) NOT NULL DEFAULT 'SENT' COMMENT 'SENT 待收听 / LISTENED 已收听 / DELETED 已删除',
+  object_key VARCHAR(255) NOT NULL COMMENT 'MinIO 对象键；客户端不可见，只能经鉴权端点取回',
+  duration_ms INT NOT NULL COMMENT '时长（毫秒）；上限由 app.voice-message.max-duration-ms 控制',
+  size_bytes BIGINT UNSIGNED NOT NULL COMMENT '音频字节数',
+  content_type VARCHAR(64) NOT NULL DEFAULT 'audio/mp4',
+  listened_at DATETIME(3) NULL,
+  deleted_at DATETIME(3) NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  version BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  CONSTRAINT pk_voice_message PRIMARY KEY (id),
+  CONSTRAINT fk_voice_message_sender FOREIGN KEY (sender_uid) REFERENCES user_account(id),
+  CONSTRAINT fk_voice_message_receiver FOREIGN KEY (receiver_uid) REFERENCES user_account(id),
+  CONSTRAINT ck_voice_message_status CHECK (status IN ('SENT', 'LISTENED', 'DELETED')),
+  CONSTRAINT ck_voice_message_distinct CHECK (sender_uid <> receiver_uid),
+  CONSTRAINT ck_voice_message_duration CHECK (duration_ms > 0)
+) ENGINE=InnoDB COMMENT='语音留言元数据；音频本体存 MinIO，媒体不入库';
+CREATE INDEX ix_voice_message_receiver ON voice_message (receiver_uid, status, created_at);
+CREATE INDEX ix_voice_message_sender ON voice_message (sender_uid, created_at);

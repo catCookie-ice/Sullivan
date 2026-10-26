@@ -6,6 +6,7 @@
         <el-menu-item index="/bindings">绑定管理</el-menu-item>
         <el-menu-item index="/activities">活动浏览</el-menu-item>
         <el-menu-item index="/realtime">实时会话</el-menu-item>
+        <el-menu-item index="/voice">语音留言</el-menu-item>
         <el-menu-item style="float: right" @click="handleLogout">退出登录</el-menu-item>
       </el-menu>
     </div>

@@ -1,18 +1,23 @@
 package com.sullivan.protectee.data.api;
 
-import com.sullivan.protectee.data.api.dto.ActivityDtos;
 import com.sullivan.protectee.data.api.dto.AlertDtos;
 import com.sullivan.protectee.data.api.dto.AuthDtos;
 import com.sullivan.protectee.data.api.dto.BindingDtos;
 import com.sullivan.protectee.data.api.dto.LookupDtos;
 import com.sullivan.protectee.data.api.dto.QrDtos;
 import com.sullivan.protectee.data.api.dto.RealtimeDtos;
+import com.sullivan.protectee.data.api.dto.VoiceMessageDtos;
 
 import java.util.List;
 
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.DELETE;
 import retrofit2.http.GET;
+import retrofit2.http.Multipart;
+import retrofit2.http.Part;
 import retrofit2.http.POST;
 import retrofit2.http.PUT;
 import retrofit2.http.Path;
@@ -111,23 +116,16 @@ public interface ApiService {
     // 账号查找
     // ------------------------------------------------------------------
 
-    /** 按账号 ID 查基本信息。发起绑定时用它确认「这是谁」，避免手滑绑错人。 */
+    /**
+     * 按登录名查基本信息（精确匹配）。**界面该用的就是这一条**：
+     * 用户手里的身份是登录名，uid 只用于服务端唯一性（00 §7 第 11 条）。
+     */
+    @GET("users/by-login-name/{loginName}")
+    Call<LookupDtos.UserResponse> getUserByLoginName(@Path("loginName") String loginName);
+
+    /** 按账号 ID 查。只留给内部与调试，界面不要用。 */
     @GET("users/{id}")
     Call<LookupDtos.UserResponse> getUser(@Path("id") String userId);
-
-    // ------------------------------------------------------------------
-    // 公益活动（只读）
-    // ------------------------------------------------------------------
-
-    /**
-     * 公开活动列表。**需要登录**（服务端 {@code requireLoggedIn}），
-     * 默认只返回 RECRUITING。{@code status} 传 null 表示用服务端默认值。
-     */
-    @GET("activities")
-    Call<ActivityDtos.PageResult<ActivityDtos.ActivityResponse>> listActivities(
-            @Query("status") String status,
-            @Query("page") long page,
-            @Query("size") long size);
 
     // ------------------------------------------------------------------
     // 实时会话（REST 部分；长连接见 RealtimeSocket）
@@ -153,6 +151,55 @@ public interface ApiService {
     /** 任一方结束会话。 */
     @POST("realtime/sessions/{id}/end")
     Call<RealtimeDtos.SessionResponse> endSession(@Path("id") String sessionId);
+
+    /**
+     * 取 WebRTC 的 ICE 配置（STUN/TURN）。
+     *
+     * <p><b>每次建连前现取，不要缓存</b>：配置了 TURN 时返回的是短时凭据，
+     * 用户名里带过期时间戳。拿过期的凭据去建连会失败，而且失败表现和「网络不好」
+     * 一模一样 —— 那种问题在用户那里是查不出来的。
+     */
+    @GET("realtime/ice-servers")
+    Call<RealtimeDtos.IceServerResponse> iceServers();
+
+    // ------------------------------------------------------------------
+    // 语音留言
+    // ------------------------------------------------------------------
+
+    /**
+     * 投递一条语音留言（multipart）。
+     *
+     * <p>{@code receiverUid} 是主键，界面选的是人（登录名），提交前换过。
+     */
+    @Multipart
+    @POST("voice-messages")
+    Call<VoiceMessageDtos.VoiceMessageResponse> sendVoiceMessage(
+            @Part("receiverUid") RequestBody receiverUid,
+            @Part("durationMs") RequestBody durationMs,
+            @Part("sizeBytes") RequestBody sizeBytes,
+            @Part("contentType") RequestBody contentType,
+            @Part MultipartBody.Part file);
+
+    /** 我的留言箱（收到的 + 发出的）。 */
+    @GET("voice-messages")
+    Call<List<VoiceMessageDtos.VoiceMessageResponse>> listVoiceMessages();
+
+    /** 标记已听。只有接收方能调，重复调是幂等的。 */
+    @POST("voice-messages/{id}/listened")
+    Call<VoiceMessageDtos.VoiceMessageResponse> markVoiceMessageListened(@Path("id") String id);
+
+    /** 删除留言（双方任一方），音频本体一并删除。 */
+    @DELETE("voice-messages/{id}")
+    Call<Void> deleteVoiceMessage(@Path("id") String id);
+
+    /**
+     * 取回留言音频。返回二进制流。
+     *
+     * <p><b>不走预签名地址</b>：音频每次都要过服务端重新校验「双方仍有 ACTIVE 绑定」。
+     * 签名地址一旦发出去就收不回来了，解绑之后它还能用。
+     */
+    @GET("voice-messages/{id}/audio")
+    Call<okhttp3.ResponseBody> voiceMessageAudio(@Path("id") String id);
 
     // ------------------------------------------------------------------
     // 报警与位置

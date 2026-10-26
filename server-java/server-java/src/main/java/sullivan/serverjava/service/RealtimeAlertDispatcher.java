@@ -78,7 +78,9 @@ public class RealtimeAlertDispatcher {
         session.setStatus("REQUESTED");
         session.setInitiatorUid(protecteeUid);
         session.setTargetUid(guardianUid);
-        session.setSessionType("BASIC");
+        // 报警触发的会话恒为紧急视频会话（02 §8.2）：EMERGENCY 只能由这条服务端路径写入，
+        // 客户端创建请求传 EMERGENCY 会被 RealtimeSessionService 拒绝。
+        session.setSessionType("EMERGENCY");
         sessionMapper.insert(session);
 
         attachSession(delivery, session.getId(), "SENT");

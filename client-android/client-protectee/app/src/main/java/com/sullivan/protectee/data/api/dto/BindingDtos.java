@@ -39,6 +39,17 @@ public final class BindingDtos {
          * 等于 {@link #protecteeId} 表示受护人发起；据此判断「谁该点确认、谁能点取消」。
          */
         public String requestedBy;
+        /**
+         * 双方登录名与显示名（服务端 2026-10-26 起带回）。
+         *
+         * <p><b>界面显示人一律用这几个字段，不要用 id</b>：uid 是服务端的唯一性标识，
+         * 用户既不知道自己的、也念不出别人的（00 §7 第 11 条）。
+         */
+        public String guardianLoginName;
+        public String protecteeLoginName;
+        /** 显示名，可能为 null（没填资料时）。 */
+        public String guardianName;
+        public String protecteeName;
     }
 
     /** {@code POST /api/v1/bindings} 请求体：发起绑定（新流程，需接收方确认）。 */

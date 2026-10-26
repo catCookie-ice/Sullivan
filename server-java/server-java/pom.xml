@@ -91,6 +91,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
+        <!-- 语音留言音频的对象存储（MinIO）。开发环境可改用本地文件系统实现，
+             见 service/media/FileSystemMediaStore 与 app.media.store 配置。 -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.5.12</version>
+        </dependency>
         <!-- OpenAPI 接口文档：http://localhost:8080/swagger-ui.html -->
         <dependency>
             <groupId>org.springdoc</groupId>

@@ -72,7 +72,6 @@ public class BindingListActivity extends AppCompatActivity {
     private View lookupResult;
     private TextView lookupResultTitle;
     private TextView lookupResultLines;
-    private TextInputEditText requestProtecteeInput;
     private TextInputEditText requestGuardianInput;
     private TextInputEditText lookupInput;
 
@@ -107,7 +106,6 @@ public class BindingListActivity extends AppCompatActivity {
         lookupResult = findViewById(R.id.binding_lookup_result);
         lookupResultTitle = findViewById(R.id.binding_lookup_result_title);
         lookupResultLines = findViewById(R.id.binding_lookup_result_lines);
-        requestProtecteeInput = findViewById(R.id.binding_request_protectee_id);
         requestGuardianInput = findViewById(R.id.binding_request_guardian_id);
         lookupInput = findViewById(R.id.binding_lookup_id);
 
@@ -138,10 +136,10 @@ public class BindingListActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.binding_refresh).setOnClickListener(view -> loadBindings());
-        findViewById(R.id.binding_request_as_guardian).setOnClickListener(
-                view -> requestBinding(true));
+        // 受护人端只有「以受护人身份申请监护人」这一个方向。反方向（以监护人身份
+        // 绑定受护人）是监护人那台设备上的事，放在这里只会让人以为本端能替对方做主。
         findViewById(R.id.binding_request_as_protectee).setOnClickListener(
-                view -> requestBinding(false));
+                view -> requestBindingAsProtectee());
         findViewById(R.id.binding_lookup_action).setOnClickListener(view -> lookup());
 
         loadBindings();
@@ -218,7 +216,8 @@ public class BindingListActivity extends AppCompatActivity {
             badge.setVisibility(View.GONE);
         }
 
-        String counterpart = BindingActionPolicy.counterpartId(binding, myUid);
+        // 对方只显示姓名 / 登录名，不显示 uid。
+        String counterpart = BindingActionPolicy.counterpartLabel(binding, myUid);
         ((TextView) row.findViewById(R.id.binding_row_counterpart)).setText(
                 getString(R.string.binding_row_counterpart,
                         counterpart == null ? "—" : counterpart));
@@ -355,19 +354,18 @@ public class BindingListActivity extends AppCompatActivity {
     // 发起绑定
     // ------------------------------------------------------------------
 
-    private void requestBinding(boolean asGuardian) {
+    private void requestBindingAsProtectee() {
         if (pendingCall != null) {
             return;
         }
-        TextInputEditText input = asGuardian ? requestProtecteeInput : requestGuardianInput;
-        String targetId = textOf(input);
+        String targetId = textOf(requestGuardianInput);
         if (TextUtils.isEmpty(targetId)) {
             showStatus(requestStatus, getString(R.string.binding_request_need_id), true);
             return;
         }
 
         Call<BindingDtos.BindingResponse> call = ApiClient.get(this).requestBinding(
-                new BindingDtos.Request(targetId, asGuardian ? "PROTECTEE" : "GUARDIAN"));
+                new BindingDtos.Request(targetId, "GUARDIAN"));
         pendingCall = call;
         showStatus(requestStatus, getString(R.string.state_loading), false);
         call.enqueue(new ResultCallback<BindingDtos.BindingResponse>() {
@@ -375,7 +373,7 @@ public class BindingListActivity extends AppCompatActivity {
             public void onSuccess(@Nullable BindingDtos.BindingResponse body) {
                 pendingCall = null;
                 showStatus(requestStatus, getString(R.string.binding_request_sent), false);
-                input.setText("");
+                requestGuardianInput.setText("");
                 loadBindings();
             }
 
@@ -397,15 +395,15 @@ public class BindingListActivity extends AppCompatActivity {
         if (pendingCall != null) {
             return;
         }
-        String userId = textOf(lookupInput);
-        if (TextUtils.isEmpty(userId)) {
+        String loginName = textOf(lookupInput);
+        if (TextUtils.isEmpty(loginName)) {
             showStatus(lookupStatus, getString(R.string.binding_lookup_need_id), true);
             return;
         }
         lookupResult.setVisibility(View.GONE);
         showStatus(lookupStatus, getString(R.string.state_loading), false);
 
-        Call<LookupDtos.UserResponse> call = ApiClient.get(this).getUser(userId);
+        Call<LookupDtos.UserResponse> call = ApiClient.get(this).getUserByLoginName(loginName);
         pendingCall = call;
         call.enqueue(new ResultCallback<LookupDtos.UserResponse>() {
             @Override
@@ -431,7 +429,7 @@ public class BindingListActivity extends AppCompatActivity {
 
     private void renderLookup(@NonNull LookupDtos.UserResponse user) {
         lookupResultTitle.setText(getString(R.string.binding_lookup_result,
-                user.id == null ? "—" : user.id));
+                TextUtils.isEmpty(user.loginName) ? "—" : user.loginName));
 
         StringBuilder lines = new StringBuilder();
         lines.append(getString(R.string.binding_lookup_display,

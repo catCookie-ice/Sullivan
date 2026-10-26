@@ -66,13 +66,13 @@
     <string name="guardian_action_scan_login_desc">扫描受护人的登录码，选一位受护人授权对方设备登录</string>
     <string name="guardian_section_account">账号与关系</string>
     <string name="guardian_action_bindings">绑定管理</string>
-    <string name="guardian_action_bindings_desc">查看并进行中的绑定关系、发起绑定、按账号 ID 查人</string>
+    <string name="guardian_action_bindings_desc">查看并进行中的绑定关系、发起绑定、按登录名查人</string>
     <string name="guardian_action_create_protectee">创建受护人</string>
     <string name="guardian_action_create_protectee_desc">代建一个受护人账号，并立即建立永久绑定</string>
     <string name="guardian_action_activities">公益活动</string>
     <string name="guardian_action_activities_desc">浏览附近的公益志愿活动（只读，报名在机构端）</string>
     <string name="guardian_action_realtime">实时会话</string>
-    <string name="guardian_action_realtime_desc">和已绑定的受护人开一条实时通道，互发消息</string>
+    <string name="guardian_action_realtime_desc">和已绑定的受护人语音、视频通话，或查看他的摄像头画面</string>
     <string name="guardian_action_volunteer_apply">申请兼任志愿者</string>
     <string name="guardian_action_volunteer_apply_desc">提交申请，审核通过后可以参加公益活动</string>
     <string name="guardian_action_logout">退出登录</string>
@@ -236,12 +236,12 @@
 
     <!-- ===== 绑定管理 ===== -->
     <string name="binding_title">绑定管理</string>
-    <string name="binding_subtitle">监护关系由双方的账号 ID 确定。你可以在这里发起、确认、解除绑定。</string>
+    <string name="binding_subtitle">监护关系由双方账号确定。你可以在这里发起、确认、解除绑定。</string>
     <string name="binding_tab_list">我的绑定</string>
     <string name="binding_tab_request">发起绑定</string>
     <string name="binding_tab_lookup">查找账号</string>
     <string name="binding_action_refresh">刷新</string>
-    <string name="binding_empty">还没有任何绑定关系。\n\n扫码绑定一位受护人，或到「发起绑定」里输入对方的账号 ID。</string>
+    <string name="binding_empty">还没有任何绑定关系。\n\n让对方扫你的绑定码，或到「发起绑定」里输入对方的登录名。</string>
     <string name="binding_row_counterpart">对方：%1$s</string>
     <string name="binding_row_side_guardian">我在这条关系里是监护人</string>
     <string name="binding_row_side_protectee">我在这条关系里是受护人</string>
@@ -266,20 +266,20 @@
     <string name="binding_action_failed">操作失败：%1$s</string>
 
     <string name="binding_request_as_guardian">以监护人身份绑定受护人</string>
-    <string name="binding_request_as_guardian_hint">输入受护人的账号 ID。对方账号 ID 可以在「查找账号」里核对。</string>
+    <string name="binding_request_as_guardian_hint">输入受护人的登录名。登录名可以在「查找账号」里核对。</string>
     <string name="binding_request_as_guardian_action">发起绑定</string>
     <string name="binding_request_as_protectee">以受护人身份申请监护人</string>
-    <string name="binding_request_as_protectee_hint">输入监护人的账号 ID。对方需要在自己的手机上确认。</string>
+    <string name="binding_request_as_protectee_hint">输入监护人的登录名。对方需要在自己的手机上确认。</string>
     <string name="binding_request_as_protectee_action">申请绑定</string>
-    <string name="binding_request_need_id">请先填写对方的账号 ID</string>
+    <string name="binding_request_need_id">请先填写对方的登录名</string>
     <string name="binding_request_sent">绑定请求已发起，等对方确认</string>
     <string name="binding_request_failed">发起失败：%1$s</string>
     <string name="binding_request_owner_hint">代建受护人会自动建立永久绑定，不需要在这里发起。</string>
 
-    <string name="binding_lookup_title">按账号 ID 查找</string>
-    <string name="binding_lookup_field">账号 ID</string>
+    <string name="binding_lookup_title">按登录名查找</string>
+    <string name="binding_lookup_field">登录名</string>
     <string name="binding_lookup_action">查找</string>
-    <string name="binding_lookup_need_id">请先填写账号 ID</string>
+    <string name="binding_lookup_need_id">请先填写登录名</string>
     <string name="binding_lookup_failed">查找失败：%1$s</string>
     <string name="binding_lookup_result">账号 %1$s</string>
     <string name="binding_lookup_display">显示名：%1$s</string>
@@ -311,14 +311,14 @@
 
     <!-- ===== 实时会话 ===== -->
     <string name="session_title">实时会话</string>
-    <string name="session_subtitle">和已绑定的对方开一条实时通道，用于日常问询与应急联络。通道只在双方都同意后建立。</string>
+    <string name="session_subtitle">和已绑定的对方语音、视频通话，或查看对方画面。对方点一次「接听」即进入会话。</string>
     <string name="session_create_title">发起新会话</string>
-    <string name="session_create_field">对方的账号 ID</string>
+    <string name="session_create_field">要联系的人</string>
     <string name="session_action_create">发起会话</string>
     <string name="session_list_title">我的会话</string>
     <string name="session_action_refresh">刷新</string>
-    <string name="session_empty">还没有任何会话。\n\n在上面输入对方的账号 ID 发起一条；对方接受后就能连上。\n\n只能和已绑定的账号通话，未绑定的 ID 会被服务端拒绝。</string>
-    <string name="session_create_need_id">请先填写对方的账号 ID</string>
+    <string name="session_empty">还没有任何会话。\n\n在上面选一个人发起；对方点一次「接听」就进入会话。\n\n只能和已绑定的人通话。</string>
+    <string name="session_create_need_id">请先选择要联系的人</string>
     <string name="session_created">会话已发起，等对方接受</string>
     <string name="session_create_failed">发起失败：%1$s</string>
     <!-- 会话行 -->
@@ -334,7 +334,7 @@
     <string name="session_action_reject">拒绝</string>
     <string name="session_action_connect">连接</string>
     <string name="session_action_end">结束</string>
-    <string name="session_confirm_accept">接受这条会话？接受后对方可以连接进来，和你互发消息。</string>
+    <string name="session_confirm_accept">接受这条会话？</string>
     <string name="session_confirm_reject">拒绝这条会话？拒绝后对方需要重新发起。</string>
     <string name="session_confirm_end">结束这条会话？结束是双方的：你们都会断开，对方需要重新发起。</string>
     <string name="session_done_accept">已接受，现在可以连接了</string>
@@ -365,4 +365,77 @@
 
     <string name="action_cancel">取消</string>
     <string name="action_ok">确定</string>
-</resources>
+
+    <!-- ===== 语音/视频/摄像头会话与语音留言（2026-10-26 提升为 [MINI]） ===== -->
+    <string name="session_create_no_contact">还没有已生效的绑定关系。请先在「绑定管理」里完成绑定，再来发起会话。</string>
+    <string name="session_create_need_contact">请先选择要联系的人</string>
+    <string name="session_contact_unnamed">已绑定的对方</string>
+    <string name="session_calling">已呼叫%1$s，等待对方接听…</string>
+    <string name="session_no_answer">对方没有接听。可以稍后再试，或改用语音留言。</string>
+    <string name="session_type_label">通话方式</string>
+    <string name="session_type_voice">语音通话（只听声音）</string>
+    <string name="session_type_video">视频通话（互为对方显示画面）</string>
+    <string name="session_type_camera">查看对方摄像头（你只接收画面）</string>
+    <string name="session_type_basic">文字会话</string>
+    <string name="session_type_voice_short">语音通话</string>
+    <string name="session_type_video_short">视频通话</string>
+    <string name="session_type_camera_short">查看摄像头</string>
+    <string name="session_type_emergency_short">紧急视频</string>
+    <string name="session_call_connecting">正在接通…</string>
+    <string name="session_call_no_ice">没有取到中转服务器配置，跨网络可能无法接通</string>
+    <string name="session_call_video_desc">对方画面</string>
+    <string name="session_action_hangup">挂断</string>
+    <string name="session_row_waiting_type">%1$s · %2$s</string>
+    <string name="session_row_meta_type">%1$s · %2$s</string>
+    <!-- ===== 语音留言 ===== -->
+    <string name="voice_title">语音留言</string>
+    <string name="voice_subtitle">对方不在手机边上也能留一句话。留言只有你们两个人能听。</string>
+    <string name="voice_record_title">录一条留言</string>
+    <string name="voice_record_to_label">发给谁</string>
+    <string name="voice_no_contact">还没有已生效的绑定关系。请先在「绑定管理」里完成绑定。</string>
+    <string name="voice_need_contact">请先选择要发给谁</string>
+    <string name="voice_contact_unnamed">已绑定的对方</string>
+    <string name="voice_action_start">开始录音</string>
+    <string name="voice_action_stop">停止录音</string>
+    <string name="voice_action_send">发送留言</string>
+    <string name="voice_action_discard">丢弃这段录音</string>
+    <string name="voice_action_refresh">刷新</string>
+    <string name="voice_action_play">播放</string>
+    <string name="voice_action_stop_play">停止</string>
+    <string name="voice_action_mark_listened">标记已听</string>
+    <string name="voice_action_delete">删除</string>
+    <string name="voice_recording_hint">正在录音，说完点「停止录音」</string>
+    <string name="voice_recording_time">录音中 %1$d 秒 / 最多 %2$d 秒</string>
+    <string name="voice_reached_limit">已到时长上限，录音自动停止</string>
+    <string name="voice_too_short">录得太短了，请按住说完整一句</string>
+    <string name="voice_recorded">已录制 %1$d 秒，确认无误后点「发送留言」</string>
+    <string name="voice_nothing_recorded">还没有可发送的录音</string>
+    <string name="voice_sent">已发给%1$s。对方打开应用就能听到。</string>
+    <string name="voice_send_failed">发送失败：%1$s（录音还在，可以再点一次发送）</string>
+    <string name="voice_inbox_title">所有留言</string>
+    <string name="voice_empty">还没有任何语音留言。\n\n在上面录一条发给已绑定的对方；对方不在手机边上也没关系。</string>
+    <string name="voice_side_received">收到的</string>
+    <string name="voice_side_sent">发出的</string>
+    <string name="voice_row_from">来自%1$s的留言</string>
+    <string name="voice_row_to">发给%1$s的留言</string>
+    <string name="voice_row_meta">%1$d 秒 · %2$s</string>
+    <string name="voice_status_new">未听</string>
+    <string name="voice_status_listened">已听</string>
+    <string name="voice_status_sent">已发送</string>
+    <string name="voice_status_heard">对方已听</string>
+    <string name="voice_downloading">正在取回留言…</string>
+    <string name="voice_playing">正在播放…</string>
+    <string name="voice_play_failed">播放失败：%1$s</string>
+    <string name="voice_play_error_decoder">音频无法解码</string>
+    <string name="voice_mark_failed">标记失败：%1$s</string>
+    <string name="voice_confirm_delete">删除这条留言？删除后音频也会一并删掉，两个人都听不到了。</string>
+    <string name="voice_deleted">已删除</string>
+    <string name="voice_delete_failed">删除失败：%1$s</string>
+    <!-- ===== 语音留言入口（主页卡片，角色中性，两端同名同值） ===== -->
+    <string name="guardian_action_voice">语音留言</string>
+    <string name="guardian_action_voice_desc">对方不在手机边上也能留一句话，之后再听</string>
+    <!-- ===== 会话状态推送（对方接受/拒绝/结束） ===== -->
+    <string name="session_log_accepted">对方已接听</string>
+    <string name="session_peer_accepted">对方已接听，正在接通…</string>
+    <string name="session_peer_rejected">对方拒绝了这次会话</string>
+    <string name="session_peer_ended">对方已结束会话</string></resources>

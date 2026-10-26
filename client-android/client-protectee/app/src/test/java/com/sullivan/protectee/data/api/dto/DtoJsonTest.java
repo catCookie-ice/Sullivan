@@ -42,39 +42,6 @@ public class DtoJsonTest {
         assertEquals("u_111", binding.requestedBy);
     }
 
-    @Test
-    public void activityPageResultMatchesServerIPageJson() {
-        // MyBatis-Plus 的 IPage 还会多序列化出 orders / optimizeCountSql 等字段，
-        // Gson 对多余字段是宽容的 —— 这条断言就是锁住「多出来也不炸」。
-        String json = "{\"records\":[{\"id\":\"act_1\",\"status\":\"RECRUITING\","
-                + "\"organizationId\":\"o_1\",\"organizationPublicName\":\"朝阳盲协\","
-                + "\"title\":\"徒步陪伴\",\"description\":\"2 公里\",\"locationText\":\"朝阳公园南门\","
-                + "\"locationLng\":116.493729,\"locationLat\":39.935524,"
-                + "\"startsAt\":\"2026-09-01T09:00:00\",\"endsAt\":\"2026-09-01T12:00:00\","
-                + "\"registrationStartsAt\":\"2026-08-20T00:00:00\","
-                + "\"registrationEndsAt\":\"2026-08-30T23:59:59\","
-                + "\"maxVolunteers\":20,\"approvedCount\":0,"
-                + "\"createdAt\":\"2026-08-17T10:00:00\"}],"
-                + "\"total\":1,\"size\":20,\"current\":1,\"pages\":1,"
-                + "\"orders\":[],\"optimizeCountSql\":true}";
-
-        java.lang.reflect.Type type = new com.google.gson.reflect.TypeToken<
-                ActivityDtos.PageResult<ActivityDtos.ActivityResponse>>() { }.getType();
-        ActivityDtos.PageResult<ActivityDtos.ActivityResponse> page = GSON.fromJson(json, type);
-
-        assertNotNull(page);
-        assertEquals(1, page.total);
-        assertEquals(1, page.records.size());
-
-        ActivityDtos.ActivityResponse activity = page.records.get(0);
-        assertEquals("徒步陪伴", activity.title);
-        assertEquals("朝阳盲协", activity.organizationPublicName);
-        assertEquals(Integer.valueOf(20), activity.maxVolunteers);
-        assertEquals(Integer.valueOf(0), activity.approvedCount);
-        // 时间一律 String：Gson 没有 LocalDateTime 适配器，用 Object 会得到一个 LinkedTreeMap。
-        assertEquals("2026-09-01T09:00:00", activity.startsAt);
-    }
-
     /**
      * 中继信封的 payload 必须是 {@code JsonElement}。
      *

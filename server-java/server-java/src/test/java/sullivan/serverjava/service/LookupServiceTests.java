@@ -82,6 +82,61 @@ class LookupServiceTests {
                 .satisfies(e -> assertThat(((ApiException) e).status().value()).isEqualTo(404));
     }
 
+    // ------------------------------------------------------------------
+    // 按登录名查找（00 §7 第 11 条：界面用登录名，不用 uid）
+    // ------------------------------------------------------------------
+
+    @Test
+    void findByLoginNameReturnsSameShapeAsById() {
+        UserAccount account = account("u1", "GUARDIAN");
+        account.setLoginName("guardian_li");
+        when(userAccountMapper.selectOne(any())).thenReturn(account);
+        when(userProfileMapper.selectOne(any())).thenReturn(profile("u1", "李监护"));
+        when(userRoleMapper.selectList(any())).thenReturn(List.of(role("u1", "GUARDIAN")));
+
+        var result = service.findUserByLoginName("guardian_li");
+
+        assertThat(result.id()).isEqualTo("u1");
+        assertThat(result.loginName()).isEqualTo("guardian_li");
+        assertThat(result.displayName()).isEqualTo("李监护");
+    }
+
+    @Test
+    void findByLoginNameTrimsSurroundingWhitespace() {
+        UserAccount account = account("u1", "GUARDIAN");
+        account.setLoginName("guardian_li");
+        when(userAccountMapper.selectOne(any())).thenReturn(account);
+        when(userRoleMapper.selectList(any())).thenReturn(List.of());
+
+        assertThat(service.findUserByLoginName("  guardian_li  ").loginName()).isEqualTo("guardian_li");
+    }
+
+    /**
+     * 不存在与无权查看必须是**同一个** 404 + 同一句话。
+     *
+     * <p>若前者说「没有这个人」、后者说「你无权查看」，两句提示的差别本身
+     * 就足以用来枚举账号 —— 攻击者不需要拿到数据，只要看提示变没变。
+     */
+    @Test
+    void findByLoginNameMissingIsIndistinguishableNotFound() {
+        when(userAccountMapper.selectOne(any())).thenReturn(null);
+
+        assertThatThrownBy(() -> service.findUserByLoginName("nobody"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(e -> {
+                    ApiException api = (ApiException) e;
+                    assertThat(api.status().value()).isEqualTo(404);
+                    assertThat(api.getMessage()).isEqualTo("没有找到该登录名对应的账号");
+                });
+    }
+
+    @Test
+    void findByLoginNameBlankRejectedAsBadRequest() {
+        assertThatThrownBy(() -> service.findUserByLoginName("   "))
+                .isInstanceOf(ApiException.class)
+                .satisfies(e -> assertThat(((ApiException) e).status().value()).isEqualTo(400));
+    }
+
     @Test
     void findOrganizationReturnsPublicFields() {
         Organization organization = new Organization();

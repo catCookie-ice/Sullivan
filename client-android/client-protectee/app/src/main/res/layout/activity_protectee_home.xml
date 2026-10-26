@@ -203,32 +203,6 @@
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/protectee_card_activities"
-                style="@style/Widget.Sullivan.Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/an_space_m"
-                android:clickable="true"
-                android:contentDescription="@string/guardian_action_activities_desc"
-                android:focusable="true"
-                android:minHeight="96dp"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/guardian_action_activities"
-                    android:textAppearance="@style/TextAppearance.Sullivan.Title" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/an_space_s"
-                    android:text="@string/guardian_action_activities_desc"
-                    android:textAppearance="@style/TextAppearance.Sullivan.Body" />
-            </LinearLayout>
-
-            <LinearLayout
                 android:id="@+id/protectee_card_realtime"
                 style="@style/Widget.Sullivan.Card"
                 android:layout_width="match_parent"
@@ -251,6 +225,33 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/an_space_s"
                     android:text="@string/guardian_action_realtime_desc"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+            </LinearLayout>
+
+            <!-- 语音留言：不需要监护人同时在场，所以单独一张卡，不并到实时会话里。 -->
+            <LinearLayout
+                android:id="@+id/protectee_card_voice"
+                style="@style/Widget.Sullivan.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_m"
+                android:clickable="true"
+                android:contentDescription="@string/guardian_action_voice_desc"
+                android:focusable="true"
+                android:minHeight="96dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/guardian_action_voice"
+                    android:textAppearance="@style/TextAppearance.Sullivan.Title" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/an_space_s"
+                    android:text="@string/guardian_action_voice_desc"
                     android:textAppearance="@style/TextAppearance.Sullivan.Body" />
             </LinearLayout>
 

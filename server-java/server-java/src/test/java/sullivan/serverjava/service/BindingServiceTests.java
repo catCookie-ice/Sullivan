@@ -9,6 +9,8 @@ import sullivan.serverjava.domain.GuardianBinding;
 import sullivan.serverjava.domain.UserAccount;
 import sullivan.serverjava.mapper.GuardianBindingMapper;
 import sullivan.serverjava.mapper.UserAccountMapper;
+import sullivan.serverjava.mapper.UserProfileMapper;
+import sullivan.serverjava.mapper.UserProfileMapper;
 import sullivan.serverjava.mapper.UserRoleMapper;
 import sullivan.serverjava.web.BindingDtos.BindingRequest;
 import sullivan.serverjava.web.RegistrationDtos.BindingResponse;
@@ -30,6 +32,7 @@ class BindingServiceTests {
     private GuardianBindingMapper bindingMapper;
     private UserAccountMapper userAccountMapper;
     private UserRoleMapper userRoleMapper;
+    private UserProfileMapper userProfileMapper;
     private BindingService service;
 
     @BeforeEach
@@ -37,7 +40,8 @@ class BindingServiceTests {
         bindingMapper = mock(GuardianBindingMapper.class);
         userAccountMapper = mock(UserAccountMapper.class);
         userRoleMapper = mock(UserRoleMapper.class);
-        service = new BindingService(bindingMapper, userAccountMapper, userRoleMapper);
+        userProfileMapper = mock(UserProfileMapper.class);
+        service = new BindingService(bindingMapper, userAccountMapper, userRoleMapper, userProfileMapper);
         // 角色校验默认通过（GUARDIAN / PROTECTEE 均视为 ACTIVE）
         when(userRoleMapper.selectCount(any())).thenReturn(1L);
         when(userAccountMapper.selectById(any())).thenReturn(account(PROTECTEE, "PROTECTEE"));

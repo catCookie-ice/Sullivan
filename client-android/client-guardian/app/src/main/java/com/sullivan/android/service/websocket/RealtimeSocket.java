@@ -118,10 +118,20 @@ public final class RealtimeSocket {
     /**
      * 连接并开始收帧。重复调用会先关掉上一根连接。
      *
+     * <p><b>已经连在同一条会话上就什么都不做</b>：发起方在等待对方接听时就连了，
+     * 对方点「接听」之后界面会再走一次连接流程。若这里无条件重连，
+     * 会把**刚收到 {@code session.accepted} 的那根连接**关掉重开 ——
+     * 服务端的推送正是在这根连接上发的，重连后那段等待期的帧就全丢了。
+     *
      * @param selfUid 本机账号 ID，用来填 {@code relay} 帧的 fromUid（服务端会校验它等于令牌主体）
      */
     public void connect(@NonNull String baseUrl, @NonNull String token, @NonNull String sessionId,
                         @NonNull String selfUid, @NonNull Listener listener) {
+        if (!closed && socket != null && sessionId.equals(this.sessionId)) {
+            // 同一会话已连：只换监听器（页面可能已经重建），不动底层连接。
+            this.listener = listener;
+            return;
+        }
         close();
         this.listener = listener;
         this.sessionId = sessionId;
@@ -142,6 +152,17 @@ public final class RealtimeSocket {
     /** 发一条文本消息给对方。未连接时返回 false，调用方据此提示「还没连上」。 */
     public boolean sendRelay(@NonNull String toUid, @NonNull String text) {
         return send(envelopeFor(toUid, text));
+    }
+
+    /**
+     * 发一条 WebRTC 信令给对方。
+     *
+     * <p>与 relay 分开是因为服务端的处理也不同：{@code signal} 要求会话**已经 ACTIVE**，
+     * 且 payload 必须是带 {@code kind} 的对象。会话还在 REQUESTED 时发信令，
+     * 服务端会回一条 error 帧 —— 那是本次调用失败，不是连接失败。
+     */
+    public boolean sendSignal(@NonNull String toUid, @NonNull JsonObject payload) {
+        return send(RealtimeDtos.Envelope.signal(null, null, toUid, payload));
     }
 
     /** 应用层心跳。服务端会回一条 {@code pong} 信封。 */

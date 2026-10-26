@@ -45,17 +45,51 @@ public class LookupService {
     }
 
     /**
+     * 按**登录名**查找自然人。这是给用户用的查找方式（00 §7 第 11 条、01 §5 第 7 条）。
+     *
+     * <p><b>为什么需要它。</b>此前只有 {@code GET /users/{userId}}，而 uid 是
+     * 26 位随机串 —— 想绑定某人或给他发起会话，用户必须先拿到那一长串字符。
+     * 这不是「不够方便」，是**根本做不到**：没有任何界面把对方的 uid 展示给他，
+     * 于是所有依赖 uid 的入口都成了死路。登录名才是人记得住、说得出的标识。
+     *
+     * <p><b>精确匹配，不做模糊。</b>模糊匹配等于把「谁能被搜到」做成了一个功能：
+     * 输入 {@code zhang} 就能枚举出全部姓张的账号，配合显示名可以拼出用户名录。
+     * 精确匹配下，搜不到就是搜不到，攻击者还得先知道完整登录名。
+     *
+     * <p><b>不存在与无权查看返回同一个 404</b>，且提示语一致，避免被用来探测账号是否存在。
+     */
+    public UserLookupResponse findUserByLoginName(String loginName) {
+        if (loginName == null || loginName.isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "缺少登录名");
+        }
+        UserAccount account = userAccountMapper.selectOne(Wrappers.<UserAccount>lambdaQuery()
+                .eq(UserAccount::getLoginName, loginName.trim())
+                .last("LIMIT 1"));
+        if (account == null) {
+            throw new ApiException(HttpStatus.NOT_FOUND, USER_NOT_FOUND_MESSAGE);
+        }
+        return buildUserResponse(account);
+    }
+
+    /**
      * 按唯一标识查找自然人（志愿者/监护人/受护人共用此接口，以 roles 区分当前角色）。
      */
     public UserLookupResponse findUser(String userId) {
         UserAccount account = userAccountMapper.selectById(userId);
         if (account == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "自然人不存在");
+            throw new ApiException(HttpStatus.NOT_FOUND, USER_NOT_FOUND_MESSAGE);
         }
+        return buildUserResponse(account);
+    }
+
+    /** 账号不存在时统一的提示语：不区分「没这个人」与「你查不到」。 */
+    private static final String USER_NOT_FOUND_MESSAGE = "没有找到该登录名对应的账号";
+
+    private UserLookupResponse buildUserResponse(UserAccount account) {
         UserProfile profile = userProfileMapper.selectOne(Wrappers.<UserProfile>lambdaQuery()
-                .eq(UserProfile::getUserId, userId));
+                .eq(UserProfile::getUserId, account.getId()));
         Set<String> roles = userRoleMapper.selectList(Wrappers.<UserRole>lambdaQuery()
-                        .eq(UserRole::getUserId, userId)
+                        .eq(UserRole::getUserId, account.getId())
                         .eq(UserRole::getStatus, "ACTIVE")).stream()
                 .map(UserRole::getRoleCode)
                 .collect(Collectors.toSet());

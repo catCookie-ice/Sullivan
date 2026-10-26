@@ -55,18 +55,32 @@ public final class RegistrationDtos {
             @NotBlank String protecteeId) {
     }
 
+    /**
+     * 绑定关系。
+     *
+     * <p>同时带双方 uid 与名字：uid 保留是因为客户端要靠它判断「我是哪一方」，
+     * 而名字是**界面唯一可显示的东西**（00 §7 第 11 条）。此前只有 uid，
+     * 于是绑定列表只能显示一串 26 位随机串，既看不懂也念不出来。
+     */
     public record BindingResponse(
             @Schema(description = "绑定关系唯一标识", example = "b_1234567890") String id,
             @Schema(description = "绑定状态：PENDING（待确认）/ ACTIVE（已生效）",
                     example = "ACTIVE", allowableValues = {"PENDING", "ACTIVE", "REJECTED",
                             "CANCELLED", "EXPIRED", "TERMINATED"}) String status,
-            @Schema(description = "监护人账号 ID", example = "u_1111111111") String guardianId,
-            @Schema(description = "受护人账号 ID", example = "u_9876543210") String protecteeId,
+            @Schema(description = "监护人账号 ID（内部主键，界面不显示）",
+                    example = "u_1111111111") String guardianId,
+            @Schema(description = "受护人账号 ID（内部主键，界面不显示）",
+                    example = "u_9876543210") String protecteeId,
             @Schema(description = "是否永久绑定（创建受护人时建立的主绑定为 true）",
                     example = "true") boolean permanent,
             @Schema(description = "是否主绑定：受护人的第一监护关系", example = "true") boolean primary,
             @Schema(description = "发起方账号 ID：等于 guardianId 表示监护人发起，等于 protecteeId 表示受护人发起",
-                    example = "u_1111111111") String requestedBy) {
+                    example = "u_1111111111") String requestedBy,
+            @Schema(description = "监护人登录名（界面显示用）", example = "guardian_li") String guardianLoginName,
+            @Schema(description = "受护人登录名（界面显示用）", example = "protectee_wang")
+            String protecteeLoginName,
+            @Schema(description = "监护人显示名（优先用于界面）", example = "李监护") String guardianName,
+            @Schema(description = "受护人显示名（优先用于界面）", example = "王小明") String protecteeName) {
     }
 
     public record OrganizationRegisterRequest(

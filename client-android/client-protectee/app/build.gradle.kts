@@ -103,6 +103,10 @@ dependencies {
     implementation(libs.onnxruntime.android)
 
     // 二维码：只用于生成（绑定码 / 登录票据），本端不扫。
+    // WebRTC：语音/视频通话与监护人查看受护人摄像头的媒体通道。
+    // 信令走既有的 WebSocket（RealtimeSocket），媒体走这里。
+    implementation(libs.webrtc)
+
     implementation(libs.zxing.core)
 
     testImplementation(libs.junit)

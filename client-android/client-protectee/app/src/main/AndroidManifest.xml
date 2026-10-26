@@ -97,10 +97,6 @@
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize" />
 
-        <!-- 公益活动列表（只读）：需要登录。 -->
-        <activity
-            android:name=".ui.common.activity.ActivityListActivity"
-            android:screenOrientation="portrait" />
 
         <!--
             实时会话：列表 + 长连接收发。锁竖屏，因为横竖切换会重建 Activity，

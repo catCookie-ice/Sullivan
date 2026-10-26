@@ -15,6 +15,10 @@ annotation = "1.8.0"
 # 而传递依赖的版本随时可能被别的库顶掉。
 recyclerview = "1.3.2"
 junit = "4.13.2"
+# WebRTC Android SDK（官方预编译版，org.webrtc 的 Java 绑定 + 原生库）。
+# 选 io.github.webrtc-sdk:android 而不是 org.webrtc:google-webrtc：后者早已停止发布，
+# Maven Central 上没有可用版本；这条线是社区维护的官方构建，版本号跟随 Chromium 主线。
+webrtc = "150.7871.04"
 # 二维码生成。选 core 而不是 zxing-android-embedded：
 # core 是纯 Java、零 GMS 依赖（国内设备可用）；BitMatrix → Bitmap 的那二十行桥接代码自己写。
 # 3.5.3 是 3.5.x 线最后一个 release。
@@ -41,6 +45,7 @@ camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "
 onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxruntime" }
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+webrtc = { group = "io.github.webrtc-sdk", name = "android", version.ref = "webrtc" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

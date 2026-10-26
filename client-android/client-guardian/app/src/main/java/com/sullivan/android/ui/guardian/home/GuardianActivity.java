@@ -31,6 +31,7 @@ import com.sullivan.android.service.call.IncomingCallService;
 import com.sullivan.android.ui.common.activity.ActivityListActivity;
 import com.sullivan.android.ui.common.realtime.RealtimeActivity;
 import com.sullivan.android.ui.common.scan.QrScanActivity;
+import com.sullivan.android.ui.common.voice.VoiceMessageActivity;
 import com.sullivan.android.ui.guardian.binding.BindingListActivity;
 import com.sullivan.android.ui.guardian.binding.CreateProtecteeActivity;
 import com.sullivan.android.ui.guardian.call.AlertLocationSummary;
@@ -189,6 +190,8 @@ public class GuardianActivity extends AppCompatActivity {
                 view -> startActivity(ActivityListActivity.intentFor(this)));
         findViewById(R.id.guardian_card_realtime).setOnClickListener(
                 view -> startActivity(RealtimeActivity.intentFor(this)));
+        findViewById(R.id.guardian_card_voice).setOnClickListener(
+                view -> startActivity(VoiceMessageActivity.intentFor(this)));
 
         // 已经是志愿者就不显示「申请兼任志愿者」—— 一个永远只会得到
         // 「已存在待审核/已通过申请」的入口，比没有这个入口更让人困惑。

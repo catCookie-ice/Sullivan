@@ -133,51 +133,6 @@
                 style="@style/Widget.Sullivan.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/binding_request_as_guardian"
-                    android:textAppearance="@style/TextAppearance.Sullivan.Title" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/an_space_xs"
-                    android:text="@string/binding_request_as_guardian_hint"
-                    android:textAppearance="@style/TextAppearance.Sullivan.Caption" />
-
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.Sullivan.TextInputLayout"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/an_space_m"
-                    android:hint="@string/binding_lookup_field">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/binding_request_protectee_id"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="text"
-                        android:maxLines="1"
-                        android:textColor="@color/an_ink"
-                        android:textSize="@dimen/an_text_body" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <Button
-                    android:id="@+id/binding_request_as_guardian"
-                    style="@style/Widget.Sullivan.Button.Primary"
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/an_button_height"
-                    android:layout_marginTop="@dimen/an_space_m"
-                    android:text="@string/binding_request_as_guardian_action" />
-            </LinearLayout>
-
-            <LinearLayout
-                style="@style/Widget.Sullivan.Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/an_space_m"
                 android:orientation="vertical">
 

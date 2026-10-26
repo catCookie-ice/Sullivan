@@ -71,10 +71,25 @@ paths:
     put:
       tags: [Profile]
       summary: 修改个人资料
+  /users/by-login-name/{loginName}:
+    get:
+      tags: [Lookup]
+      summary: 按登录名查找自然人（志愿者/监护人/受护人）
+      description: |
+        精确匹配登录名，**这是界面应当使用的查找方式**（00 §7 第 11 条）。
+        不做模糊匹配：模糊匹配等于把「谁能被搜到」做成功能，可用于枚举用户名录。
+        不存在时返回 404，提示语一致，避免被用来探测账号是否存在。
+      parameters:
+        - name: loginName
+          in: path
+          required: true
+          schema:
+            type: string
   /users/{userId}:
     get:
       tags: [Lookup]
       summary: 按唯一标识查找自然人（志愿者/监护人/受护人）
+      description: 保留给内部与调试使用；界面应改用 by-login-name。
       parameters:
         - name: userId
           in: path
@@ -406,13 +421,28 @@ paths:
       tags: [Activity]
       summary: 取消活动
 
-  # ============ 实时会话 / 长连接 (FR-25) ============
+  # ============ 实时会话 / 长连接 (FR-25 / FR-26) ============
   # 长连接本体在 WebSocket 端点 /ws/realtime（握手带 ?token=<jwt>&sessionId=<id>），
-  # 会话创建与消息中继都要求双方存在 ACTIVE 绑定；sessionType 当前仅 BASIC。
+  # 会话创建与消息中继都要求双方存在 ACTIVE 绑定。
+  # 语音/视频/摄像头会话的媒体流走 WebRTC，信令经同一长连接的 envelope type=signal 中继
+  # （payload.kind ∈ offer/answer/candidate/hangup/renegotiate），服务端不解析 SDP 也不落库。
+  #
+  # 服务端主动下发的控制信封（payload 为空）：
+  #   session.joined    双方任一方连上长连接时，通知另一方
+  #   session.accepted  接收方接受会话时推给**发起方** —— 这是「点一次确认即可通话」的另一半：
+  #                     没有它，发起方只能轮询列表才发现对方接了
+  #   session.rejected  接收方拒绝时推给发起方
+  #   session.ended     任一方结束时推给另一方
+  # 发起方应在 REQUESTED 阶段就连上长连接，否则收不到上述推送。
+  # 推送是加速，不是唯一通道：对方不在线时什么都不会发生，状态仍以 REST 查询为准。
   /realtime/sessions:
     post:
       tags: [Realtime]
       summary: 发起实时会话（REQUESTED；双方须有 ACTIVE 绑定）
+      description: |
+        sessionType 客户端可达 BASIC / VOICE / VIDEO / CAMERA。
+        EMERGENCY 只能由服务端报警派发创建，客户端传入返回 403。
+        接收方点一次「接受」即进入会话（见 /accept），发起方无需再执行第二次操作。
       requestBody:
         required: true
         content:
@@ -421,15 +451,16 @@ paths:
               type: object
               required: [targetUid, sessionType]
               properties:
-                targetUid: { type: string, description: 已绑定受护人/监护人 ID }
-                sessionType: { type: string, enum: [BASIC] }
+                targetUid: { type: string, description: 已绑定受护人/监护人 ID（内部主键） }
+                sessionType: { type: string, enum: [BASIC, VOICE, VIDEO, CAMERA, EMERGENCY] }
     get:
       tags: [Realtime]
       summary: 我的会话列表（发起或接收）
+      description: 响应对每条会话附带双方 loginName 与 displayName，界面显示不要用 uid。
   /realtime/sessions/{id}/accept:
     post:
       tags: [Realtime]
-      summary: 接收方接受会话（REQUESTED → ACTIVE）
+      summary: 接收方接受会话（REQUESTED → ACTIVE），一次点击即进入会话
   /realtime/sessions/{id}/reject:
     post:
       tags: [Realtime]
@@ -438,6 +469,60 @@ paths:
     post:
       tags: [Realtime]
       summary: 任一方结束会话
+  /realtime/ice-servers:
+    get:
+      tags: [Realtime]
+      summary: 获取 WebRTC ICE 配置（STUN/TURN）
+      description: |
+        配置了 TURN 时返回**短时有效**的临时凭据（username 含过期时间戳，
+        credential 为该 username 的 HMAC）。凭据不得长期缓存或写死进客户端。
+        未配置 TURN 时 username/credential 为空，此时仅能直连或经 STUN 打洞；
+        两端不在同一网段会接不通，客户端必须如实提示而不是显示「已接通」。
+
+  # ============ 语音留言 (FR-27) ============
+  /voice-messages:
+    post:
+      tags: [VoiceMessage]
+      summary: 投递语音留言（multipart/form-data；接收方须有 ACTIVE 绑定）
+      description: |
+        字段：receiverUid、durationMs、sizeBytes、file（音频）、sessionId（可选）、
+        contentType（可选）。时长/大小/格式受服务端限制，24 小时条数超限返回 429。
+        通知只送「有一条留言」，音频本体不经通知下发。
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [receiverUid, durationMs, sizeBytes, file]
+              properties:
+                receiverUid: { type: string }
+                durationMs: { type: integer, minimum: 1 }
+                sizeBytes: { type: integer, format: int64, minimum: 1 }
+                sessionId: { type: string }
+                contentType:
+                  type: string
+                  enum: [audio/mp4, audio/aac, audio/3gpp, audio/amr, audio/ogg]
+                file: { type: string, format: binary }
+    get:
+      tags: [VoiceMessage]
+      summary: 我的留言箱（收到的 + 发出的，倒序；myRole 区分双方）
+      description: 响应不含 uid 与对象键，界面用 senderName/receiverName 显示。
+  /voice-messages/{id}/listened:
+    post:
+      tags: [VoiceMessage]
+      summary: 标记已听（仅接收方本人；重复标记幂等）
+  /voice-messages/{id}:
+    delete:
+      tags: [VoiceMessage]
+      summary: 删除留言（投递双方任一方；音频本体一并删除）
+  /voice-messages/{id}/audio:
+    get:
+      tags: [VoiceMessage]
+      summary: 取回留言音频（仅投递双方；每次重新校验 ACTIVE 绑定）
+      description: |
+        不签发预签名地址，音频经本端点流式转发，响应带 Cache-Control no-store。
+        绑定解除后历史留言不再可取回音频。
 
   # ============ 报警与位置 (FR-06 / FR-11~FR-13) ============
   /me/location:

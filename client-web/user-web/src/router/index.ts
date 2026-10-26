@@ -36,6 +36,7 @@ const router = createRouter({
         { path: 'services', name: 'GuardianServices', component: () => import('@/views/guardian/ServiceList.vue') },
         { path: 'volunteer-apply', name: 'VolunteerApply', component: () => import('@/views/guardian/VolunteerApply.vue') },
         { path: 'realtime', name: 'RealtimeDemo', component: () => import('@/views/guardian/RealtimeDemo.vue') },
+        { path: 'voice', name: 'VoiceMessages', component: () => import('@/views/guardian/VoiceMessagePanel.vue') },
       ],
     },
     {

@@ -19,7 +19,7 @@
           <el-button type="primary" :loading="loading" @click="handleCreate">创建并建立绑定</el-button>
         </el-form-item>
         <el-alert v-if="result" type="success" :closable="false"
-          :title="`创建成功：ID ${result.id}，角色 ${result.roles.join(' / ')}，状态 ${result.status}`" />
+          :title="`创建成功：${createdLoginName}，状态 ${result.status}。可在「绑定管理」里查看绑定。`" />
       </KeepAutoForm>
     </el-card>
   </div>
@@ -40,6 +40,9 @@ const form = reactive({
 })
 const loading = ref(false)
 const result = ref<RegistrationResponse | null>(null)
+// 创建成功后表单会被清空，但提示里要说明是「谁」创建成功了；
+// 这里留住被创建者的登录名，避免为了显示而回读账号内部编号（uid 不对用户展示）。
+const createdLoginName = ref('')
 const keepFormRef = ref<{ clearCache: () => void } | null>(null)
 
 async function handleCreate() {
@@ -49,12 +52,14 @@ async function handleCreate() {
   loading.value = true
   result.value = null
   try {
-    result.value = await createProtectee({
+    const created = await createProtectee({
       loginName: form.loginName,
       password: form.password,
       displayName: form.displayName,
       emergencyNote: form.emergencyNote || undefined,
     })
+    result.value = created
+    createdLoginName.value = `${form.displayName}（${form.loginName}）`
     ElMessage.success('受护人创建成功')
     keepFormRef.value?.clearCache()
     form.loginName = ''

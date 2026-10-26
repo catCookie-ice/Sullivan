@@ -99,19 +99,6 @@ public final class StatusLabels {
     }
 
     // ------------------------------------------------------------------
-    // 公益活动（ActivityDtos.ActivityResponse.status）
-    // ------------------------------------------------------------------
-
-    @NonNull
-    public static Label activity(@Nullable String status) {
-        return switch (normalize(status)) {
-            case "RECRUITING" -> new Label("招募中", Tone.SUCCESS);
-            case "IN_PROGRESS" -> new Label("进行中", Tone.WARNING);
-            case "ENDED" -> new Label("已结束", Tone.NEUTRAL);
-            case "CANCELLED" -> new Label("已取消", Tone.DANGER);
-            default -> unknown(status);
-        };
-    }
 
     // ------------------------------------------------------------------
     // 角色

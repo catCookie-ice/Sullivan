@@ -20,8 +20,8 @@ import java.util.List;
  * <p>时间字段一律不用 {@code LocalDateTime}：Gson 没有内置适配器，要额外注册
  * 序列化器才能收敛格式。客户端真正需要的是「还剩几秒」，服务端已经给了
  * {@code ttlSeconds}，所以 {@code expiresAt} 干脆用 String 收下不解析。
- * 这条在 {@link ActivityDtos} 里也适用 —— 服务端的 {@code LocalDateTime}
- * 到了这边一律是 String，显示时只做截断，不做时区换算。
+ * 服务端的 {@code LocalDateTime} 到了这边一律是 String，显示时只做截断，
+ * 不做时区换算。
  */
 public final class AuthDtos {
 

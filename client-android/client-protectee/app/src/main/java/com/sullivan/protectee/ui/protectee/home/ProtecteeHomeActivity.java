@@ -16,8 +16,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.sullivan.protectee.R;
 import com.sullivan.protectee.data.session.SessionStore;
-import com.sullivan.protectee.ui.common.activity.ActivityListActivity;
 import com.sullivan.protectee.ui.common.realtime.RealtimeActivity;
+import com.sullivan.protectee.ui.common.voice.VoiceMessageActivity;
 import com.sullivan.protectee.ui.common.binding.BindingListActivity;
 import com.sullivan.protectee.ui.protectee.login.QrLoginActivity;
 import com.sullivan.protectee.ui.protectee.binding.BindCodeActivity;
@@ -91,8 +91,8 @@ public class ProtecteeHomeActivity extends AppCompatActivity {
 
         bindMemberCard(R.id.protectee_card_bind_code, BindCodeActivity.class);
         bindMemberCard(R.id.protectee_card_bindings, BindingListActivity.class);
-        bindMemberCard(R.id.protectee_card_activities, ActivityListActivity.class);
         bindMemberCard(R.id.protectee_card_realtime, RealtimeActivity.class);
+        bindMemberCard(R.id.protectee_card_voice, VoiceMessageActivity.class);
     }
 
     @Override

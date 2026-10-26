@@ -18,14 +18,19 @@ import sullivan.serverjava.web.LookupDtos.OrganizationLookupResponse;
 import sullivan.serverjava.web.LookupDtos.UserLookupResponse;
 
 /**
- * 按唯一标识（ID）查找各业务对象。
+ * 按唯一标识（ID）或登录名查找各业务对象。
  *
- * <p>志愿者、监护人、受护人均为自然人账号，统一通过 GET /users/{id} 按 ID 查找，
- * 以返回的 roles 区分当前角色；机构与管理员各有独立接口。</p>
+ * <p>志愿者、监护人、受护人均为自然人账号，可通过 {@code GET /users/{id}} 按 ID 或
+ * {@code GET /users/by-login-name/{loginName}} 按登录名查找，以返回的 roles 区分当前角色；
+ * 机构与管理员各有独立接口。</p>
+ *
+ * <p><b>面向用户的查找一律用登录名</b>（00 §7 第 11 条）：账号 ID 是 26 位随机串，
+ * 既记不住也抄不对，只适合作为内部主键。按 ID 的端点保留，供已有客户端与调试使用，
+ * 但不得再作为界面上唯一的入口。</p>
  */
 @RestController
 @RequestMapping("/api/v1")
-@Tag(name = "对象查找", description = "按唯一标识（ID）查找业务对象。需登录；返回字段不含密码哈希等敏感信息。")
+@Tag(name = "对象查找", description = "按登录名或唯一标识查找业务对象。需登录；返回字段不含密码哈希等敏感信息。")
 @SecurityRequirement(name = "bearerAuth")
 public class LookupController {
     private final LookupService lookupService;
@@ -34,10 +39,22 @@ public class LookupController {
         this.lookupService = lookupService;
     }
 
+    @GetMapping("/users/by-login-name/{loginName}")
+    @Operation(summary = "按登录名查找自然人（志愿者/监护人/受护人）",
+            description = "精确匹配登录名。志愿者、监护人、受护人共用本接口，以 roles 区分。"
+                    + "不存在时返回 404，提示语与「无权查看」一致，避免被用来枚举账号。"
+                    + "这是界面应当使用的查找方式。")
+    public UserLookupResponse findUserByLoginName(
+            @Parameter(description = "自然人登录名（全局唯一，精确匹配）", example = "protectee_wang")
+            @PathVariable String loginName) {
+        return lookupService.findUserByLoginName(loginName);
+    }
+
     @GetMapping("/users/{userId}")
     @Operation(summary = "按唯一标识查找自然人（志愿者/监护人/受护人）",
             description = "任何已登录用户可按账号 ID 查找自然人，返回其状态、显示名与当前生效角色集合。"
-                    + "志愿者、监护人、受护人共用本接口，以 roles 区分。")
+                    + "志愿者、监护人、受护人共用本接口，以 roles 区分。"
+                    + "该端点保留给内部与调试使用；界面应改用 by-login-name。")
     public UserLookupResponse findUser(
             @Parameter(description = "自然人账号唯一标识", example = "u_1234567890")
             @PathVariable String userId) {

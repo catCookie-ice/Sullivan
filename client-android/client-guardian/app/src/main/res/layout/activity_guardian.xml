@@ -249,6 +249,33 @@
                 android:textAppearance="@style/TextAppearance.Sullivan.Body" />
         </LinearLayout>
 
+        <!-- 语音留言：不需要对方同时在场，所以单独一张卡，不并到实时会话里。 -->
+        <LinearLayout
+            android:id="@+id/guardian_card_voice"
+            style="@style/Widget.Sullivan.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/an_space_m"
+            android:clickable="true"
+            android:contentDescription="@string/guardian_action_voice_desc"
+            android:focusable="true"
+            android:minHeight="96dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/guardian_action_voice"
+                android:textAppearance="@style/TextAppearance.Sullivan.Title" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/an_space_s"
+                android:text="@string/guardian_action_voice_desc"
+                android:textAppearance="@style/TextAppearance.Sullivan.Body" />
+        </LinearLayout>
+
         <!-- 志愿者申请：只对「还不是志愿者」的账号显示，由代码按 roles 置可见性。 -->
         <LinearLayout
             android:id="@+id/guardian_card_volunteer_apply"

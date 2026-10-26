@@ -17,7 +17,8 @@
             </el-table-column>
             <el-table-column label="对方">
               <template #default="{ row }">
-                {{ row.guardianId === myUid ? row.protecteeId + '（受护人）' : row.guardianId + '（监护人）' }}
+                <div>{{ peerLabel(row) }}</div>
+                <div class="sub-text">{{ peerRoleLabel(row) }}</div>
               </template>
             </el-table-column>
             <el-table-column label="发起方" width="120">
@@ -53,24 +54,28 @@
           </el-table>
         </el-tab-pane>
 
-        <!-- 发起绑定 -->
+        <!-- 发起绑定：监护人端只保留「以监护人身份绑定受护人」这一个方向。
+             反向的「受护人申请监护人」由受护人端发起——同一个人在同一个应用里
+             两种身份并列，只会让人点错那个自己没有权限的方向（服务端会返回 404）。 -->
         <el-tab-pane label="发起绑定" name="request">
-          <el-form label-width="140px" style="max-width: 480px">
-            <el-form-item label="作为监护人绑定受护人">
-              <el-input v-model="protecteeId" placeholder="输入受护人账号 ID" />
+          <el-form label-width="140px" style="max-width: 520px">
+            <el-form-item label="受护人登录名">
+              <el-input
+                v-model="protecteeLoginName"
+                placeholder="输入受护人的登录名"
+                clearable
+                @keyup.enter="handleRequest"
+              />
             </el-form-item>
             <el-form-item>
-              <el-button type="primary" :loading="loading" @click="handleRequest('guardian')">
-                监护人发起绑定
+              <el-button type="primary" :loading="loading" @click="handleRequest">
+                以监护人身份绑定受护人
               </el-button>
-            </el-form-item>
-            <el-form-item label="作为受护人申请监护人">
-              <el-input v-model="guardianId" placeholder="输入监护人账号 ID" />
             </el-form-item>
             <el-form-item>
-              <el-button :loading="loading" @click="handleRequest('protectee')">
-                受护人申请绑定
-              </el-button>
+              <span class="sub-text">
+                绑定发起后需要对方在自己的应用里确认；若双方已有待确认或已生效的绑定，服务端会拒绝重复发起。
+              </span>
             </el-form-item>
           </el-form>
         </el-tab-pane>
@@ -78,20 +83,29 @@
         <!-- 用户查找 -->
         <el-tab-pane label="用户查找" name="lookup">
           <el-form :inline="true">
-            <el-form-item label="账号 ID">
-              <el-input v-model="lookupUserId" placeholder="按唯一标识查找用户" style="width: 280px" />
+            <el-form-item label="登录名">
+              <el-input
+                v-model="lookupLoginName"
+                placeholder="按登录名查找用户"
+                style="width: 280px"
+                clearable
+                @keyup.enter="handleLookup"
+              />
             </el-form-item>
             <el-form-item>
               <el-button :loading="loading" @click="handleLookup">查找</el-button>
             </el-form-item>
           </el-form>
           <el-descriptions v-if="looked" :column="1" border>
-            <el-descriptions-item label="ID">{{ looked.id }}</el-descriptions-item>
-            <el-descriptions-item label="显示名">{{ looked.displayName }}</el-descriptions-item>
-            <el-descriptions-item label="主角色">{{ looked.roleCode }}</el-descriptions-item>
-            <el-descriptions-item label="角色集合">{{ looked.roles.join(' / ') }}</el-descriptions-item>
+            <el-descriptions-item label="显示名">{{ looked.displayName || '—' }}</el-descriptions-item>
+            <el-descriptions-item label="登录名">{{ looked.loginName }}</el-descriptions-item>
+            <el-descriptions-item label="主角色">{{ roleText(looked.roleCode) }}</el-descriptions-item>
+            <el-descriptions-item label="角色集合">
+              {{ looked.roles.map(roleText).join(' / ') }}
+            </el-descriptions-item>
             <el-descriptions-item label="兼任志愿者">{{ looked.alsoVolunteer ? '是' : '否' }}</el-descriptions-item>
           </el-descriptions>
+          <el-empty v-else description="输入登录名后查询账号" />
         </el-tab-pane>
       </el-tabs>
     </el-card>
@@ -102,26 +116,26 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  requestBinding,
-  requestBindingByProtectee,
   acceptBinding,
-  rejectBinding,
   cancelBinding,
-  terminateBinding,
   listMyBindings,
-} from '@/api/guardian'
-import { getUser } from '@/api/lookup'
+  rejectBinding,
+  requestBindingByGuardian,
+  terminateBinding,
+} from '@/api/binding'
+import { getUserByLoginName } from '@/api/lookup'
 import type { BindingResponse, UserLookupResponse } from '@/types/api'
 import { useAuthStore } from '@/stores/auth'
+import { personLabel, personSubLabel } from '@/utils/display'
 
 const auth = useAuthStore()
+// uid 只用于判断「我是这条绑定的哪一方」，不出现在界面上
 const myUid = auth.principalId
 
 const tab = ref('list')
 const bindings = ref<BindingResponse[]>([])
-const protecteeId = ref('')
-const guardianId = ref('')
-const lookupUserId = ref('')
+const protecteeLoginName = ref('')
+const lookupLoginName = ref('')
 const loading = ref(false)
 const looked = ref<UserLookupResponse | null>(null)
 
@@ -142,35 +156,103 @@ function isReceiver(row: BindingResponse) {
   return row.requestedBy !== myUid && (row.guardianId === myUid || row.protecteeId === myUid)
 }
 
+/** 我是监护人时对方是受护人，反之亦然。 */
+function iAmGuardian(row: BindingResponse): boolean {
+  return row.guardianId === myUid
+}
+
+/** 对方的展示名：显示名 > 登录名 > 未知用户。uid 永不展示。 */
+function peerLabel(row: BindingResponse): string {
+  return iAmGuardian(row)
+    ? personLabel(row.protecteeName, row.protecteeLoginName)
+    : personLabel(row.guardianName, row.guardianLoginName)
+}
+
+function peerRoleLabel(row: BindingResponse): string {
+  const role = iAmGuardian(row) ? '受护人' : '监护人'
+  const sub = iAmGuardian(row)
+    ? personSubLabel(row.protecteeName, row.protecteeLoginName)
+    : personSubLabel(row.guardianName, row.guardianLoginName)
+  return sub ? `${role}${sub}` : role
+}
+
+/** 角色码转中文，避免把 GUARDIAN 这类内部代码直接摆给用户。 */
+function roleText(code: string): string {
+  const map: Record<string, string> = {
+    GUARDIAN: '监护人',
+    PROTECTEE: '受护人',
+    VOLUNTEER: '志愿者',
+    ORG_ADMIN: '机构管理员',
+    PLATFORM_ADMIN: '平台管理员',
+  }
+  return map[code] || code
+}
+
 async function handle(row: BindingResponse, action: 'accept' | 'reject' | 'cancel' | 'terminate') {
   if (action === 'terminate' || action === 'reject') {
     const label = action === 'terminate' ? '解除绑定' : '拒绝绑定请求'
-    await ElMessageBox.confirm(`确认${label}？`, '确认操作', { type: 'warning' }).catch(() => 'cancel')
-    if (action === 'terminate') {
-      await terminateBinding(row.id)
-      ElMessage.success('已解除绑定')
-    } else {
-      await rejectBinding(row.id)
-      ElMessage.success('已拒绝')
+    const confirmed = await ElMessageBox.confirm(`确认${label}？`, '确认操作', {
+      type: 'warning',
+    }).catch(() => false)
+    if (!confirmed) return
+    try {
+      if (action === 'terminate') {
+        await terminateBinding(row.id)
+        ElMessage.success('已解除绑定')
+      } else {
+        await rejectBinding(row.id)
+        ElMessage.success('已拒绝')
+      }
+    } catch (e: any) {
+      ElMessage.error(e.response?.data?.error || '操作失败')
     }
   } else if (action === 'accept') {
-    const res = await acceptBinding(row.id)
-    ElMessage.success(`已确认，状态：${res.status}，主绑定：${res.primary}`)
+    try {
+      const res = await acceptBinding(row.id)
+      ElMessage.success(`已确认，状态：${statusText(res.status)}，主绑定：${res.primary ? '是' : '否'}`)
+    } catch (e: any) {
+      ElMessage.error(e.response?.data?.error || '确认失败')
+    }
   } else {
-    await cancelBinding(row.id)
-    ElMessage.success('已取消')
+    try {
+      await cancelBinding(row.id)
+      ElMessage.success('已取消')
+    } catch (e: any) {
+      ElMessage.error(e.response?.data?.error || '取消失败')
+    }
   }
   await load()
 }
 
-async function handleRequest(kind: 'guardian' | 'protectee') {
-  const id = kind === 'guardian' ? protecteeId.value : guardianId.value
-  if (!id) return ElMessage.warning(kind === 'guardian' ? '请输入受护人 ID' : '请输入监护人 ID')
+/**
+ * 发起绑定：界面收登录名，先查成 uid 再提交。
+ *
+ * 为什么不直接提交登录名：绑定接口的 targetId 是账号主键，
+ * 服务端不接受登录名——转换必须发生在这里。
+ */
+async function handleRequest() {
+  const login = protecteeLoginName.value.trim()
+  if (!login) return ElMessage.warning('请输入受护人的登录名')
   loading.value = true
   try {
-    const res =
-      kind === 'guardian' ? await requestBinding(id) : await requestBindingByProtectee(id)
-    ElMessage.success(`绑定请求已发起，状态：${res.status}，绑定 ID：${res.id}`)
+    let target: UserLookupResponse
+    try {
+      target = await getUserByLoginName(login)
+    } catch (e: any) {
+      ElMessage.error(e.response?.data?.error || `没有找到登录名为「${login}」的账号`)
+      return
+    }
+    if (target.id === myUid) {
+      ElMessage.warning('不能绑定自己')
+      return
+    }
+    const res = await requestBindingByGuardian(target.id)
+    ElMessage.success(
+      `已向 ${personLabel(target.displayName, target.loginName)} 发起绑定，等待对方确认`,
+    )
+    protecteeLoginName.value = ''
+    if (res) await load()
+    tab.value = 'list'
   } catch (e: any) {
     ElMessage.error(e.response?.data?.error || '发起失败')
   } finally {
@@ -179,10 +261,11 @@ async function handleRequest(kind: 'guardian' | 'protectee') {
 }
 
 async function handleLookup() {
-  if (!lookupUserId.value) return ElMessage.warning('请输入账号 ID')
+  const login = lookupLoginName.value.trim()
+  if (!login) return ElMessage.warning('请输入登录名')
   loading.value = true
   try {
-    looked.value = await getUser(lookupUserId.value)
+    looked.value = await getUserByLoginName(login)
   } catch (e: any) {
     looked.value = null
     ElMessage.error(e.response?.data?.error || '查找失败')
@@ -215,3 +298,10 @@ function statusText(status: string) {
   return map[status] || status
 }
 </script>
+
+<style scoped>
+.sub-text {
+  font-size: 12px;
+  color: var(--ink-soft, #7a7264);
+}
+</style>

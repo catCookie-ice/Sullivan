@@ -109,6 +109,10 @@ dependencies {
 
     // 二维码：解码（扫码页的 ZXing 多格式 Reader）。
     // 生成那一侧（QrBitmapGenerator）已随受护人端拆走。
+    // WebRTC：语音/视频通话与监护人查看受护人摄像头的媒体通道。
+    // 信令走既有的 WebSocket（RealtimeSocket），媒体走这里。
+    implementation(libs.webrtc)
+
     implementation(libs.zxing.core)
 
     testImplementation(libs.junit)

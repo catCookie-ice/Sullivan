@@ -27,6 +27,7 @@ const router = createRouter({
         { path: 'bindings', name: 'Bindings', component: () => import('@/views/protectee/BindingManage.vue') },
         { path: 'activities', name: 'Activities', component: () => import('@/views/protectee/ActivityList.vue') },
         { path: 'realtime', name: 'RealtimeDemo', component: () => import('@/views/protectee/RealtimeDemo.vue') },
+        { path: 'voice', name: 'VoiceMessages', component: () => import('@/views/protectee/VoiceMessagePanel.vue') },
       ],
     },
     {

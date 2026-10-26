@@ -9,9 +9,11 @@ import sullivan.serverjava.common.ApiException;
 import sullivan.serverjava.common.IdGenerator;
 import sullivan.serverjava.domain.GuardianBinding;
 import sullivan.serverjava.domain.UserAccount;
+import sullivan.serverjava.domain.UserProfile;
 import sullivan.serverjava.domain.UserRole;
 import sullivan.serverjava.mapper.GuardianBindingMapper;
 import sullivan.serverjava.mapper.UserAccountMapper;
+import sullivan.serverjava.mapper.UserProfileMapper;
 import sullivan.serverjava.mapper.UserRoleMapper;
 import sullivan.serverjava.web.BindingDtos.BindingRequest;
 import sullivan.serverjava.web.RegistrationDtos.BindingResponse;
@@ -33,12 +35,14 @@ public class BindingService {
     private final GuardianBindingMapper guardianBindingMapper;
     private final UserAccountMapper userAccountMapper;
     private final UserRoleMapper userRoleMapper;
+    private final UserProfileMapper userProfileMapper;
 
     public BindingService(GuardianBindingMapper guardianBindingMapper, UserAccountMapper userAccountMapper,
-                          UserRoleMapper userRoleMapper) {
+                          UserRoleMapper userRoleMapper, UserProfileMapper userProfileMapper) {
         this.guardianBindingMapper = guardianBindingMapper;
         this.userAccountMapper = userAccountMapper;
         this.userRoleMapper = userRoleMapper;
+        this.userProfileMapper = userProfileMapper;
     }
 
     /** 扫码绑定的结果：{@code alreadyBound=true} 表示关系此前已生效，本次扫码是幂等重扫。 */
@@ -230,11 +234,43 @@ public class BindingService {
 
     /** 我的绑定与请求列表（作为监护人或受护人参与的所有关系）。 */
     public List<BindingResponse> listMyBindings(String callerId) {
-        return guardianBindingMapper.selectList(Wrappers.<GuardianBinding>lambdaQuery()
-                        .and(w -> w.eq(GuardianBinding::getGuardianUid, callerId)
-                                .or().eq(GuardianBinding::getProtecteeUid, callerId))
-                        .orderByDesc(GuardianBinding::getCreatedAt))
-                .stream().map(this::toBindingResponse).toList();
+        List<GuardianBinding> bindings = guardianBindingMapper.selectList(Wrappers.<GuardianBinding>lambdaQuery()
+                .and(w -> w.eq(GuardianBinding::getGuardianUid, callerId)
+                        .or().eq(GuardianBinding::getProtecteeUid, callerId))
+                .orderByDesc(GuardianBinding::getCreatedAt));
+        return toBindingResponses(bindings);
+    }
+
+    /**
+     * 批量转换，一次补齐双方名字。
+     *
+     * <p><b>为什么不在 {@code toBindingResponse} 里逐条查名字</b>：那样每条关系要查两次
+     * 账号、两次资料，十条绑定就是四十次查询。绑定列表是打开频率很高的页面，
+     * 这种 N+1 会把「进入绑定管理」变成一个能感觉到的卡顿。
+     */
+    private List<BindingResponse> toBindingResponses(List<GuardianBinding> bindings) {
+        if (bindings.isEmpty()) {
+            return List.of();
+        }
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        for (GuardianBinding binding : bindings) {
+            ids.add(binding.getGuardianUid());
+            ids.add(binding.getProtecteeUid());
+        }
+        ids.remove(null);
+        java.util.Map<String, String> loginNames = new java.util.HashMap<>();
+        java.util.Map<String, String> displayNames = new java.util.HashMap<>();
+        if (!ids.isEmpty()) {
+            userAccountMapper.selectBatchIds(ids)
+                    .forEach(account -> loginNames.put(account.getId(), account.getLoginName()));
+            userProfileMapper.selectList(Wrappers.<UserProfile>lambdaQuery().in(UserProfile::getUserId, ids))
+                    .forEach(profile -> {
+                        if (profile.getDisplayName() != null && !profile.getDisplayName().isBlank()) {
+                            displayNames.put(profile.getUserId(), profile.getDisplayName());
+                        }
+                    });
+        }
+        return bindings.stream().map(binding -> toBindingResponse(binding, loginNames, displayNames)).toList();
     }
 
     /** 定时任务：将超过 7 天仍未处理的 PENDING 绑定置为 EXPIRED。 */
@@ -388,9 +424,37 @@ public class BindingService {
                 || roleCode.equals(userAccountMapper.selectById(userId).getRoleCode());
     }
 
+    /**
+     * 单条转换。名字按需查（单条路径上的调用方都是「刚操作完这一条」的场景），
+     * 列表路径走 {@link #toBindingResponses} 的批量版本。
+     */
     private BindingResponse toBindingResponse(GuardianBinding binding) {
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        ids.add(binding.getGuardianUid());
+        ids.add(binding.getProtecteeUid());
+        ids.remove(null);
+        java.util.Map<String, String> loginNames = new java.util.HashMap<>();
+        java.util.Map<String, String> displayNames = new java.util.HashMap<>();
+        if (!ids.isEmpty()) {
+            userAccountMapper.selectBatchIds(ids)
+                    .forEach(account -> loginNames.put(account.getId(), account.getLoginName()));
+            userProfileMapper.selectList(Wrappers.<UserProfile>lambdaQuery().in(UserProfile::getUserId, ids))
+                    .forEach(profile -> {
+                        if (profile.getDisplayName() != null && !profile.getDisplayName().isBlank()) {
+                            displayNames.put(profile.getUserId(), profile.getDisplayName());
+                        }
+                    });
+        }
+        return toBindingResponse(binding, loginNames, displayNames);
+    }
+
+    private BindingResponse toBindingResponse(GuardianBinding binding,
+                                              java.util.Map<String, String> loginNames,
+                                              java.util.Map<String, String> displayNames) {
         return new BindingResponse(binding.getId(), binding.getStatus(), binding.getGuardianUid(),
                 binding.getProtecteeUid(), Boolean.TRUE.equals(binding.getPermanentFlag()),
-                Boolean.TRUE.equals(binding.getIsPrimary()), binding.getRequestedBy());
+                Boolean.TRUE.equals(binding.getIsPrimary()), binding.getRequestedBy(),
+                loginNames.get(binding.getGuardianUid()), loginNames.get(binding.getProtecteeUid()),
+                displayNames.get(binding.getGuardianUid()), displayNames.get(binding.getProtecteeUid()));
     }
 }

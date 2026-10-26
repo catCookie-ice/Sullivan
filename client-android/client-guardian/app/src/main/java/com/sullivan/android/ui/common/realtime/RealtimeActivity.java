@@ -9,10 +9,13 @@ import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.RadioGroup;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -28,14 +31,18 @@ import com.sullivan.android.data.api.ApiClient;
 import com.sullivan.android.data.api.ApiException;
 import com.sullivan.android.data.api.ResultCallback;
 import com.sullivan.android.data.api.dto.AlertDtos;
+import com.sullivan.android.data.api.dto.BindingDtos;
 import com.sullivan.android.data.api.dto.RealtimeDtos;
 import com.sullivan.android.data.session.SessionStore;
-import com.sullivan.android.ui.guardian.call.AlertLocationSummary;
-import com.sullivan.android.ui.guardian.call.AlertQuery;
 import com.sullivan.android.service.websocket.RealtimeSocket;
+import com.sullivan.android.service.webrtc.RealtimeCall;
 import com.sullivan.android.ui.common.components.ServerTime;
 import com.sullivan.android.ui.common.components.StateView;
 import com.sullivan.android.ui.common.components.StatusLabels;
+import com.sullivan.android.ui.guardian.call.AlertLocationSummary;
+import com.sullivan.android.ui.guardian.call.AlertQuery;
+
+import org.webrtc.VideoTrack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,27 +50,31 @@ import java.util.List;
 import retrofit2.Call;
 
 /**
- * 实时会话：列表 + 发起/接受/拒绝/结束 + 连接后的消息中继。
+ * 实时会话：选人发起（语音 / 视频 / 查看受护人摄像头）、接听、挂断、文字中继。
  *
- * <p>对应 web 的 {@code guardian/RealtimeDemo.vue}，但有一处刻意的差别：
- * <b>不要求用户手填「对方 UID」</b>。web 端让用户填，因为那一页是调试页；
- * 手机上的问题永远是「和谁说话」，而对方在会话记录里本来就有 ——
- * 再让用户从别处抄一遍账号 ID，只会多一个抄错的入口。
+ * <p><b>这一页不出现 uid</b>。发起会话时选的是已绑定的人，列表里显示的是
+ * 登录名或显示名；uid 只在提交那一刻用作参数。用户既不知道自己的 uid，
+ * 也念不出别人的 —— 把它摆到界面上，等于要求用户记住一个不该存在的概念
+ * （00 §7 第 11 条）。
+ *
+ * <p><b>接听只有一次点击</b>：接收方点「接听」就地进入会话，不再有第二道确认。
+ * 会话本来就是「对方按了才响」的东西，再问一遍「你确定要接吗」只是多一次误触
+ * 的机会。
+ *
+ * <p><b>发起方不会无限等待</b>：60 秒没人接就显示「对方未接听」并停止轮询。
+ * 一直转圈的界面会被用户理解成「还在响」，而实际上什么都不会发生了。
  *
  * <p><b>为什么列表是 LinearLayout 而不是 RecyclerView</b>：一个人同时进行的会话
  * 是个位数，而且每一行的按钮组合都不同（见 {@link #bindRow}）。为它写一套
- * Adapter + ViewHolder 换不来任何东西，反而要多写一个和 row_session 一一对应的类。
- *
- * <p><b>长连接不重连</b>：见 {@link RealtimeSocket} 的类注释。断开就是断开，
- * 界面上说清楚，用户重新点「连接」。
- *
- * <p><b>消息不留存</b>：中继是纯转发，服务端不落库。所以断开时把日志面板整个收起来，
- * 而不是留着 —— 留着会让人以为「这些还能翻回来」。
+ * Adapter + ViewHolder 换不来任何东西。
  */
 public class RealtimeActivity extends AppCompatActivity {
 
     /** 日志最多留多少行。中继不限速，聊久了不加这个上界就是一个无界增长的 String。 */
     private static final int MAX_LOG_LINES = 200;
+
+    /** 呼叫超时。超过它就不再等，也不再轮询。 */
+    private static final long RING_TIMEOUT_MS = 60_000L;
 
     private static final String STATUS_REQUESTED = "REQUESTED";
     private static final String STATUS_ACTIVE = "ACTIVE";
@@ -79,15 +90,19 @@ public class RealtimeActivity extends AppCompatActivity {
     private LinearLayout listContainer;
     private StateView stateView;
     private TextView statusText;
-    private EditText targetInput;
+    private Spinner targetSpinner;
+    private TextView targetEmpty;
+    private RadioGroup typeGroup;
     private EditText messageInput;
     private Button createButton;
     private Button refreshButton;
 
     private LinearLayout chatCard;
     private TextView chatTitle;
+    private TextView callStateView;
+    private org.webrtc.SurfaceViewRenderer remoteVideo;
     /**
-     * 受护人位置条。普通会话（监护人主动发起的）没有报警，整条 gone。
+     * 受护人位置条。普通会话没有报警，整条 gone。
      *
      * <p>位置放在这里而不是会话列表的某一行：列表是"选一条会话"的地方，
      * 而位置是"我已经决定要看这个人了，他到底在哪"的信息。
@@ -101,16 +116,45 @@ public class RealtimeActivity extends AppCompatActivity {
     private Button disconnectButton;
 
     private RealtimeSocket socket;
+    @Nullable
+    private RealtimeCall call;
 
     /** 当前这条连接对应的会话；null = 没连。 */
     @Nullable
     private RealtimeDtos.SessionResponse connected;
+
+    /** 已绑定的对方（用于选人发起）。{@code label} 是给人看的，{@code uid} 是提交用的。 */
+    private final List<Contact> contacts = new ArrayList<>();
+
+    /** 我发起的、还在等对方接听的那条会话。超时后置空。 */
+    @Nullable
+    private String ringingSessionId;
 
     /** 日志行。带颜色，所以不能只存一个 String 直接往上拼。 */
     private final List<LogLine> logLines = new ArrayList<>();
 
     @Nullable
     private Call<?> pendingCall;
+
+    private final android.os.Handler ringHandler =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+
+    /** 选人下拉的一个候选项。 */
+    private static final class Contact {
+        final String uid;
+        final String label;
+
+        Contact(String uid, String label) {
+            this.uid = uid;
+            this.label = label;
+        }
+
+        @NonNull
+        @Override
+        public String toString() {
+            return label;
+        }
+    }
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -128,13 +172,17 @@ public class RealtimeActivity extends AppCompatActivity {
         listContainer = findViewById(R.id.session_list);
         stateView = findViewById(R.id.session_state);
         statusText = findViewById(R.id.session_status_text);
-        targetInput = findViewById(R.id.session_target);
+        targetSpinner = findViewById(R.id.session_target);
+        targetEmpty = findViewById(R.id.session_target_empty);
+        typeGroup = findViewById(R.id.session_types);
         messageInput = findViewById(R.id.session_message);
         createButton = findViewById(R.id.session_create);
         refreshButton = findViewById(R.id.session_refresh);
 
         chatCard = findViewById(R.id.session_chat);
         chatTitle = findViewById(R.id.session_chat_title);
+        callStateView = findViewById(R.id.session_call_state);
+        remoteVideo = findViewById(R.id.session_remote_video);
         alertLocationView = findViewById(R.id.session_alert_location);
         logView = findViewById(R.id.session_log);
         logScroll = findViewById(R.id.session_log_scroll);
@@ -144,23 +192,29 @@ public class RealtimeActivity extends AppCompatActivity {
         disconnectButton = findViewById(R.id.session_disconnect);
 
         socket = new RealtimeSocket();
+        RealtimeCall.attachRenderer(remoteVideo);
+
+        // 默认语音：三种形态里最省权限、最不容易失败的一种。
+        // 默认给视频会让没有摄像头权限的用户第一次点下去就撞在权限弹窗上。
+        typeGroup.check(R.id.session_type_voice);
 
         createButton.setOnClickListener(view -> createSession());
         refreshButton.setOnClickListener(view -> load());
         sendButton.setOnClickListener(view -> sendMessage());
         pingButton.setOnClickListener(view -> sendPing());
         disconnectButton.setOnClickListener(view -> {
-            disconnect();
+            hangupCurrent();
             toast(getString(R.string.session_disconnected));
         });
 
         load();
+        loadContacts();
     }
 
     @Override
     protected void onStop() {
         // 退到后台就断开：连接是「当面用一下」的东西，留着它会得到一个
-        // 用户看不见、服务端还占着的心跳。回来时重新点「连接」即可。
+        // 用户看不见、服务端还占着的心跳，而且摄像头还开着。
         if (connected != null) {
             disconnect();
         } else {
@@ -175,8 +229,82 @@ public class RealtimeActivity extends AppCompatActivity {
             pendingCall.cancel();
             pendingCall = null;
         }
+        ringHandler.removeCallbacksAndMessages(null);
+        closeCall();
         socket.close();
         super.onDestroy();
+    }
+
+    // ------------------------------------------------------------------
+    // 联系人（选人）
+    // ------------------------------------------------------------------
+
+    /**
+     * 拉已生效的绑定，把对方放进下拉里。
+     *
+     * <p>为什么不在这一页让人手填登录名：会话的前提就是「双方已绑定」，
+     * 那么可选的对象本来就只有那几个。让人手填等于允许输入一个必然被服务端
+     * 拒绝的字符串。
+     */
+    private void loadContacts() {
+        ApiClient.get(this).listBindings()
+                .enqueue(new ResultCallback<List<BindingDtos.BindingResponse>>() {
+                    @Override
+                    public void onSuccess(@Nullable List<BindingDtos.BindingResponse> body) {
+                        contacts.clear();
+                        if (body != null) {
+                            for (BindingDtos.BindingResponse binding : body) {
+                                Contact contact = contactOf(binding);
+                                if (contact != null) {
+                                    contacts.add(contact);
+                                }
+                            }
+                        }
+                        renderContacts();
+                    }
+
+                    @Override
+                    public void onError(@NonNull ApiException error) {
+                        handleUnauthorized(error);
+                        // 联系人拉不到不影响看已有会话，所以不弹错误页，
+                        // 只让下方的「没有可联系的监护人」提示接管。
+                        renderContacts();
+                    }
+                });
+    }
+
+    @Nullable
+    private Contact contactOf(@NonNull BindingDtos.BindingResponse binding) {
+        if (!"ACTIVE".equalsIgnoreCase(binding.status)) {
+            // 只有已生效的绑定能通话。把待确认的也列出来，用户选了必然失败。
+            return null;
+        }
+        boolean iAmGuardian = myUid.equals(binding.guardianId);
+        String otherUid = iAmGuardian ? binding.protecteeId : binding.guardianId;
+        if (TextUtils.isEmpty(otherUid)) {
+            return null;
+        }
+        String name = iAmGuardian ? binding.protecteeName : binding.guardianName;
+        String loginName = iAmGuardian ? binding.protecteeLoginName : binding.guardianLoginName;
+        // 显示名优先，其次登录名。两个都没有就显示「已绑定的对方」而不是 uid。
+        String label = !TextUtils.isEmpty(name) ? name
+                : !TextUtils.isEmpty(loginName) ? loginName
+                : getString(R.string.session_contact_unnamed);
+        return new Contact(otherUid, label);
+    }
+
+    private void renderContacts() {
+        boolean empty = contacts.isEmpty();
+        targetEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
+        targetSpinner.setVisibility(empty ? View.GONE : View.VISIBLE);
+        createButton.setEnabled(!empty);
+        if (empty) {
+            return;
+        }
+        ArrayAdapter<Contact> adapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, contacts);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        targetSpinner.setAdapter(adapter);
     }
 
     // ------------------------------------------------------------------
@@ -203,7 +331,7 @@ public class RealtimeActivity extends AppCompatActivity {
             public void onError(@NonNull ApiException error) {
                 pendingCall = null;
                 handleUnauthorized(error);
-                stateView.showError(error.getMessage(), RealtimeActivity.this::load);
+                stateView.showError(error.getMessage(), () -> load());
             }
         });
     }
@@ -227,7 +355,6 @@ public class RealtimeActivity extends AppCompatActivity {
 
     private void bindRow(@NonNull View row, @NonNull RealtimeDtos.SessionResponse item) {
         boolean mine = myUid.equals(item.initiatorUid);
-        String counterpart = counterpartOf(item);
 
         StatusLabels.Label status = StatusLabels.session(item.status);
         TextView statusView = row.findViewById(R.id.session_status);
@@ -238,32 +365,28 @@ public class RealtimeActivity extends AppCompatActivity {
         ((TextView) row.findViewById(R.id.session_role)).setText(
                 mine ? R.string.session_row_role_mine : R.string.session_row_role_theirs);
         ((TextView) row.findViewById(R.id.session_counterpart)).setText(
-                TextUtils.isEmpty(counterpart)
-                        ? getString(R.string.session_row_counterpart_unknown)
-                        : getString(R.string.session_row_counterpart, counterpart));
+                getString(R.string.session_row_counterpart, counterpartLabel(item)));
 
         TextView meta = row.findViewById(R.id.session_meta);
+        String typeLabel = typeLabelOf(item.sessionType);
         if (STATUS_REQUESTED.equalsIgnoreCase(item.status)) {
             // 待接受时，比会话 ID 有用的是「现在卡在谁那里」。
-            meta.setText(mine ? R.string.session_row_waiting_mine
-                    : R.string.session_row_waiting_theirs);
+            meta.setText(getString(R.string.session_row_waiting_type,
+                    typeLabel, mine ? getString(R.string.session_row_waiting_mine)
+                            : getString(R.string.session_row_waiting_theirs)));
         } else {
-            meta.setText(getString(R.string.session_row_meta,
-                    item.id == null ? "—" : item.id, ServerTime.shortForm(item.createdAt)));
+            meta.setText(getString(R.string.session_row_meta_type,
+                    typeLabel, ServerTime.shortForm(item.createdAt)));
         }
 
-        // 三个动作按钮在布局里都已声明，这里只决定谁露面。
-        // 与 web 的规则一致：REQUESTED 只有**接收方**能接/拒（发起方没有撤回接口），
-        // ACTIVE 双方都能连接与结束，终态没有任何动作。
+        // ACTIVE 时主按钮是「接通」。REQUESTED 只有接收方能接/拒（发起方没有撤回接口）。
         boolean requestedToMe = STATUS_REQUESTED.equalsIgnoreCase(item.status) && !mine;
         boolean active = STATUS_ACTIVE.equalsIgnoreCase(item.status);
         bindAction(row, R.id.session_accept, requestedToMe,
-                () -> confirm(R.string.session_confirm_accept, () -> accept(item)));
-        bindAction(row, R.id.session_reject, requestedToMe,
-                () -> confirm(R.string.session_confirm_reject, () -> reject(item)));
+                () -> acceptAndConnect(item));
+        bindAction(row, R.id.session_reject, requestedToMe, () -> reject(item));
         bindAction(row, R.id.session_connect, active, () -> connect(item));
-        bindAction(row, R.id.session_end, active,
-                () -> confirm(R.string.session_confirm_end, () -> end(item)));
+        bindAction(row, R.id.session_end, active, () -> end(item));
     }
 
     private void bindAction(@NonNull View row, int buttonId, boolean visible,
@@ -280,19 +403,39 @@ public class RealtimeActivity extends AppCompatActivity {
         button.setOnClickListener(view -> action.run());
     }
 
-    /** 会话里的另一方。发起方看到的对方是 targetUid，接收方看到的对方是 initiatorUid。 */
+    /**
+     * 会话里的另一方**叫什么**。
+     *
+     * <p>会话响应现在带着双方的名字了，所以这里不再拼 uid ——
+     * 旧实现会把 {@code u_1759...} 直接摆在一行的大标题上，那是给开发者看的，
+     * 不是给用户看的。
+     */
     @NonNull
-    private String counterpartOf(@NonNull RealtimeDtos.SessionResponse item) {
-        String other = myUid.equals(item.initiatorUid) ? item.targetUid : item.initiatorUid;
-        return other == null ? "" : other;
+    private String counterpartLabel(@NonNull RealtimeDtos.SessionResponse item) {
+        boolean mine = myUid.equals(item.initiatorUid);
+        String name = mine ? item.targetName : item.initiatorName;
+        String loginName = mine ? item.targetLoginName : item.initiatorLoginName;
+        if (!TextUtils.isEmpty(name)) {
+            return name;
+        }
+        if (!TextUtils.isEmpty(loginName)) {
+            return loginName;
+        }
+        return getString(R.string.session_contact_unnamed);
     }
 
-    private void confirm(int messageRes, @NonNull Runnable onConfirm) {
-        new AlertDialog.Builder(this)
-                .setMessage(messageRes)
-                .setNegativeButton(R.string.action_cancel, null)
-                .setPositiveButton(R.string.action_ok, (dialog, which) -> onConfirm.run())
-                .show();
+    @NonNull
+    private String typeLabelOf(@Nullable String sessionType) {
+        if (sessionType == null) {
+            return getString(R.string.session_type_basic);
+        }
+        return switch (sessionType.toUpperCase()) {
+            case "VOICE" -> getString(R.string.session_type_voice_short);
+            case "VIDEO" -> getString(R.string.session_type_video_short);
+            case "CAMERA" -> getString(R.string.session_type_camera_short);
+            case "EMERGENCY" -> getString(R.string.session_type_emergency_short);
+            default -> getString(R.string.session_type_basic);
+        };
     }
 
     // ------------------------------------------------------------------
@@ -300,28 +443,35 @@ public class RealtimeActivity extends AppCompatActivity {
     // ------------------------------------------------------------------
 
     private void createSession() {
-        String target = text(targetInput);
-        if (TextUtils.isEmpty(target)) {
-            showStatus(getString(R.string.session_create_need_id), true);
+        Contact target = (Contact) targetSpinner.getSelectedItem();
+        if (target == null) {
+            showStatus(getString(R.string.session_create_need_contact), true);
             return;
         }
         if (pendingCall != null) {
             return;
         }
+        String type = selectedType();
         createButton.setEnabled(false);
         showStatus(getString(R.string.state_loading), false);
         Call<RealtimeDtos.SessionResponse> call = ApiClient.get(this)
-                .createSession(new RealtimeDtos.SessionCreateRequest(target));
+                .createSession(new RealtimeDtos.SessionCreateRequest(target.uid, type));
         pendingCall = call;
         call.enqueue(new ResultCallback<RealtimeDtos.SessionResponse>() {
             @Override
             public void onSuccess(@Nullable RealtimeDtos.SessionResponse body) {
                 pendingCall = null;
                 createButton.setEnabled(true);
-                // 清空输入框：这条请求已经变成列表里的一行了，留着它只会让人以为没发出去。
-                targetInput.setText("");
-                showStatus(getString(R.string.session_created), false);
+                String who = body == null ? target.label : counterpartLabel(body);
+                showStatus(getString(R.string.session_calling, who), false);
+                startRingTimeout(body == null ? null : body.id);
                 load();
+                if (body != null) {
+                    // 发起方在 REQUESTED 阶段就挂上长连接。
+                    // 不挂的话，对端点「接听」时服务端没有任何通道可以通知我 ——
+                    // 只能靠轮询列表，那就不叫「点一次确认就能通话」了。
+                    attachPendingChannel(body);
+                }
             }
 
             @Override
@@ -334,8 +484,73 @@ public class RealtimeActivity extends AppCompatActivity {
         });
     }
 
-    private void accept(RealtimeDtos.SessionResponse item) {
-        transition(ApiClient.get(this).acceptSession(item.id), R.string.session_done_accept);
+    /**
+     * 开始时长为 {@link #RING_TIMEOUT_MS} 的计时。
+     *
+     * <p>时间到了就把状态改成「对方未接听」。这一步是**界面自己的事**：
+     * 服务端不会替用户挂断一条没人接的请求，所以不在这里收尾，
+     * 那条 {@code REQUESTED} 会话会永远挂在列表里看起来还在响。
+     */
+    private void startRingTimeout(@Nullable String sessionId) {
+        ringHandler.removeCallbacksAndMessages(null);
+        if (sessionId == null) {
+            return;
+        }
+        ringingSessionId = sessionId;
+        ringHandler.postDelayed(() -> {
+            if (!sessionId.equals(ringingSessionId)) {
+                return;
+            }
+            ringingSessionId = null;
+            showStatus(getString(R.string.session_no_answer), true);
+            // 顺手结束掉：让列表里那条也变成终态，避免用户以后还去点它。
+            ApiClient.get(RealtimeActivity.this).endSession(sessionId)
+                    .enqueue(new ResultCallback<RealtimeDtos.SessionResponse>() {
+                        @Override
+                        public void onSuccess(@Nullable RealtimeDtos.SessionResponse body) {
+                            load();
+                        }
+
+                        @Override
+                        public void onError(@NonNull ApiException error) {
+                            load();
+                        }
+                    });
+        }, RING_TIMEOUT_MS);
+    }
+
+    /**
+     * 接听。**一次点击就进入会话**。
+     *
+     * <p>旧实现是「接受 → 状态变成 ACTIVE → 再去列表里点连接」，中间那一步
+     * 对用户毫无意义：他已经表达了「我要接」，剩下的就是把通话接起来。
+     */
+    private void acceptAndConnect(@NonNull RealtimeDtos.SessionResponse item) {
+        if (pendingCall != null) {
+            return;
+        }
+        // 用具体类型的局部变量而不是 pendingCall（它是 Call<?>）：
+        // 通配符的 enqueue 只接受 Callback<CAP#>，塞不进 ResultCallback<SessionResponse>。
+        Call<RealtimeDtos.SessionResponse> call = ApiClient.get(this).acceptSession(item.id);
+        pendingCall = call;
+        call.enqueue(new ResultCallback<RealtimeDtos.SessionResponse>() {
+            @Override
+            public void onSuccess(@Nullable RealtimeDtos.SessionResponse body) {
+                pendingCall = null;
+                showStatus(getString(R.string.session_done_accept), false);
+                load();
+                if (body != null) {
+                    connect(body);
+                }
+            }
+
+            @Override
+            public void onError(@NonNull ApiException error) {
+                pendingCall = null;
+                handleUnauthorized(error);
+                showStatus(getString(R.string.session_action_failed, error.getMessage()), true);
+            }
+        });
     }
 
     private void reject(RealtimeDtos.SessionResponse item) {
@@ -351,7 +566,7 @@ public class RealtimeActivity extends AppCompatActivity {
         transition(ApiClient.get(this).endSession(item.id), R.string.session_done_end);
     }
 
-    /** accept / reject / end 三个接口的请求与响应形状相同，差异只有那句提示。 */
+    /** reject / end 两个接口的请求与响应形状相同，差异只有那句提示。 */
     private void transition(@NonNull Call<RealtimeDtos.SessionResponse> call, int doneRes) {
         if (pendingCall != null) {
             return;
@@ -374,8 +589,35 @@ public class RealtimeActivity extends AppCompatActivity {
         });
     }
 
+    @NonNull
+    private String selectedType() {
+        int checked = typeGroup.getCheckedRadioButtonId();
+        if (checked == R.id.session_type_video) {
+            return RealtimeDtos.TYPE_VIDEO;
+        }
+        if (checked == R.id.session_type_camera) {
+            return RealtimeDtos.TYPE_CAMERA;
+        }
+        return RealtimeDtos.TYPE_VOICE;
+    }
+
+    /**
+     * 以「发起方等待中」的姿态挂上长连接，只等对方那一下确认。
+     *
+     * <p><b>为什么要提前挂</b>：服务端在对方接受时会把 {@code session.accepted} 推给
+     * 发起方，而这条推送走的是同一条长连接。发起方等到「连上」才连，
+     * 就永远收不到那条通知 —— 只能每两秒拉一次列表，于是「点一次确认就通话」
+     * 退化成「点一次确认 + 我恰好刷新到」。
+     *
+     * <p>此处**不建 PeerConnection**：会话还不是 ACTIVE，交换 SDP 没有意义。
+     * 收到 {@code session.accepted} 之后才走 {@link #connect}。
+     */
+    private void attachPendingChannel(@NonNull RealtimeDtos.SessionResponse item) {
+        socket.connect(session.baseUrl(), tokenOrEmpty(), item.id, myUid, listener);
+    }
+
     // ------------------------------------------------------------------
-    // 连接与消息
+    // 连接、媒体与消息
     // ------------------------------------------------------------------
 
     private void connect(@NonNull RealtimeDtos.SessionResponse item) {
@@ -384,9 +626,10 @@ public class RealtimeActivity extends AppCompatActivity {
         }
         releaseConnected();
         connected = item;
-        String counterpart = counterpartOf(item);
-        chatTitle.setText(getString(R.string.session_chat_title,
-                TextUtils.isEmpty(counterpart) ? "—" : counterpart));
+        ringingSessionId = null;
+        ringHandler.removeCallbacksAndMessages(null);
+
+        chatTitle.setText(getString(R.string.session_chat_title, counterpartLabel(item)));
         logLines.clear();
         renderLog();
         chatCard.setVisibility(View.VISIBLE);
@@ -395,10 +638,152 @@ public class RealtimeActivity extends AppCompatActivity {
         // 那是**错误的信息** —— 会把人指向另一个地点。
         showAlertLocation(null);
         loadAlertLocation(item.id);
+
+        RealtimeCall.Mode mode = mediaModeOf(item);
+        boolean hasMedia = mode != null;
+        callStateView.setVisibility(hasMedia ? View.VISIBLE : View.GONE);
+        remoteVideo.setVisibility(hasMedia && wantsVideoView(mode) ? View.VISIBLE : View.GONE);
+        if (hasMedia) {
+            // 先摆一句诚实的初始状态：「正在接通」而不是「已接通」。
+            callStateView.setText(R.string.session_call_connecting);
+        }
+
         // 会话面板在页面下方，连接成功后滚过去 —— 不滚的话，用户在页面上半部分
         // 看到的是「什么都没发生」，而实际上连接已经建立了。
         chatCard.post(() -> pageScroll.smoothScrollTo(0, chatCard.getTop()));
         socket.connect(session.baseUrl(), tokenOrEmpty(), item.id, myUid, listener);
+
+        if (hasMedia) {
+            prepareCall(mode);
+        }
+    }
+
+    /**
+     * 这条会话该用哪种媒体形态；{@code null} 表示这是纯文字会话（BASIC）。
+     *
+     * <p>EMERGENCY 按产品定义是视频通话（受护人报警时的紧急视频），
+     * 所以这里的两个分支都要认它。
+     */
+    @Nullable
+    private RealtimeCall.Mode mediaModeOf(@NonNull RealtimeDtos.SessionResponse item) {
+        String type = item.sessionType == null ? "BASIC" : item.sessionType.toUpperCase();
+        boolean iAmInitiator = myUid.equals(item.initiatorUid);
+        return switch (type) {
+            case "VOICE" -> RealtimeCall.Mode.VOICE;
+            case "VIDEO", "EMERGENCY" -> RealtimeCall.Mode.VIDEO;
+            // CAMERA：受护人拍、监护人看。监护人这一侧**绝不上行摄像头** ——
+            // 他是去看人的，不是把自己的画面送回给盲人。
+            case "CAMERA" -> iAmInitiator
+                    ? RealtimeCall.Mode.CAMERA_SEND : RealtimeCall.Mode.CAMERA_RECEIVE;
+            default -> null;
+        };
+    }
+
+    /** 哪些形态需要一块画面。纯语音只出状态文字，一块黑框没有意义。 */
+    private boolean wantsVideoView(@NonNull RealtimeCall.Mode mode) {
+        return mode != RealtimeCall.Mode.VOICE;
+    }
+
+    /**
+     * 取 ICE 配置后建 PeerConnection。
+     *
+     * <p><b>每次现取</b>：服务端下发的 TURN 凭据是短时有效的，缓存到本地
+     * 过一会儿就会失效，而失效的表现是「怎么都连不上」—— 那种问题用户查不出来。
+     */
+    private void prepareCall(@NonNull RealtimeCall.Mode mode) {
+        ApiClient.get(this).iceServers()
+                .enqueue(new ResultCallback<RealtimeDtos.IceServerResponse>() {
+                    @Override
+                    public void onSuccess(@Nullable RealtimeDtos.IceServerResponse body) {
+                        startCall(mode, body == null
+                                ? List.of() : List.of(body));
+                    }
+
+                    @Override
+                    public void onError(@NonNull ApiException error) {
+                        // 拿不到配置不等于一定打不通（同局域网可以靠本机候选直连），
+                        // 所以仍然尝试，但把话说明白。
+                        handleUnauthorized(error);
+                        startCall(mode, List.of());
+                        postCallState(getString(R.string.session_call_no_ice), false);
+                    }
+                });
+    }
+
+    private void startCall(@NonNull RealtimeCall.Mode mode,
+                           @NonNull List<RealtimeDtos.IceServerResponse> iceServers) {
+        if (connected == null) {
+            return;
+        }
+        call = new RealtimeCall(this, mode, callListener, this::sendSignalEnvelope);
+        // 由「发起方」发 offer，接收方等 offer。倒过来两端会互相等，
+        // 表现是一直停在「正在接通」。
+        boolean initiator = myUid.equals(connected.initiatorUid);
+        call.start(iceServers, initiator);
+    }
+
+    private final RealtimeCall.Listener callListener = new RealtimeCall.Listener() {
+        @Override
+        public void onLocalDescription(@NonNull String kind, @NonNull String sdp) {
+            JsonObject payload = new JsonObject();
+            payload.addProperty("kind", kind);
+            payload.addProperty("sdp", sdp);
+            sendSignalEnvelope(payload);
+        }
+
+        @Override
+        public void onLocalCandidate(@NonNull String sdpMid, int sdpMLineIndex,
+                                     @NonNull String candidate) {
+            JsonObject payload = new JsonObject();
+            payload.addProperty("kind", "candidate");
+            payload.addProperty("sdpMid", sdpMid);
+            payload.addProperty("sdpMLineIndex", sdpMLineIndex);
+            payload.addProperty("candidate", candidate);
+            sendSignalEnvelope(payload);
+        }
+
+        @Override
+        public void onRemoteVideoTrack(@NonNull VideoTrack track) {
+            remoteVideo.setVisibility(View.VISIBLE);
+            track.addSink(remoteVideo);
+        }
+
+        @Override
+        public void onState(@NonNull String message, boolean connectedNow) {
+            postCallState(message, connectedNow);
+        }
+
+        @Override
+        public void onError(@NonNull String message) {
+            // 通话层失败不要静默：用户会以为对方在听。
+            postCallState(message, false);
+            appendLog(getString(R.string.session_log_error, message), true);
+        }
+    };
+
+    /** 把信令塞进当前连接。没连上时返回 false —— 调用方据此知道这一条丢了。 */
+    private boolean sendSignalEnvelope(@NonNull JsonObject payload) {
+        RealtimeDtos.SessionResponse current = connected;
+        if (current == null || !socket.sendSignal(peerUidOf(current), payload)) {
+            appendLog(getString(R.string.session_log_error,
+                    getString(R.string.session_not_connected)), true);
+            return false;
+        }
+        return true;
+    }
+
+    private void postCallState(@NonNull String message, boolean connectedNow) {
+        callStateView.setVisibility(View.VISIBLE);
+        callStateView.setText(message);
+        callStateView.setTextColor(getColor(
+                connectedNow ? R.color.an_sage : R.color.an_terracotta));
+    }
+
+    /** 会话里的另一方 uid。信令与 relay 都要填它，服务端会校验。 */
+    @NonNull
+    private String peerUidOf(@NonNull RealtimeDtos.SessionResponse item) {
+        String other = myUid.equals(item.initiatorUid) ? item.targetUid : item.initiatorUid;
+        return other == null ? "" : other;
     }
 
     /**
@@ -460,7 +845,34 @@ public class RealtimeActivity extends AppCompatActivity {
                     appendLog(getString(mine ? R.string.session_log_mine : R.string.session_log_peer,
                             payloadText(envelope.payload)), false);
                 }
+                case "signal" -> {
+                    // 信令不写进日志：SDP 与候选是又长又没意义的技术细节，
+                    // 写进去会把真正的对话顶出屏幕。
+                    if (call != null && envelope.payload != null
+                            && envelope.payload.isJsonObject()) {
+                        call.onRemoteSignal(envelope.payload.getAsJsonObject());
+                    }
+                }
                 case "session.joined" -> appendLog(getString(R.string.session_log_joined), false);
+                case "session.accepted" -> {
+                    // 发起方专用：对方点了「接听」。这一步之后**不需要**我再点任何东西。
+                    appendLog(getString(R.string.session_log_accepted), false);
+                    handleAcceptedByPeer(envelope.sessionId);
+                }
+                case "session.rejected" -> {
+                    ringHandler.removeCallbacksAndMessages(null);
+                    ringingSessionId = null;
+                    showStatus(getString(R.string.session_peer_rejected), true);
+                    disconnect();
+                    load();
+                }
+                case "session.ended" -> {
+                    ringHandler.removeCallbacksAndMessages(null);
+                    ringingSessionId = null;
+                    showStatus(getString(R.string.session_peer_ended), true);
+                    disconnect();
+                    load();
+                }
                 case "leave" -> appendLog(getString(R.string.session_log_left), false);
                 case "ping" -> appendLog(getString(R.string.session_log_ping), false);
                 case "pong" -> appendLog(getString(R.string.session_log_pong), false);
@@ -481,13 +893,57 @@ public class RealtimeActivity extends AppCompatActivity {
         }
     };
 
+    /**
+     * 对方接受了会话：把那条会话重新取回来，然后直接进会。
+     *
+     * <p>为什么要重新取一次而不是就用手上的：推送信封里只有会话 ID，
+     * 而 {@link #connect} 需要完整的会话对象（类型决定媒体形态，
+     * 双方名字决定标题）。用一个「只有 ID 的假对象」去连，媒体形态会退化成纯文字。
+     *
+     * <p>取失败也不静默：那样用户会停在「已接通」的假象里。
+     */
+    private void handleAcceptedByPeer(@Nullable String sessionId) {
+        if (sessionId == null) {
+            return;
+        }
+        ringHandler.removeCallbacksAndMessages(null);
+        ringingSessionId = null;
+        ApiClient.get(this).listSessions()
+                .enqueue(new ResultCallback<List<RealtimeDtos.SessionResponse>>() {
+                    @Override
+                    public void onSuccess(
+                            @Nullable List<RealtimeDtos.SessionResponse> body) {
+                        if (body == null) {
+                            return;
+                        }
+                        for (RealtimeDtos.SessionResponse item : body) {
+                            if (sessionId.equals(item.id)) {
+                                showStatus(getString(R.string.session_peer_accepted), false);
+                                connect(item);
+                                return;
+                            }
+                        }
+                        // 列表里还没有它（极短的时间窗）：下次刷新会补上。
+                        load();
+                    }
+
+                    @Override
+                    public void onError(@NonNull ApiException error) {
+                        handleUnauthorized(error);
+                        showStatus(getString(R.string.session_action_failed,
+                                error.getMessage()), true);
+                    }
+                });
+    }
+
     private void sendMessage() {
         String text = text(messageInput);
         if (TextUtils.isEmpty(text)) {
             toast(getString(R.string.session_message_need_text));
             return;
         }
-        if (connected == null || !socket.sendRelay(counterpartOf(connected), text)) {
+        RealtimeDtos.SessionResponse current = connected;
+        if (current == null || !socket.sendRelay(peerUidOf(current), text)) {
             appendLog(getString(R.string.session_log_error,
                     getString(R.string.session_not_connected)), true);
             return;
@@ -503,15 +959,40 @@ public class RealtimeActivity extends AppCompatActivity {
         }
     }
 
-    /** 收起来：断开连接并把会话面板整个隐藏（消息不留存，留着反而误导）。 */
+    /**
+     * 挂断：先告诉对方，再释放媒体，最后收面板。
+     *
+     * <p>顺序不能反。先关 PeerConnection 再发 hangup，那条 hangup 就没有通道了，
+     * 对方会一直等到 ICE 自己超时（几十秒），期间他以为自己还在通话中。
+     */
+    private void hangupCurrent() {
+        if (call != null && connected != null) {
+            JsonObject payload = new JsonObject();
+            payload.addProperty("kind", "hangup");
+            socket.sendSignal(peerUidOf(connected), payload);
+        }
+        disconnect();
+    }
+
+    /** 收起来：断开通话与连接，并把会话面板整个隐藏（消息不留存，留着反而误导）。 */
     private void disconnect() {
+        closeCall();
         socket.leave();
         releaseConnected();
+    }
+
+    private void closeCall() {
+        if (call != null) {
+            call.close();
+            call = null;
+        }
+        remoteVideo.setVisibility(View.GONE);
     }
 
     private void releaseConnected() {
         connected = null;
         chatCard.setVisibility(View.GONE);
+        callStateView.setVisibility(View.GONE);
     }
 
     private boolean isConnected(@Nullable RealtimeDtos.SessionResponse item) {

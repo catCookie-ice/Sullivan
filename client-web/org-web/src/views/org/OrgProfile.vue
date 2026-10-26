@@ -4,7 +4,8 @@
       <template #header>机构资料</template>
       <el-skeleton v-if="loading" :rows="5" animated />
       <el-descriptions v-else-if="org" :column="1" border>
-        <el-descriptions-item label="机构 ID">{{ org.id }}</el-descriptions-item>
+        <!-- 不展示机构内部编号：它只用于服务端唯一性校验，对用户没有意义，
+             下方已有登录名与对外展示名两个可读标识。 -->
         <el-descriptions-item label="状态">
           <el-tag :type="statusTagType(org.status)">{{ statusLabel(org.status) }}</el-tag>
         </el-descriptions-item>

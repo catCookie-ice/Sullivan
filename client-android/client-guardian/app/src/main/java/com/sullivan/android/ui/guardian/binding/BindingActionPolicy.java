@@ -123,6 +123,36 @@ public final class BindingActionPolicy {
         return null;
     }
 
+    /**
+     * 我在一条关系里的对方的**可显示名字**：显示名优先，回落到登录名。
+     *
+     * <p><b>不返回 uid</b>：界面上不该出现账号 ID（`01` §5 第 7 条）。两者都没有
+     * 时返回 {@code null}，由调用方显示一个占位符，而不是拿 ID 顶上。
+     */
+    @Nullable
+    public static String counterpartLabel(@Nullable BindingDtos.BindingResponse binding,
+                                          @Nullable String myUid) {
+        if (binding == null || myUid == null) {
+            return null;
+        }
+        String name = null;
+        String loginName = null;
+        if (myUid.equals(binding.guardianId)) {
+            name = binding.protecteeName;
+            loginName = binding.protecteeLoginName;
+        } else if (myUid.equals(binding.protecteeId)) {
+            name = binding.guardianName;
+            loginName = binding.guardianLoginName;
+        }
+        if (name != null && !name.trim().isEmpty()) {
+            return name;
+        }
+        if (loginName != null && !loginName.trim().isEmpty()) {
+            return loginName;
+        }
+        return null;
+    }
+
     @NonNull
     private static String trimUpper(@Nullable String raw) {
         return raw == null ? "" : raw.trim().toUpperCase(java.util.Locale.ROOT);

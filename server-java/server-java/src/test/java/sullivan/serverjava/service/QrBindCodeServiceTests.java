@@ -193,7 +193,8 @@ class QrBindCodeServiceTests {
     }
 
     private BindingResponse binding(String id, String status, boolean primary) {
-        return new BindingResponse(id, status, GUARDIAN, PROTECTEE, false, primary, GUARDIAN);
+        return new BindingResponse(id, status, GUARDIAN, PROTECTEE, false, primary, GUARDIAN,
+                null, null, null, null);
     }
 
     private UserAccount account(String id, String status) {

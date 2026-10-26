@@ -6,10 +6,11 @@ export function listMyBindings() {
   return request.get<never, BindingResponse[]>('/bindings')
 }
 
-// 受护人发起绑定（targetRole=GUARDIAN，目标为监护人）
-export function requestBindingByProtectee(guardianId: string) {
+// 受护人发起绑定（targetRole=GUARDIAN，目标为监护人）。
+// targetId 是**监护人主键 uid**：界面输入登录名后由调用方先查成 uid。
+export function requestBindingByProtectee(guardianUid: string) {
   return request.post<never, BindingResponse>('/bindings', {
-    targetId: guardianId,
+    targetId: guardianUid,
     targetRole: 'GUARDIAN',
   })
 }

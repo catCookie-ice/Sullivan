@@ -10,6 +10,7 @@
       <el-menu-item index="/guardian/services">公益服务</el-menu-item>
       <el-menu-item v-if="!isVolunteer" index="/guardian/volunteer-apply">志愿者申请</el-menu-item>
       <el-menu-item index="/guardian/realtime">实时会话</el-menu-item>
+      <el-menu-item index="/guardian/voice">语音留言</el-menu-item>
       <el-menu-item style="float: right" @click="handleLogout">退出登录</el-menu-item>
       </el-menu>
     </div>

@@ -52,20 +52,6 @@ public class StatusLabelsTest {
     }
 
     @Test
-    public void activityStatusesAreChinese() {
-        assertEquals("招募中", StatusLabels.activity("RECRUITING").text);
-        assertEquals("进行中", StatusLabels.activity("IN_PROGRESS").text);
-        assertEquals("已结束", StatusLabels.activity("ENDED").text);
-        assertEquals("已取消", StatusLabels.activity("CANCELLED").text);
-    }
-
-    /**
-     * 服务端加了新状态值时，界面必须还能跑。
-     *
-     * <p>正确行为是「原样显示那个不认识的词 + 中性色」，
-     * 而不是崩溃、抛异常或显示空白 —— 空白会让用户以为这条记录坏了。
-     */
-    @Test
     public void unknownStatusNeverThrowsAndKeepsRawValue() {
         assertEquals("WAITING_ROOM", StatusLabels.binding("WAITING_ROOM").text);
         assertEquals(StatusLabels.Tone.NEUTRAL, StatusLabels.binding("WAITING_ROOM").tone);
@@ -78,7 +64,6 @@ public class StatusLabelsTest {
         assertNotNull(StatusLabels.binding(null));
         assertNotNull(StatusLabels.session(null));
         assertNotNull(StatusLabels.application(null));
-        assertNotNull(StatusLabels.activity(null));
         assertEquals("状态未知", StatusLabels.binding(null).text);
         assertEquals("状态未知", StatusLabels.session("   ").text);
     }

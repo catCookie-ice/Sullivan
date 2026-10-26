@@ -1,6 +1,8 @@
 package sullivan.serverjava.service;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -8,37 +10,68 @@ import sullivan.serverjava.common.ApiException;
 import sullivan.serverjava.common.IdGenerator;
 import sullivan.serverjava.domain.RealtimeSession;
 import sullivan.serverjava.domain.UserAccount;
+import sullivan.serverjava.domain.UserProfile;
 import sullivan.serverjava.mapper.RealtimeSessionMapper;
 import sullivan.serverjava.mapper.UserAccountMapper;
+import sullivan.serverjava.mapper.UserProfileMapper;
+import sullivan.serverjava.realtime.ConnectionPool;
+import sullivan.serverjava.realtime.RealtimeEnvelope;
 import sullivan.serverjava.web.RealtimeDtos.RealtimeSessionCreateRequest;
 import sullivan.serverjava.web.RealtimeDtos.RealtimeSessionResponse;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * 实时会话生命周期：发起/接受/拒绝/结束。创建与消息中继都要求双方存在 ACTIVE 绑定
  * （中继校验见 {@link sullivan.serverjava.realtime.RealtimeWebSocketHandler}）。
+ *
+ * <p><b>会话类型</b>（02 §8.2）：{@code BASIC} 纯消息、{@code VOICE} 语音、
+ * {@code VIDEO} 视频、{@code CAMERA} 监护人看受护人摄像头（有语音）、
+ * {@code EMERGENCY} 紧急视频会话。媒体流走 WebRTC，本服务只管会话状态与信令授权。
+ *
+ * <p><b>{@code EMERGENCY} 只能由服务端报警派发创建</b>（{@link RealtimeAlertDispatcher}）。
+ * 客户端若能自行把类型设成 EMERGENCY，就绕过了「紧急」二字的语义 ——
+ * 它本应意味着「这条会话是报警触发的」，而不是「我想让它看起来更急」。
  */
 @Service
 public class RealtimeSessionService {
+
+    private static final Logger log = LoggerFactory.getLogger(RealtimeSessionService.class);
+
+    /** 客户端可自行发起的类型。EMERGENCY 不在此列，理由见类注释。 */
+    private static final Set<String> CLIENT_TYPES = Set.of("BASIC", "VOICE", "VIDEO", "CAMERA");
+
     private final RealtimeSessionMapper sessionMapper;
     private final UserAccountMapper userAccountMapper;
+    private final UserProfileMapper userProfileMapper;
     private final BindingService bindingService;
+    private final ConnectionPool connectionPool;
 
     public RealtimeSessionService(RealtimeSessionMapper sessionMapper, UserAccountMapper userAccountMapper,
-                                  BindingService bindingService) {
+                                  UserProfileMapper userProfileMapper, BindingService bindingService,
+                                  ConnectionPool connectionPool) {
         this.sessionMapper = sessionMapper;
         this.userAccountMapper = userAccountMapper;
+        this.userProfileMapper = userProfileMapper;
         this.bindingService = bindingService;
+        this.connectionPool = connectionPool;
     }
 
     /** 发起实时会话：双方须存在 ACTIVE 绑定；同一对账号只允许一条 REQUESTED/ACTIVE 会话。 */
     @Transactional
     public RealtimeSessionResponse create(String callerId, RealtimeSessionCreateRequest request) {
-        if (!"BASIC".equals(request.sessionType())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "会话类型仅支持 BASIC");
+        String type = request.sessionType() == null ? "BASIC" : request.sessionType().trim().toUpperCase();
+        if ("EMERGENCY".equals(type)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "紧急会话只能由报警自动发起");
+        }
+        if (!CLIENT_TYPES.contains(type)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST,
+                    "会话类型仅支持 BASIC / VOICE / VIDEO / CAMERA");
         }
         UserAccount target = userAccountMapper.selectById(request.targetUid());
         if (target == null || !"ENABLED".equals(target.getStatus())) {
@@ -61,21 +94,31 @@ public class RealtimeSessionService {
         session.setStatus("REQUESTED");
         session.setInitiatorUid(callerId);
         session.setTargetUid(request.targetUid());
-        session.setSessionType(request.sessionType());
+        session.setSessionType(type);
         sessionMapper.insert(session);
         return toResponse(session);
     }
 
     /** 我的会话列表（发起或接收）。 */
     public List<RealtimeSessionResponse> mySessions(String callerId) {
-        return sessionMapper.selectList(Wrappers.<RealtimeSession>lambdaQuery()
-                        .and(w -> w.eq(RealtimeSession::getInitiatorUid, callerId)
-                                .or().eq(RealtimeSession::getTargetUid, callerId))
-                        .orderByDesc(RealtimeSession::getCreatedAt))
-                .stream().map(this::toResponse).toList();
+        List<RealtimeSession> sessions = sessionMapper.selectList(Wrappers.<RealtimeSession>lambdaQuery()
+                .and(w -> w.eq(RealtimeSession::getInitiatorUid, callerId)
+                        .or().eq(RealtimeSession::getTargetUid, callerId))
+                .orderByDesc(RealtimeSession::getCreatedAt));
+        // 一次查出全部对端名字，而不是每行查两次。会话列表本来就只有个位数，
+        // 但 N+1 的写法会在「某人绑了十几个监护人」时变成几十次查询。
+        Map<String, UserAccount> accounts = accountsById(sessions);
+        Map<String, String> names = displayNamesById(sessions);
+        return sessions.stream().map(session -> toResponse(session, accounts, names)).toList();
     }
 
-    /** 接收方接受会话。 */
+    /**
+     * 接收方接受会话。
+     *
+     * <p><b>一次点击即进入会话</b>（00 §8.1 的简化）：接受后状态变 ACTIVE，
+     * 双方各自连上长连接就能开始通话，发起方不需要再点第二次，
+     * 也不存在「已接受但还没连上」的中间状态。
+     */
     @Transactional
     public RealtimeSessionResponse accept(String callerId, String sessionId) {
         RealtimeSession session = load(sessionId);
@@ -87,6 +130,10 @@ public class RealtimeSessionService {
             throw new ApiException(HttpStatus.CONFLICT, "会话已处理");
         }
         session.setStatus("ACTIVE");
+        session.setAcceptedAt(LocalDateTime.now());
+        // 主动推给发起方。不推的话，发起方只能靠轮询列表才知道对方已经接了 ——
+        // 而「对方点一次确认就能通话」这条需求，正卡在这一步上。
+        push(session, "session.accepted", session.getTargetUid());
         return toResponse(session);
     }
 
@@ -102,6 +149,7 @@ public class RealtimeSessionService {
             throw new ApiException(HttpStatus.CONFLICT, "会话已处理");
         }
         session.setStatus("REJECTED");
+        push(session, "session.rejected", session.getTargetUid());
         return toResponse(session);
     }
 
@@ -120,7 +168,52 @@ public class RealtimeSessionService {
         session.setStatus("ENDED");
         session.setEndedAt(LocalDateTime.now());
         session.setEndedByUid(callerId);
+        push(session, "session.ended", callerId);
         return toResponse(session);
+    }
+
+    /**
+     * 把会话状态变化推给另一方。
+     *
+     * <p><b>为什么必须推</b>：接受方点一次「接听」就该直接进会话，
+     * 发起方不再需要任何动作。不推的话发起方只能靠轮询列表
+     * 发现「对方已经接了」—— 那不是一次确认就能通话，而是
+     * 「一次确认 + 对方偶然刷新到」。
+     *
+     * <p>只发给另一方（{@code actorUid} 是动作发起者，他自己已经知道结果）。
+     * 对方没连长连接时 {@link ConnectionPool#send} 什么都不做，
+     * 这是正确的降级：推送是加快，不是唯一通道。
+     *
+     * <p><b>它不能把调用方的事务搞崩</b>：调用点都在 {@code @Transactional} 方法里，
+     * 而状态已经落库。推送只是尽力而为，序列化或写 socket 出错都不该让
+     * 「会话已经结束」这件事回滚 —— 那会让状态与用户看到的结果对不上。
+     */
+    private void push(RealtimeSession session, String type, String actorUid) {
+        String peerUid = Objects.equals(actorUid, session.getInitiatorUid())
+                ? session.getTargetUid() : session.getInitiatorUid();
+        if (peerUid == null) {
+            return;
+        }
+        try {
+            connectionPool.send(session.getId(), peerUid,
+                    RealtimeEnvelope.control(type, session.getId(), actorUid, peerUid, null));
+        } catch (RuntimeException exception) {
+            log.warn("realtime push {} failed for session={}: {}", type, session.getId(),
+                    exception.getMessage());
+        }
+    }
+
+    /**
+     * 会话是否为「可传信令」的状态：ACTIVE 且双方仍有 ACTIVE 绑定。
+     *
+     * <p>信令中继每次转发都调用它。会话结束与绑定解除是**两条独立的失效路径**，
+     * 只判其中一个都会留下「绑定已经解除、通话还在继续」的窗口。
+     */
+    public boolean signalingAllowed(RealtimeSession session) {
+        if (session == null || !"ACTIVE".equals(session.getStatus())) {
+            return false;
+        }
+        return bindingService.hasActiveBinding(session.getInitiatorUid(), session.getTargetUid());
     }
 
     private int conditionalUpdate(RealtimeSession session, String status, String endedByUid) {
@@ -146,8 +239,54 @@ public class RealtimeSessionService {
         return session;
     }
 
+    private Map<String, UserAccount> accountsById(List<RealtimeSession> sessions) {
+        Set<String> ids = new java.util.HashSet<>();
+        for (RealtimeSession session : sessions) {
+            ids.add(session.getInitiatorUid());
+            ids.add(session.getTargetUid());
+        }
+        ids.remove(null);
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, UserAccount> result = new HashMap<>();
+        userAccountMapper.selectBatchIds(ids).forEach(account -> result.put(account.getId(), account));
+        return result;
+    }
+
+    private Map<String, String> displayNamesById(List<RealtimeSession> sessions) {
+        Set<String> ids = new java.util.HashSet<>();
+        for (RealtimeSession session : sessions) {
+            ids.add(session.getInitiatorUid());
+            ids.add(session.getTargetUid());
+        }
+        ids.remove(null);
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, String> result = new HashMap<>();
+        userProfileMapper.selectList(Wrappers.<UserProfile>lambdaQuery().in(UserProfile::getUserId, ids))
+                .forEach(profile -> {
+                    if (profile.getDisplayName() != null && !profile.getDisplayName().isBlank()) {
+                        result.put(profile.getUserId(), profile.getDisplayName());
+                    }
+                });
+        return result;
+    }
+
     private RealtimeSessionResponse toResponse(RealtimeSession session) {
+        Map<String, UserAccount> accounts = accountsById(List.of(session));
+        return toResponse(session, accounts, displayNamesById(List.of(session)));
+    }
+
+    private RealtimeSessionResponse toResponse(RealtimeSession session, Map<String, UserAccount> accounts,
+                                               Map<String, String> names) {
+        UserAccount initiator = accounts.get(session.getInitiatorUid());
+        UserAccount target = accounts.get(session.getTargetUid());
         return new RealtimeSessionResponse(session.getId(), session.getStatus(), session.getInitiatorUid(),
-                session.getTargetUid(), session.getSessionType(), session.getCreatedAt());
+                session.getTargetUid(), session.getSessionType(), session.getCreatedAt(),
+                initiator == null ? null : initiator.getLoginName(),
+                target == null ? null : target.getLoginName(),
+                names.get(session.getInitiatorUid()), names.get(session.getTargetUid()));
     }
 }

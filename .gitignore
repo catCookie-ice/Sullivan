@@ -64,3 +64,6 @@ Thumbs.db
 
 # 参考项目（本地参考材料，不入库；其端侧检测资产已移植进 client-android/client-protectee/）
 参考1/
+
+# 构建期临时缓存（如 node 编译缓存），不入库
+.tmp/
