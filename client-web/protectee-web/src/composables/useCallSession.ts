@@ -24,7 +24,12 @@ import {
 } from '@/api/realtime'
 import { getUserByLoginName } from '@/api/lookup'
 import { PeerCall, RealtimeSignalSocket, hasTurnServer, toMediaShape } from '@/utils/webrtc'
-import type { CallPhase, MediaSide, SignalPayload } from '@/utils/webrtc'
+import type {
+  CallPhase,
+  MediaSide,
+  RealtimeSignalSocketHandlers,
+  SignalPayload,
+} from '@/utils/webrtc'
 import { personLabel } from '@/utils/display'
 import type { ClientRealtimeSessionType, RealtimeSessionResponse } from '@/types/api'
 
@@ -34,7 +39,7 @@ export type UiPhase = CallPhase | 'idle' | 'texting'
 /** 发起方等待接听的时限。60 秒足够一个正在找手机的人接起来，又不至于让人干等。 */
 const CALL_TIMEOUT_MS = 60_000
 /** 等待期内轮询会话状态的间隔：2 秒是「点完几乎立刻有反应」的体感上限。 */
-const WAIT_POLL_MS = 2_000
+const WAIT_POLL_MS = 2_000  // 兜底轮询；正常路径由 session.accepted 推送驱动
 /** 空闲时刷新会话列表的间隔，用于发现别人发来的会话请求。 */
 const IDLE_POLL_MS = 5_000
 
@@ -248,8 +253,67 @@ export function useCallSession(side: MediaSide) {
       waiting.value = { ...waiting.value, remaining }
       if (remaining <= 0) void cancelUnanswered(session.id)
     }, 1000)
-    // 服务端不推送「已接受」，只能轮询；一旦变 ACTIVE 就立刻建媒体连接
+    // 先挂上长连接，接 session.accepted 推送（对方一点「接听」就立刻进会）
+    attachWaitingChannel(session)
+    // 轮询降为兜底：推送丢包（对方不在线、连接刚断）时仍然能发现状态变化
     statusPoller = window.setInterval(() => void pollWaiting(session.id), WAIT_POLL_MS)
+  }
+
+  /**
+   * 等待接听时先挂上长连接 —— 服务端会把 session.accepted 推到这条连接上。
+   *
+   * 不先连的话，对方接受那一刻没有任何通道可发，发起方只能靠轮询发现，
+   * 「点一次确认就能通话」在发起方这一侧就不成立。
+   *
+   * 这条连接随后会被 joinSession 复用：同一个 sessionId 再连一次是空操作。
+   */
+  function attachWaitingChannel(session: RealtimeSessionResponse) {
+    const handler = (kind: 'accepted' | 'rejected' | 'ended') => {
+      if (!waiting.value) return
+      if (kind === 'accepted') {
+        void onPeerAccepted(session.id)
+      } else if (kind === 'rejected') {
+        void stopWaiting()
+        phase.value = 'failed'
+        phaseDetail.value = '对方已拒绝本次会话'
+        activeSession.value = null
+        ElMessage.info('对方已拒绝本次会话')
+      } else {
+        void stopWaiting()
+        phase.value = 'failed'
+        phaseDetail.value = '对方已结束会话'
+        activeSession.value = null
+        ElMessage.info('对方已结束会话')
+      }
+    }
+    socket = new RealtimeSignalSocket(session.id, myUid, peerUid(session), {
+      onOpen: () => {},
+      onSignal: () => {},
+      onJoined: () => {},
+      onSessionStatus: handler,
+      onRelay: () => {},
+      onError: () => {},
+      onClose: () => {
+        // 等待期的长连接断开不影响判定：轮询仍在兜底
+      },
+    })
+    socket.connect()
+  }
+
+  /** 收到「对方已接听」：取回完整会话对象再进会（推送信封里只有 ID）。 */
+  async function onPeerAccepted(sessionId: string) {
+    let current: RealtimeSessionResponse | undefined
+    try {
+      const list = await listMyRealtimeSessions()
+      sessions.value = list
+      current = list.find((s) => s.id === sessionId)
+    } catch {
+      return
+    }
+    if (!current || !waiting.value) return
+    if (current.status !== 'ACTIVE') return
+    await stopWaiting()
+    await joinSession(current)
   }
 
   async function pollWaiting(sessionId: string) {
@@ -368,7 +432,21 @@ export function useCallSession(side: MediaSide) {
 
   async function joinSession(session: RealtimeSessionResponse) {
     activeSession.value = session
-    closeMedia()
+    // 若等待期已经挂上了同一条会话的长连接，保留它：那条连接刚送来 session.accepted，
+    // 关掉重开会丢掉在途信令。只有不同会话（或根本没有）才整体清理。
+    const reuseSocket = socket !== null && socket.sessionId === session.id
+    if (reuseSocket) {
+      if (call) {
+        call.close()
+        call = null
+      }
+      pendingSignals = []
+      localStream.value = null
+      remoteStream.value = null
+      stopElapsedTicker()
+    } else {
+      closeMedia()
+    }
     relayMessages.value = []
     phase.value = 'connecting-ws'
     phaseDetail.value = ''
@@ -376,7 +454,7 @@ export function useCallSession(side: MediaSide) {
     const type = session.sessionType
     // 信令通道对纯文本会话也有用：文本中继走同一条长连接
     const shape = toMediaShape(type)
-    socket = new RealtimeSignalSocket(session.id, myUid, peerUid(session), {
+    const callHandlers: RealtimeSignalSocketHandlers = {
       onOpen: () => {
         if (!shape) {
           phase.value = 'texting'
@@ -398,8 +476,13 @@ export function useCallSession(side: MediaSide) {
       onClose: () => {
         if (inCall.value) phaseDetail.value = '信令连接已断开，正在重连…'
       },
-    })
-    socket.connect()
+    }
+    if (reuseSocket && socket) {
+      socket.replaceHandlers(callHandlers)
+    } else {
+      socket = new RealtimeSignalSocket(session.id, myUid, peerUid(session), callHandlers)
+      socket.connect()
+    }
 
     if (!shape) return
 

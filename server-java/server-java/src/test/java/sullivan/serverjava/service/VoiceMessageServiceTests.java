@@ -128,6 +128,27 @@ class VoiceMessageServiceTests {
         assertThat(result.myRole()).isEqualTo("SENDER");
     }
 
+    /**
+     * 投递响应必须带时间。
+     *
+     * <p>{@code createdAt} 由数据库填，insert 之后内存对象里还是 null。
+     * 早先这里直接把内存对象拿去拼响应，客户端收到 {@code createdAt=null}，
+     * 表现为「刚发的留言没有时间」，而列表接口（走 selectList）却有时间 ——
+     * 同一个字段在两个接口里表现不一致。单元测试当时没抓到，因为它只断言 status。
+     */
+    @Test
+    void createResponseCarriesPersistedTimestamp() {
+        when(bindingService.hasActiveBinding(SENDER, RECEIVER)).thenReturn(true);
+        VoiceMessage persisted = message("vm-new", "SENT", SENDER, RECEIVER);
+        persisted.setCreatedAt(java.time.LocalDateTime.of(2026, 10, 26, 18, 43, 35));
+        when(voiceMessageMapper.selectById(any())).thenReturn(persisted);
+
+        VoiceMessageResponse result = service.create(SENDER,
+                request(RECEIVER, 1_000, 100L, "audio/mp4"), audio());
+
+        assertThat(result.createdAt()).isEqualTo(persisted.getCreatedAt());
+    }
+
     /** 对象键里不能出现发送方或接收方的 uid：它会出现在存储日志与目录列表里。 */
     @Test
     void objectKeyDoesNotLeakParticipantIds() {

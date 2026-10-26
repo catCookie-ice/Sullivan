@@ -90,6 +90,33 @@ class RealtimeSessionServiceTests {
         assertThat(result.status()).isEqualTo("REQUESTED");
     }
 
+    /**
+     * 创建响应必须带时间。
+     *
+     * <p>{@code createdAt} 由数据库默认值填，insert 之后内存对象里还是 null。
+     * 早先这里直接把内存对象拿去拼响应，客户端拿到的 {@code createdAt} 是 null，
+     * 而列表接口有值 —— 同一个字段两个接口两种表现。单元测试只断言了 status，
+     * 所以没抓到；真实库上有值，mock 上永远是 null，正是这类缺陷的温床。
+     */
+    @Test
+    void createResponseCarriesPersistedTimestamp() {
+        when(bindingService.hasActiveBinding(GUARDIAN, PROTECTEE)).thenReturn(true);
+        when(sessionMapper.selectCount(any())).thenReturn(0L);
+        RealtimeSession persisted = new RealtimeSession();
+        persisted.setId("rs-new");
+        persisted.setStatus("REQUESTED");
+        persisted.setInitiatorUid(GUARDIAN);
+        persisted.setTargetUid(PROTECTEE);
+        persisted.setSessionType("VOICE");
+        persisted.setCreatedAt(java.time.LocalDateTime.of(2026, 10, 26, 18, 43, 35));
+        when(sessionMapper.selectById(any())).thenReturn(persisted);
+
+        RealtimeSessionResponse result = service.create(GUARDIAN,
+                new RealtimeSessionCreateRequest(PROTECTEE, "VOICE"));
+
+        assertThat(result.createdAt()).isEqualTo(persisted.getCreatedAt());
+    }
+
     // ------------------------------------------------------------------
     // 会话类型（00 §8.1 基线变更后的四条新增可达值）
     // ------------------------------------------------------------------

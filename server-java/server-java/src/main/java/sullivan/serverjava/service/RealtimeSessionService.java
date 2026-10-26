@@ -96,7 +96,11 @@ public class RealtimeSessionService {
         session.setTargetUid(request.targetUid());
         session.setSessionType(type);
         sessionMapper.insert(session);
-        return toResponse(session);
+        // 重新读一次：createdAt 由数据库默认值填，insert 之后内存对象里还是 null。
+        // 不重读的话，创建响应的 createdAt 是 null，而列表接口有值 ——
+        // 客户端会看到「刚发起的会话没有时间」，同一个字段两个接口两种表现。
+        RealtimeSession stored = sessionMapper.selectById(session.getId());
+        return toResponse(stored == null ? session : stored);
     }
 
     /** 我的会话列表（发起或接收）。 */

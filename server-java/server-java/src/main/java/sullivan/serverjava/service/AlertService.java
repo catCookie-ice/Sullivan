@@ -128,7 +128,11 @@ public class AlertService {
         // 投递记录必须在 alert 落库之后插入：alert_delivery.alert_id 有外键。
         List<String> guardians = bindingService.activeGuardianIds(protecteeUid);
         createDeliveries(alert, guardians, request.note());
-        return toResponse(alert);
+        // 重新读一次：createdAt 由数据库默认值填，insert 之后内存对象里还是 null。
+        // 不重读的话，报警创建响应的 createdAt 是 null，而列表/详情接口有值 ——
+        // 客户端会看到「刚发出的报警没有时间」。报警恰好是最不能缺时间戳的一条记录。
+        Alert stored = alertMapper.selectById(alert.getId());
+        return toResponse(stored == null ? alert : stored);
     }
 
     /**

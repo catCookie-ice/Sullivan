@@ -54,6 +54,8 @@ client-android/client-protectee/app/release/
 deploy/data/
 logs/
 *.log
+# 语音留言音频默认落在 app.media.root=./data/media（本地文件系统存储），不入库
+server-java/server-java/data/
 
 # OS
 .DS_Store

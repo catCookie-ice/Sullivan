@@ -137,7 +137,11 @@ public class VoiceMessageService {
         voiceMessageMapper.insert(message);
 
         notifyReceiver(message, senderUid);
-        return toResponse(message, senderUid, Map.of(), Map.of());
+        // 重新读一次：insert 之后 createdAt / version 由数据库填，内存对象里还是 null。
+        // 直接拿内存对象拼响应，客户端会收到 createdAt=null —— 表现为「这条留言没有时间」，
+        // 而列表接口（走 selectList）是有时间的，于是同一个字段在两个接口里表现不一致。
+        VoiceMessage stored = voiceMessageMapper.selectById(id);
+        return stored == null ? toResponse(message, senderUid) : toResponse(stored, senderUid);
     }
 
     /**

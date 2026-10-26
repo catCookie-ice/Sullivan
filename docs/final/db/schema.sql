@@ -526,7 +526,7 @@ CREATE TABLE notification (
   CONSTRAINT pk_notification PRIMARY KEY (id),
   CONSTRAINT ck_notification_status CHECK (status IN ('UNREAD', 'READ')),
   CONSTRAINT ck_notification_principal CHECK (receiver_principal_type IN ('USER', 'ORGANIZATION', 'ADMIN')),
-  CONSTRAINT ck_notification_type CHECK (notification_type IN ('BINDING_REQUEST', 'BINDING_RESULT', 'ALERT', 'APPLICATION_RESULT', 'ENROLLMENT_RESULT', 'ACTIVITY_CHANGE', 'ORG_REVIEW', 'SYSTEM')),
+  CONSTRAINT ck_notification_type CHECK (notification_type IN ('BINDING_REQUEST', 'BINDING_RESULT', 'ALERT', 'APPLICATION_RESULT', 'ENROLLMENT_RESULT', 'ACTIVITY_CHANGE', 'ORG_REVIEW', 'SYSTEM', 'VOICE_MESSAGE')),
   CONSTRAINT ck_notification_payload CHECK (payload_json IS NULL OR JSON_TYPE(payload_json) = 'OBJECT')
 ) ENGINE=InnoDB COMMENT='多接收主体通知；不作为聊天消息表';
 CREATE INDEX ix_notification_receiver_unread ON notification (receiver_principal_type, receiver_principal_id, status, created_at);

@@ -63,6 +63,14 @@ export interface RealtimeSignalSocketHandlers {
   onSignal: (payload: SignalPayload, fromUid: string) => void
   /** joinedUid：对端也连上来了（服务端转发的 session.joined） */
   onJoined: (joinedUid: string) => void
+  /**
+   * 会话状态推送（服务端主动下发，payload 为空）。
+   *
+   * 这是「对方点一次确认即可通话」的另一半：发起方在等待接听时就连上长连接，
+   * 对方一接受立刻收到 session.accepted，不需要轮询列表。
+   * 推送是加速而非唯一通道 —— 对方不在线时什么都不会发生，状态仍以列表查询为准。
+   */
+  onSessionStatus?: (kind: 'accepted' | 'rejected' | 'ended', fromUid: string) => void
   onRelay: (text: string, fromUid: string) => void
   onError: (message: string) => void
   onClose: () => void
@@ -96,17 +104,30 @@ export class RealtimeSignalSocket {
   private pendingSignals: Envelope[] = []
 
   constructor(
-    private readonly sessionId: string,
+    readonly sessionId: string,
     private readonly myUid: string,
     private readonly peerUid: string,
-    private readonly handlers: RealtimeSignalSocketHandlers,
+    private handlers: RealtimeSignalSocketHandlers,
   ) {}
 
   get connected(): boolean {
     return this.socket?.readyState === WebSocket.OPEN
   }
 
+  /**
+   * 换掉回调，**不动底层连接**。
+   *
+   * 等待接听时挂的是一条「只听状态推送」的通道；对方一接听，
+   * 这条连接正是送来 session.accepted 的那一条，不能为了换成通话回调
+   * 而把它关掉重开 —— 那会丢掉已经在路上的信令。
+   */
+  replaceHandlers(handlers: RealtimeSignalSocketHandlers) {
+    this.handlers = handlers
+  }
+
   connect() {
+    // 已经连上了就什么都不做：重连会白白丢掉在途信令
+    if (this.connected) return
     this.closedByUs = false
     this.disposeSocket()
     const token = localStorage.getItem('access_token')
@@ -222,6 +243,15 @@ export class RealtimeSignalSocket {
       }
       case 'session.joined':
         this.handlers.onJoined(envelope.fromUid)
+        return
+      case 'session.accepted':
+        this.handlers.onSessionStatus?.('accepted', envelope.fromUid)
+        return
+      case 'session.rejected':
+        this.handlers.onSessionStatus?.('rejected', envelope.fromUid)
+        return
+      case 'session.ended':
+        this.handlers.onSessionStatus?.('ended', envelope.fromUid)
         return
       case 'relay':
         if (typeof envelope.payload === 'string') {
