@@ -36,7 +36,9 @@ public final class ActivityDtos {
             @Schema(description = "报名结束时间（不得晚于活动开始时间）", example = "2026-08-30T23:59:59")
             @NotNull LocalDateTime registrationEndsAt,
             @Schema(description = "需要的志愿者人数", example = "20", minimum = "1")
-            @NotNull @Min(1) Integer maxVolunteers) {
+            @NotNull @Min(1) Integer maxVolunteers,
+            @Schema(description = "报名是否需机构审核；缺省 false（报名即通过并直接入群）", example = "true")
+            Boolean reviewRequired) {
     }
 
     public record ActivityResponse(
@@ -55,6 +57,7 @@ public final class ActivityDtos {
             @Schema(description = "报名开始时间", example = "2026-08-20T00:00:00") LocalDateTime registrationStartsAt,
             @Schema(description = "报名结束时间", example = "2026-08-30T23:59:59") LocalDateTime registrationEndsAt,
             @Schema(description = "需要的志愿者人数", example = "20") Integer maxVolunteers,
+            @Schema(description = "报名是否需机构审核", example = "true") Boolean reviewRequired,
             @Schema(description = "已批准报名人数（参与志愿者数）", example = "0") Integer approvedCount,
             @Schema(description = "创建时间", example = "2026-08-17T10:00:00") LocalDateTime createdAt) {
     }

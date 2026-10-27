@@ -47,6 +47,8 @@ const router = createRouter({
       children: [
         { path: 'activities', name: 'Activities', component: () => import('@/views/volunteer/ActivityList.vue') },
         { path: 'enrollments', name: 'MyEnrollments', component: () => import('@/views/volunteer/MyEnrollments.vue') },
+        { path: 'group-chat', name: 'VolunteerGroupChat', component: () => import('@/views/volunteer/ActivityGroupChat.vue') },
+        { path: 'penalties', name: 'MyPenalties', component: () => import('@/views/volunteer/MyPenalties.vue') },
         { path: 'availability', name: 'Availability', component: () => import('@/views/volunteer/AvailabilityView.vue') },
         { path: 'alerts', name: 'VolunteerAlerts', component: () => import('@/views/volunteer/AlertList.vue') },
       ],

@@ -7,6 +7,7 @@
         <template #title>
           只能与存在「生效绑定」的受护人通话；一旦解除绑定，通话会立刻中断。
           界面上的「对方」一律按登录名查找，账号内部编号不对外显示。
+          文本会话、视频通话与查看摄像头在监护人端暂时关闭，当前仅开放语音通话。
         </template>
       </el-alert>
 
@@ -133,11 +134,11 @@
         </div>
       </el-card>
 
-      <!-- 会话请求横幅：一次点击即进入会话 -->
+      <!-- 会话请求横幅：一次点击即进入会话；被禁用的类型只给「拒绝」，避免监护人端继续使用 -->
       <el-alert
         v-for="request in incomingRequests"
         :key="request.id"
-        type="success"
+        :type="isSessionTypeDisabled(request.sessionType) ? 'info' : 'success'"
         :closable="false"
         style="margin-bottom: 12px"
       >
@@ -145,7 +146,15 @@
           <span>
             {{ displayOf(request) }} 邀请你进行「{{ sessionTypeLabel(request.sessionType) }}」
           </span>
+          <span
+            v-if="isSessionTypeDisabled(request.sessionType)"
+            class="sub-text"
+            style="margin-left: 12px"
+          >
+            该会话类型在监护人端暂未开放
+          </span>
           <el-button
+            v-if="!isSessionTypeDisabled(request.sessionType)"
             type="success"
             size="small"
             style="margin-left: 12px"
@@ -188,9 +197,16 @@
         <el-table-column label="操作" min-width="200">
           <template #default="{ row }">
             <template v-if="row.status === 'REQUESTED' && row.targetUid === myUid">
-              <el-button size="small" type="success" :loading="acceptingId === row.id" @click="onAccept(row)">
+              <el-button
+                v-if="!isSessionTypeDisabled(row.sessionType)"
+                size="small"
+                type="success"
+                :loading="acceptingId === row.id"
+                @click="onAccept(row)"
+              >
                 接受
               </el-button>
+              <span v-else class="sub-text">暂未开放</span>
               <el-button size="small" @click="onReject(row)">拒绝</el-button>
             </template>
             <template v-else-if="row.status === 'REQUESTED' && row.initiatorUid === myUid">
@@ -198,7 +214,8 @@
               <el-button size="small" @click="cancelOutgoing(row)">撤回</el-button>
             </template>
             <template v-else-if="row.status === 'ACTIVE'">
-              <el-button size="small" type="primary" @click="onRejoin(row)">进入会话</el-button>
+              <span v-if="isSessionTypeDisabled(row.sessionType)" class="sub-text">暂未开放</span>
+              <el-button v-else size="small" type="primary" @click="onRejoin(row)">进入会话</el-button>
               <el-button size="small" type="danger" @click="onEndRow(row)">结束</el-button>
             </template>
             <span v-else class="sub-text">—</span>
@@ -271,11 +288,23 @@ const localVideo = ref<HTMLVideoElement | null>(null)
 const bindings = ref<BindingResponse[]>([])
 
 /**
- * 会话类型选项。
+ * 暂时禁用的会话类型（仅监护人 Web 端）：
+ *   - BASIC 文本会话：经过考虑，不再适合本项目用户；
+ *   - VIDEO 视频通话 / CAMERA 查看摄像头：缺少中继（TURN）服务器，跨网络时基本无法接通，暂时关闭。
+ * 「暂时」= 恢复时只需从集合里移除对应类型：发起选项、来电横幅与列表入口都读这一份名单。
+ */
+const DISABLED_SESSION_TYPES: ReadonlySet<string> = new Set(['BASIC', 'VIDEO', 'CAMERA'])
+
+function isSessionTypeDisabled(type: string): boolean {
+  return DISABLED_SESSION_TYPES.has(type)
+}
+
+/**
+ * 可发起的会话类型：完整名单在此维护，展示时过滤掉暂时禁用的类型。
  * 刻意不提供「紧急会话」：服务端只允许报警自动发起，客户端选了也会被 403 拒绝，
  * 摆出来只会让用户以为可以手动触发紧急通话。
  */
-const sessionTypeOptions: Array<{ value: ClientRealtimeSessionType; label: string; hint: string }> = [
+const allSessionTypeOptions: Array<{ value: ClientRealtimeSessionType; label: string; hint: string }> = [
   { value: 'BASIC', label: '文本会话', hint: '只发送文字，不打开麦克风与摄像头，适合先问一句方不方便。' },
   { value: 'VOICE', label: '语音通话', hint: '双方建立双向语音，只使用麦克风。' },
   { value: 'VIDEO', label: '视频通话', hint: '双方建立双向语音与视频，双方都会打开摄像头。' },
@@ -285,6 +314,10 @@ const sessionTypeOptions: Array<{ value: ClientRealtimeSessionType; label: strin
     hint: '受护人上传摄像头画面与声音；监护人只接收，不会打开自己的摄像头。',
   },
 ]
+
+const sessionTypeOptions = allSessionTypeOptions.filter(
+  (option) => !isSessionTypeDisabled(option.value),
+)
 
 const currentTypeHint = computed(
   () => sessionTypeOptions.find((option) => option.value === sessionType.value)?.hint || '',
@@ -387,6 +420,11 @@ async function onStart() {
 }
 
 async function onAccept(row: RealtimeSessionResponse) {
+  // 兜底：即使某个入口漏了过滤，也不允许监护人端进入被禁用的会话类型
+  if (isSessionTypeDisabled(row.sessionType)) {
+    ElMessage.warning('该会话类型在监护人端暂未开放')
+    return
+  }
   acceptingId.value = row.id
   try {
     // 一次点击直接进入会话：不弹确认框，也不要求发起方再点一次
@@ -401,6 +439,11 @@ async function onReject(row: RealtimeSessionResponse) {
 }
 
 async function onRejoin(row: RealtimeSessionResponse) {
+  // 兜底：禁用类型的既有 ACTIVE 会话不允许重新进入（列表里也只会给「结束」）
+  if (isSessionTypeDisabled(row.sessionType)) {
+    ElMessage.warning('该会话类型在监护人端暂未开放')
+    return
+  }
   await rejoinActive(row)
 }
 

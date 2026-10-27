@@ -10,10 +10,12 @@ import org.springframework.transaction.annotation.Transactional;
 import sullivan.serverjava.common.ApiException;
 import sullivan.serverjava.common.IdGenerator;
 import sullivan.serverjava.domain.Notification;
+import sullivan.serverjava.domain.RealtimeSession;
 import sullivan.serverjava.domain.UserAccount;
 import sullivan.serverjava.domain.UserProfile;
 import sullivan.serverjava.domain.VoiceMessage;
 import sullivan.serverjava.mapper.NotificationMapper;
+import sullivan.serverjava.mapper.RealtimeSessionMapper;
 import sullivan.serverjava.mapper.UserAccountMapper;
 import sullivan.serverjava.mapper.UserProfileMapper;
 import sullivan.serverjava.mapper.VoiceMessageMapper;
@@ -55,6 +57,7 @@ public class VoiceMessageService {
     private final NotificationMapper notificationMapper;
     private final UserAccountMapper userAccountMapper;
     private final UserProfileMapper userProfileMapper;
+    private final RealtimeSessionMapper realtimeSessionMapper;
     private final BindingService bindingService;
     private final MediaStore mediaStore;
 
@@ -66,6 +69,7 @@ public class VoiceMessageService {
                                NotificationMapper notificationMapper,
                                UserAccountMapper userAccountMapper,
                                UserProfileMapper userProfileMapper,
+                               RealtimeSessionMapper realtimeSessionMapper,
                                BindingService bindingService,
                                MediaStore mediaStore,
                                @Value("${app.voice-message.max-duration-ms:60000}") int maxDurationMs,
@@ -75,6 +79,7 @@ public class VoiceMessageService {
         this.notificationMapper = notificationMapper;
         this.userAccountMapper = userAccountMapper;
         this.userProfileMapper = userProfileMapper;
+        this.realtimeSessionMapper = realtimeSessionMapper;
         this.bindingService = bindingService;
         this.mediaStore = mediaStore;
         this.maxDurationMs = maxDurationMs;
@@ -120,6 +125,22 @@ public class VoiceMessageService {
         }
         enforceDailyLimit(senderUid);
 
+        // 来源会话可选，但一旦给出必须是真实会话且双方正是留言双方：
+        // 数据库 fk_voice_message_session 兜底存在性，这里校验归属并给出清晰 404，
+        // 而不是让客户端拿到外键违例的 500。
+        String sessionId = blankToNull(request.sessionId());
+        if (sessionId != null) {
+            RealtimeSession session = realtimeSessionMapper.selectById(sessionId);
+            boolean samePair = session != null
+                    && ((Objects.equals(session.getInitiatorUid(), senderUid)
+                        && Objects.equals(session.getTargetUid(), receiverUid))
+                    || (Objects.equals(session.getInitiatorUid(), receiverUid)
+                        && Objects.equals(session.getTargetUid(), senderUid)));
+            if (!samePair) {
+                throw new ApiException(HttpStatus.NOT_FOUND, "来源会话不存在或不属于留言双方");
+            }
+        }
+
         String id = IdGenerator.next();
         String objectKey = objectKeyFor(id, contentType);
         mediaStore.put(objectKey, audio, request.sizeBytes(), contentType);
@@ -129,7 +150,7 @@ public class VoiceMessageService {
         message.setStatus("SENT");
         message.setSenderUid(senderUid);
         message.setReceiverUid(receiverUid);
-        message.setSessionId(blankToNull(request.sessionId()));
+        message.setSessionId(sessionId);
         message.setObjectKey(objectKey);
         message.setDurationMs(request.durationMs());
         message.setSizeBytes(request.sizeBytes());

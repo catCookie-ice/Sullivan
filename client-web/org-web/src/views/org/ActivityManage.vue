@@ -27,7 +27,7 @@
         <el-table-column prop="title" label="活动名" min-width="160" show-overflow-tooltip />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="statusTag(row.status)">{{ statusText(row.status) }}</el-tag>
+            <el-tag :type="displayStatus(row).tag">{{ displayStatus(row).text }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="locationText" label="地点" min-width="140" show-overflow-tooltip />
@@ -45,8 +45,9 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
+            <el-button size="small" @click="openRoster(row)">报名名单</el-button>
             <el-button size="small" @click="openDetail(row)">详情</el-button>
           </template>
         </el-table-column>
@@ -68,7 +69,7 @@
       <el-descriptions v-if="detail" :column="1" border>
         <el-descriptions-item label="活动名">{{ detail.title }}</el-descriptions-item>
         <el-descriptions-item label="状态">
-          <el-tag :type="statusTag(detail.status)">{{ statusText(detail.status) }}</el-tag>
+          <el-tag :type="displayStatus(detail).tag">{{ displayStatus(detail).text }}</el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="志愿者要求">
           <span class="pre-wrap">{{ detail.description }}</span>
@@ -95,14 +96,59 @@
         <el-button @click="detailVisible = false">关闭</el-button>
       </template>
     </el-dialog>
+
+    <!-- 报名名单：查看该活动全部报名与成功报名的志愿者；审核动作在「报名审核」页做。 -->
+    <el-dialog v-model="rosterVisible" :title="`报名名单 · ${rosterActivity?.title ?? ''}`" width="720px">
+      <div class="roster-summary">
+        <span>成功报名 <b>{{ rosterSummary?.approved ?? 0 }}</b> / {{ rosterActivity?.maxVolunteers ?? '—' }}（名额）</span>
+        <el-divider direction="vertical" />
+        <span>总报名 <b>{{ rosterSummary?.total ?? 0 }}</b></span>
+        <el-divider direction="vertical" />
+        <span>待审核 <b>{{ rosterSummary?.pending ?? 0 }}</b></span>
+      </div>
+
+      <el-tabs v-model="rosterTab" @tab-change="loadRoster">
+        <el-tab-pane label="成功报名" name="approved" />
+        <el-tab-pane label="全部报名" name="all" />
+      </el-tabs>
+
+      <el-table :data="rosterRows" v-loading="rosterLoading" max-height="380" empty-text="暂无报名记录">
+        <el-table-column label="志愿者" min-width="160">
+          <template #default="{ row }">
+            <span class="volunteer-name">{{ row.volunteerDisplayName || row.volunteerLoginName || row.volunteerUid }}</span>
+            <span v-if="row.volunteerDisplayName" class="volunteer-login">{{ row.volunteerLoginName }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="enrollTag(row.status)" size="small">{{ enrollText(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="报名时间" width="170">
+          <template #default="{ row }">{{ format(row.createdAt) }}</template>
+        </el-table-column>
+        <el-table-column label="审核信息" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">
+            <template v-if="row.decidedAt">
+              {{ format(row.decidedAt) }}<span v-if="row.decisionReason"> · {{ row.decisionReason }}</span>
+            </template>
+            <span v-else>—</span>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <template #footer>
+        <el-button @click="rosterVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { listMyActivities } from '@/api/org'
-import type { ActivityResponse } from '@/types/api'
+import { listActivityEnrollments, listMyActivities } from '@/api/org'
+import type { ActivityResponse, EnrollmentResponse, EnrollmentSummary } from '@/types/api'
 import { formatDateTime } from '@/utils/display'
 
 import { errorMessage } from '@/utils/error'
@@ -138,14 +184,42 @@ function format(iso: string) {
   return formatDateTime(iso)
 }
 
-function statusTag(s: string) {
-  const map: Record<string, string> = { RECRUITING: 'success', IN_PROGRESS: 'warning', ENDED: 'info', CANCELLED: 'danger' }
-  return map[s] || 'info'
+/** 报名窗口三态：未开始 / 开放中 / 已截止。 */
+function registrationPhase(item: ActivityResponse): 'upcoming' | 'open' | 'closed' {
+  if (item.status === 'CANCELLED' || item.status === 'ENDED') return 'closed'
+  const now = Date.now()
+  const start = parseLocalTime(item.registrationStartsAt)
+  const end = parseLocalTime(item.registrationEndsAt)
+  if (start != null && now < start) return 'upcoming'
+  if (end != null && now > end) return 'closed'
+  return 'open'
 }
 
-function statusText(s: string) {
-  const map: Record<string, string> = { RECRUITING: '招募中', IN_PROGRESS: '进行中', ENDED: '已结束', CANCELLED: '已取消' }
-  return map[s] || s
+/**
+ * 展示态：报名还没开始的活动显示「待开启」，不显示「招募中」。
+ * 「待开启」不在数据库状态机里（库里仍是 RECRUITING），纯展示推导，
+ * 与 user-web 活动列表的 displayStatus 同口径。
+ */
+function displayStatus(item: ActivityResponse): { text: string; tag: 'success' | 'warning' | 'info' | 'danger' } {
+  if (item.status === 'RECRUITING' && registrationPhase(item) === 'upcoming') {
+    return { text: '待开启', tag: 'info' }
+  }
+  const map: Record<string, { text: string; tag: 'success' | 'warning' | 'info' | 'danger' }> = {
+    RECRUITING: { text: '招募中', tag: 'success' },
+    IN_PROGRESS: { text: '进行中', tag: 'warning' },
+    ENDED: { text: '已结束', tag: 'info' },
+    CANCELLED: { text: '已取消', tag: 'danger' },
+    SUSPENDED: { text: '已下架（处罚中）', tag: 'danger' },
+  }
+  return map[item.status] ?? { text: item.status, tag: 'info' }
+}
+
+/** `yyyy-MM-dd HH:mm:ss` → 本地时间毫秒（直接 new Date() 部分浏览器按 UTC 解析）。 */
+function parseLocalTime(value: string): number | null {
+  if (!value) return null
+  const normalized = value.replace(' ', 'T')
+  const time = new Date(normalized).getTime()
+  return Number.isNaN(time) ? null : time
 }
 
 // —— 详情弹窗 ——
@@ -160,6 +234,53 @@ function openDetail(row: ActivityResponse) {
 /** 高德 URI 打点；参数顺序是「经度,纬度」，与后端存库顺序相反，别搞混。 */
 function mapLink(row: ActivityResponse): string {
   return `https://uri.amap.com/marker?position=${row.locationLng},${row.locationLat}&name=${encodeURIComponent(row.title)}&src=sullivan&coordinate=gaode&callnative=0`
+}
+
+// —— 报名名单弹窗 ——
+// 「成功报名」= APPROVED（占名额、已入群）；「全部报名」= 含待审/已拒/已撤，机构评估热度用。
+const rosterVisible = ref(false)
+const rosterActivity = ref<ActivityResponse | null>(null)
+const rosterTab = ref<'approved' | 'all'>('approved')
+const rosterRows = ref<EnrollmentResponse[]>([])
+const rosterSummary = ref<EnrollmentSummary | null>(null)
+const rosterLoading = ref(false)
+
+function openRoster(row: ActivityResponse) {
+  rosterActivity.value = row
+  rosterTab.value = 'approved'
+  rosterVisible.value = true
+  loadRoster()
+}
+
+async function loadRoster() {
+  if (!rosterActivity.value) return
+  rosterLoading.value = true
+  try {
+    const result = await listActivityEnrollments(rosterActivity.value.id, {
+      status: rosterTab.value === 'approved' ? 'APPROVED' : undefined,
+      page: 1,
+      size: 200,
+    })
+    rosterRows.value = result.records
+    // 统计数字始终取全量口径，切页签不改变顶部汇总。
+    rosterSummary.value = result.summary
+  } catch (e: any) {
+    ElMessage.error(errorMessage(e, '加载报名名单失败'))
+  } finally {
+    rosterLoading.value = false
+  }
+}
+
+function enrollText(status: string) {
+  const map: Record<string, string> = {
+    PENDING: '待审核', APPROVED: '已通过', REJECTED: '已拒绝', CANCELLED: '已撤回',
+  }
+  return map[status] ?? status
+}
+
+function enrollTag(status: string) {
+  const map: Record<string, string> = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'danger', CANCELLED: 'info' }
+  return (map[status] ?? 'info') as 'warning' | 'success' | 'danger' | 'info'
 }
 </script>
 
@@ -177,5 +298,25 @@ function mapLink(row: ActivityResponse): string {
   font-size: 12px;
   color: var(--mist-dark);
   text-decoration: underline;
+}
+.roster-summary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.roster-summary b {
+  color: var(--ink-1);
+}
+.volunteer-name {
+  display: block;
+  color: var(--ink-1);
+}
+.volunteer-login {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-3);
 }
 </style>

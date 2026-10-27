@@ -1,12 +1,14 @@
 # SullivanMINI OpenAPI 契约
 # 文档版本: v0.1 (骨架草案)
-# 当前状态: Java 业务 API 与 Python 导航 API 的契约骨架，按阶段增量补充。
+# 当前状态: Java 业务 API 契约骨架，按阶段增量补充。
+# 历史注记(2026-10-26, v1.0.0): 原骨架中的 Python 导航 API 部分已随 server-python
+# 移除而废弃，相关路径/描述仅作历史对照保留；当前唯一服务端为 Java 单应用。
 
 openapi: "3.1.0"
 info:
   title: SullivanMINI API
-  version: "0.1.0"
-  description: Java 业务应用 REST API；导航路径由 Python 应用直接提供 (docs/final/06)
+  version: "1.0.0"
+  description: Java 业务应用 REST API（v1.0.0 起为唯一服务端；原 Python 导航应用已移除）
 
 servers:
   - url: http://localhost:8080/api/v1
@@ -633,6 +635,45 @@ paths:
     post:
       tags: [Admin]
       summary: 最高管理员或 HR 管理员创建注册码
+  /admin/admins:
+    get:
+      tags: [Admin]
+      summary: 管理员列表（实时角色与权限汇总；需 ADMIN_MANAGE）
+  /admin/admins/{adminId}:
+    get:
+      tags: [Admin]
+      summary: 管理员详情（需 ADMIN_MANAGE）
+  /admin/admins/{adminId}/status:
+    post:
+      tags: [Admin]
+      summary: 启用/停用管理员（停用立即生效；需 ADMIN_GOVERN）
+  /admin/admins/{adminId}/roles:
+    post:
+      tags: [Admin]
+      summary: 授予角色（可带过期时间；需 ADMIN_GOVERN）
+  /admin/admins/{adminId}/roles/{roleCode}:
+    delete:
+      tags: [Admin]
+      summary: 撤销角色（需 ADMIN_GOVERN）
+  /admin/roles:
+    get:
+      tags: [Admin]
+      summary: 角色列表（含权限集与成员数；需 ADMIN_MANAGE）
+    post:
+      tags: [Admin]
+      summary: 新建角色（权限集打包；需 ADMIN_GOVERN）
+  /admin/roles/{roleCode}/permissions:
+    put:
+      tags: [Admin]
+      summary: 全量覆盖式调整角色权限集（立即生效；需 ADMIN_GOVERN；SUPER_ADMIN 不可调）
+  /admin/roles/{roleCode}:
+    delete:
+      tags: [Admin]
+      summary: 停用自定义角色（有成员或可用注册码时 409；需 ADMIN_GOVERN）
+  /admin/permissions:
+    get:
+      tags: [Admin]
+      summary: 权限代码字典（需 ADMIN_MANAGE）
   /admin/accounts:
     post:
       tags: [Admin]

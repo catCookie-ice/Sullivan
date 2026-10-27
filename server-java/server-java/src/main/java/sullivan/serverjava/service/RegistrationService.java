@@ -23,6 +23,7 @@ import sullivan.serverjava.web.RegistrationDtos.ProtecteeRegisterRequest;
 import sullivan.serverjava.web.RegistrationDtos.RegistrationResponse;
 import sullivan.serverjava.web.RegistrationDtos.UserRegisterRequest;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Service
@@ -81,6 +82,9 @@ public class RegistrationService {
         binding.setIsPrimary(true);
         binding.setPermanentFlag(true);
         binding.setRequestedBy(guardianId);
+        // ck_guardian_binding_confirmed 要求 ACTIVE 行必须有 confirmed_at；
+        // 监护人代受护人注册即视为受护人当场确认。
+        binding.setConfirmedAt(LocalDateTime.now());
         guardianBindingMapper.insert(binding);
 
         return new RegistrationResponse(protectee.getId(), "USER", "ENABLED", Set.of("PROTECTEE"));

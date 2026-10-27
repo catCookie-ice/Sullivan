@@ -40,8 +40,8 @@ android {
         applicationId = "com.sullivan.protectee"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "1.0.0"
 
         // 后端基地址（SessionStore 读 BuildConfig.SERVER_BASE_URL）。
         // 缺省是**空串而不是模拟器地址**：给一个看似可用的默认值（10.0.2.2）

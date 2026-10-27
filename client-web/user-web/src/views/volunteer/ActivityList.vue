@@ -8,12 +8,13 @@
         </div>
       </template>
 
-      <!-- 报名入口在 MINI 里还没有对外接口，必须讲清楚，否则用户会一直找「报名」按钮。 -->
+      <!-- 报名已上线：直接通过的活动报名即入群；需审核的活动等机构批准。
+           提示保留一句，说明「待审核 ≠ 报名成功」。 -->
       <el-alert
         type="info"
         :closable="false"
         show-icon
-        title="当前可浏览公益机构发布的志愿活动。在线报名功能尚未开放，如需参与请联系活动发布机构。"
+        title="报名成功（机构审核通过）后可进入活动群聊；名额只统计报名成功的人数。"
         style="margin-bottom: 16px"
       />
 
@@ -36,8 +37,11 @@
       <div v-else class="activity-grid">
         <article v-for="item in rows" :key="item.id" class="activity-card">
           <header class="activity-head">
-            <el-tag :type="statusTag(item.status)" size="small">{{ statusText(item.status) }}</el-tag>
-            <span v-if="isRegistrationOpen(item)" class="deadline">报名截止 {{ formatDateTime(item.registrationEndsAt) }}</span>
+            <el-tag :type="displayStatus(item).tag" size="small">{{ displayStatus(item).text }}</el-tag>
+            <span v-if="registrationPhase(item) === 'open'" class="deadline">报名截止 {{ formatDateTime(item.registrationEndsAt) }}</span>
+            <span v-else-if="registrationPhase(item) === 'upcoming'" class="deadline is-upcoming">
+              {{ formatDateTime(item.registrationStartsAt) }} 开启报名
+            </span>
             <span v-else class="deadline is-closed">报名已结束</span>
           </header>
 
@@ -71,9 +75,49 @@
               rel="noopener noreferrer"
               class="map-link"
             >在地图中查看地点</a>
+            <div class="enroll-area">
+              <el-tag v-if="item.reviewRequired" size="small" type="warning">需审核</el-tag>
+              <el-tag v-if="myStatus(item) === 'PENDING'" size="small" type="warning">待机构审核</el-tag>
+              <el-tag v-else-if="myStatus(item) === 'APPROVED'" size="small" type="success">已报名成功 · 可去群聊</el-tag>
+              <el-tag v-else-if="myStatus(item) === 'REJECTED'" size="small" type="danger">已拒绝</el-tag>
+              <el-button
+                v-if="canEnroll(item)"
+                size="small" type="primary"
+                :loading="enrolling === item.id"
+                @click="enroll(item)"
+              >立即报名</el-button>
+              <el-button
+                v-else-if="myStatus(item) === 'APPROVED'"
+                size="small"
+                @click="$router.push('/volunteer/group-chat')"
+              >进入群聊</el-button>
+              <el-button size="small" text type="danger" @click="openReport(item)">举报</el-button>
+            </div>
           </footer>
         </article>
       </div>
+
+      <!-- 举报活动 -->
+      <el-dialog v-model="reportVisible" title="举报活动" width="440px">
+        <el-form label-width="70px">
+          <el-form-item label="活动">
+            <span>{{ reportTarget?.title }}</span>
+          </el-form-item>
+          <el-form-item label="理由">
+            <el-input
+              v-model="reportReason"
+              type="textarea"
+              :rows="3"
+              maxlength="500"
+              placeholder="请说明违规情况（500 字以内）"
+            />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="reportVisible = false">取消</el-button>
+          <el-button type="danger" :loading="reporting" @click="submitReport">提交举报</el-button>
+        </template>
+      </el-dialog>
 
       <el-pagination
         v-if="total > size"
@@ -89,10 +133,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { listPublicActivities } from '@/api/activity'
-import type { ActivityResponse } from '@/types/api'
+import { enrollActivity, listMyEnrollments, listPublicActivities } from '@/api/activity'
+import { createAbuseReport } from '@/api/abuse'
+import type { ActivityResponse, EnrollmentResponse } from '@/types/api'
 import { formatDateTime } from '@/utils/display'
 import { errorMessage } from '@/utils/error'
 
@@ -102,23 +147,106 @@ const page = ref(1)
 const size = ref(12)
 const total = ref(0)
 const loading = ref(false)
+const enrolling = ref('')
+/** 我在已加载活动上的有效报名（PENDING/APPROVED 优先展示；REJECTED/CANCELLED 可再报名）。 */
+const myEnrollments = ref<EnrollmentResponse[]>([])
+
+// ---- 举报活动（治理入口：提交给举报治理管理员，匿名处理） ----
+const reportVisible = ref(false)
+const reporting = ref(false)
+const reportTarget = ref<ActivityResponse>()
+const reportReason = ref('')
+
+function openReport(item: ActivityResponse) {
+  reportTarget.value = item
+  reportReason.value = ''
+  reportVisible.value = true
+}
+
+async function submitReport() {
+  if (!reportTarget.value) return
+  if (!reportReason.value.trim()) {
+    ElMessage.warning('请填写举报理由')
+    return
+  }
+  reporting.value = true
+  try {
+    await createAbuseReport({
+      category: 'ACTIVITY',
+      targetId: reportTarget.value.id,
+      reason: reportReason.value.trim(),
+    })
+    ElMessage.success('举报已提交，感谢你的反馈')
+    reportVisible.value = false
+  } catch (e) {
+    ElMessage.error(errorMessage(e, '举报失败'))
+  } finally {
+    reporting.value = false
+  }
+}
+
+const enrollmentByActivity = computed(() => {
+  const map = new Map<string, EnrollmentResponse>()
+  for (const enrollment of myEnrollments.value) {
+    const existing = map.get(enrollment.activityId)
+    // 一行 PENDING/APPROVED 比已拒绝/已撤回更值得展示。
+    if (!existing || (existing.status === 'PENDING' || existing.status === 'APPROVED'
+      ? false
+      : enrollment.status === 'PENDING' || enrollment.status === 'APPROVED')) {
+      map.set(enrollment.activityId, enrollment)
+    }
+  }
+  return map
+})
 
 onMounted(reload)
 
 async function reload() {
   loading.value = true
   try {
-    const res = await listPublicActivities({
-      status: status.value || undefined,
-      page: page.value,
-      size: size.value,
-    })
+    const [res, mine] = await Promise.all([
+      listPublicActivities({
+        status: status.value || undefined,
+        page: page.value,
+        size: size.value,
+      }),
+      listMyEnrollments({ page: 1, size: 100 }),
+    ])
     rows.value = res.records
     total.value = res.total
+    myEnrollments.value = mine.records
   } catch (e: any) {
     ElMessage.error(errorMessage(e, '加载活动失败'))
   } finally {
     loading.value = false
+  }
+}
+
+function myStatus(item: ActivityResponse): string | null {
+  return enrollmentByActivity.value.get(item.id)?.status ?? null
+}
+
+/** 可报名 = 活动招募中、窗口开着、没满员、没有待审/已通过的报名。 */
+function canEnroll(item: ActivityResponse): boolean {
+  if (!isRegistrationOpen(item) || item.approvedCount >= item.maxVolunteers) return false
+  const current = myStatus(item)
+  return current !== 'PENDING' && current !== 'APPROVED'
+}
+
+async function enroll(item: ActivityResponse) {
+  const confirmText = item.reviewRequired
+    ? `报名「${item.title}」？该活动需机构审核，审核通过才算报名成功。`
+    : `报名「${item.title}」？报名成功后将自动加入活动群聊。`
+  if (!window.confirm(confirmText)) return
+  enrolling.value = item.id
+  try {
+    const result = await enrollActivity(item.id)
+    ElMessage.success(result.status === 'APPROVED' ? '报名成功，已加入活动群聊' : '已提交报名，等待机构审核')
+    await reload()
+  } catch (e: any) {
+    ElMessage.error(errorMessage(e, '报名失败'))
+  } finally {
+    enrolling.value = ''
   }
 }
 
@@ -127,14 +255,38 @@ function onPageChange(p: number) {
   reload()
 }
 
-/** 报名窗口是否还开着（且活动本身还能报名）。 */
-function isRegistrationOpen(item: ActivityResponse): boolean {
-  if (item.status === 'CANCELLED' || item.status === 'ENDED') return false
+/** 报名窗口三态：未开始 / 开放中 / 已截止（未开始时展示态叫「待开启」）。 */
+function registrationPhase(item: ActivityResponse): 'upcoming' | 'open' | 'closed' {
+  if (item.status === 'CANCELLED' || item.status === 'ENDED') return 'closed'
   const now = Date.now()
   const start = parseTime(item.registrationStartsAt)
   const end = parseTime(item.registrationEndsAt)
-  if (start == null || end == null) return false
-  return now >= start && now <= end
+  if (start != null && now < start) return 'upcoming'
+  if (end != null && now > end) return 'closed'
+  return 'open'
+}
+
+/** 报名窗口是否还开着（且活动本身还能报名）。 */
+function isRegistrationOpen(item: ActivityResponse): boolean {
+  return registrationPhase(item) === 'open'
+}
+
+/**
+ * 展示态：「待开启」不在数据库状态机里（库里仍是 RECRUITING），是纯展示推导——
+ * 报名还没开始的活动对志愿者来说不是「招募中」，标成招募中会误导人去点报名。
+ */
+function displayStatus(item: ActivityResponse): { text: string; tag: 'success' | 'warning' | 'info' | 'danger' } {
+  if (item.status === 'RECRUITING' && registrationPhase(item) === 'upcoming') {
+    return { text: '待开启', tag: 'info' }
+  }
+  const map: Record<string, { text: string; tag: 'success' | 'warning' | 'info' | 'danger' }> = {
+    RECRUITING: { text: '招募中', tag: 'success' },
+    IN_PROGRESS: { text: '进行中', tag: 'warning' },
+    ENDED: { text: '已结束', tag: 'info' },
+    CANCELLED: { text: '已取消', tag: 'danger' },
+    SUSPENDED: { text: '已下架', tag: 'danger' },
+  }
+  return map[item.status] ?? { text: item.status, tag: 'info' }
 }
 
 function parseTime(value: string): number | null {
@@ -147,26 +299,6 @@ function parseTime(value: string): number | null {
 
 function mapLink(item: ActivityResponse): string {
   return `https://uri.amap.com/marker?position=${item.locationLng},${item.locationLat}&name=${encodeURIComponent(item.title)}&src=sullivan&coordinate=gaode&callnative=0`
-}
-
-function statusTag(s: string): 'success' | 'warning' | 'info' | 'danger' {
-  const map: Record<string, 'success' | 'warning' | 'info' | 'danger'> = {
-    RECRUITING: 'success',
-    IN_PROGRESS: 'warning',
-    ENDED: 'info',
-    CANCELLED: 'danger',
-  }
-  return map[s] || 'info'
-}
-
-function statusText(s: string): string {
-  const map: Record<string, string> = {
-    RECRUITING: '招募中',
-    IN_PROGRESS: '进行中',
-    ENDED: '已结束',
-    CANCELLED: '已取消',
-  }
-  return map[s] || s
 }
 </script>
 
@@ -206,6 +338,9 @@ function statusText(s: string): string {
 }
 .deadline.is-closed {
   color: var(--ink-4);
+}
+.deadline.is-upcoming {
+  color: var(--ink-2);
 }
 .activity-title {
   font-family: var(--font-hand);
@@ -258,6 +393,13 @@ function statusText(s: string): string {
   margin-top: 10px;
   padding-top: 8px;
   border-top: 1px dashed var(--line);
+}
+.enroll-area {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .map-link {
   font-size: 12px;

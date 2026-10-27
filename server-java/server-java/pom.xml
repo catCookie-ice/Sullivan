@@ -10,7 +10,7 @@
     </parent>
     <groupId>Sullivan</groupId>
     <artifactId>server-java</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>server-java</name>
     <description>server-java</description>
     <url/>

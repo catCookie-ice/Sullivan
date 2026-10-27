@@ -42,7 +42,8 @@
           <el-col :span="12">
             <el-form-item label="活动开始时间" required>
               <el-date-picker v-model="form.startsAt" type="datetime" placeholder="活动开始时间"
-                              style="width: 100%" value-format="YYYY-MM-DD HH:mm:ss" />
+                              style="width: 100%" value-format="YYYY-MM-DD HH:mm:ss"
+                              :disabled-date="disableBeforeEarliest" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -57,7 +58,8 @@
           <el-col :span="12">
             <el-form-item label="报名开始时间" required>
               <el-date-picker v-model="form.registrationStartsAt" type="datetime" placeholder="报名开始时间"
-                              style="width: 100%" value-format="YYYY-MM-DD HH:mm:ss" />
+                              style="width: 100%" value-format="YYYY-MM-DD HH:mm:ss"
+                              :disabled-date="disableBeforeEarliest" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -70,6 +72,19 @@
 
         <el-form-item label="需要志愿者人数" required>
           <el-input-number v-model="form.maxVolunteers" :min="1" :max="9999" />
+        </el-form-item>
+
+        <el-form-item label="报名审核">
+          <div class="review-switch">
+            <el-switch v-model="form.reviewRequired" />
+            <!-- 文本随开关联动：开 = 需审核（报名先待审），关 = 直接通过（报名即成功入群）。 -->
+            <el-tag :type="form.reviewRequired ? 'warning' : 'info'" size="small">
+              {{ form.reviewRequired ? '需审核' : '直接通过' }}
+            </el-tag>
+            <span class="review-hint">{{ form.reviewRequired
+              ? '志愿者报名后进入待审核，机构在「报名审核」页批准才算报名成功并占名额入群。'
+              : '志愿者报名即成功，自动占用名额并加入活动群聊。' }}</span>
+          </div>
         </el-form-item>
 
         <el-form-item>
@@ -153,7 +168,10 @@ const form = reactive({
   endsAt: '' as string,
   registrationStartsAt: '' as string,
   registrationEndsAt: '' as string,
-  maxVolunteers: 10,
+  // el-input-number 被手动清空后会把 null 写进模型，类型如实放宽，提交前再拦。
+  maxVolunteers: 10 as number | null,
+  // 报名是否需机构审核；开启后报名先进 PENDING，机构批准才占名额入群。
+  reviewRequired: false,
 })
 
 const location = ref<{ lng?: number; lat?: number; address?: string }>({})
@@ -253,6 +271,41 @@ watch(
   { flush: 'sync' },
 )
 
+// —— 时间/人数校验：与后端 VolunteerActivityService + TimeUtil 同口径（前后端双向校验） ——
+
+/**
+ * 12:00 规则：「开始时间」（活动开始、报名开始都算）允许的最早时刻。
+ * 12:00 之前创建 → 今天零点；12:00 及之后 → 明天零点。正好 12:00 整按「之后」处理，
+ * 与后端 TimeUtil.earliestAllowedStart 保持一字不差的口径。
+ */
+function earliestAllowedStart(now: Date = new Date()): Date {
+  const day = new Date(now)
+  day.setHours(0, 0, 0, 0)
+  if (now.getHours() < 12) return day
+  const next = new Date(day)
+  next.setDate(next.getDate() + 1)
+  return next
+}
+
+/** 开始时间选择器里禁用早于下限的整天（下限随创建时刻跨过 12:00 动态变化）。 */
+function disableBeforeEarliest(date: Date): boolean {
+  return date.getTime() < earliestAllowedStart().getTime()
+}
+
+/** 今天零点（用于判断下限是「今天」还是「明天」，拼进提示文案）。 */
+function startOfToday(): Date {
+  const day = new Date()
+  day.setHours(0, 0, 0, 0)
+  return day
+}
+
+/** 与后端错误提示一致的 yyyy-MM-dd HH:mm:ss 展示。 */
+function formatDateTime(value: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${value.getFullYear()}-${p(value.getMonth() + 1)}-${p(value.getDate())} `
+    + `${p(value.getHours())}:${p(value.getMinutes())}:${p(value.getSeconds())}`
+}
+
 async function submit() {
   if (!form.title || !form.description || !form.locationText) {
     return ElMessage.warning('请填写活动名、志愿者要求与活动地点')
@@ -260,17 +313,43 @@ async function submit() {
   if (!form.startsAt || !form.endsAt || !form.registrationStartsAt || !form.registrationEndsAt) {
     return ElMessage.warning('请填写完整的活动与报名时间')
   }
-  if (new Date(form.startsAt).getTime() <= Date.now()) {
+  // 人数必须是 > 0 的数字（清空后的 null 也要拦下；与后端 @Min(1) + 服务端兜底同口径）。
+  // 提取成局部变量：守卫的类型收窄能带进 payload（对 form 整体展开时属性收窄会丢失）。
+  const maxVolunteers = form.maxVolunteers
+  if (maxVolunteers == null || !Number.isFinite(maxVolunteers) || maxVolunteers < 1) {
+    return ElMessage.warning('需要的志愿者人数必须是大于 0 的数字')
+  }
+
+  const startsAt = new Date(form.startsAt).getTime()
+  const endsAt = new Date(form.endsAt).getTime()
+  const regStart = new Date(form.registrationStartsAt).getTime()
+  const regEnd = new Date(form.registrationEndsAt).getTime()
+
+  // 12:00 规则：两个「开始时间」都不早于今天（中午前创建）/ 明天（中午后创建）零点。
+  const floor = earliestAllowedStart()
+  const floorDesc = floor.getTime() === startOfToday().getTime() ? '今天' : '明天'
+  const floorText = `${floorDesc}（${formatDateTime(floor)}）`
+  if (startsAt < floor.getTime()) {
+    return ElMessage.warning(`活动开始时间不能早于${floorText}`)
+  }
+  if (regStart < floor.getTime()) {
+    return ElMessage.warning(`报名开始时间不能早于${floorText}`)
+  }
+  if (startsAt <= Date.now()) {
     return ElMessage.warning('活动开始时间必须晚于当前时间')
   }
-  if (new Date(form.startsAt).getTime() >= new Date(form.endsAt).getTime()) {
-    return ElMessage.warning('活动结束时间必须晚于开始时间')
+  // 「不能早于」允许相等：结束时间只要不早于开始时间即可（与后端一致）。
+  if (endsAt < startsAt) {
+    return ElMessage.warning('活动结束时间不能早于开始时间')
   }
-  if (
-    new Date(form.registrationStartsAt).getTime() > new Date(form.registrationEndsAt).getTime() ||
-    new Date(form.registrationEndsAt).getTime() > new Date(form.startsAt).getTime()
-  ) {
-    return ElMessage.warning('报名窗口必须满足：报名开始 <= 报名结束 <= 活动开始')
+  if (regStart > startsAt) {
+    return ElMessage.warning('报名开始时间不能晚于活动开始时间')
+  }
+  if (regEnd < regStart) {
+    return ElMessage.warning('报名结束时间不能早于报名开始时间')
+  }
+  if (regEnd > startsAt) {
+    return ElMessage.warning('报名截止时间不能晚于活动开始时间')
   }
   if (location.value.lng != null && location.value.lat == null) {
     return ElMessage.warning('经纬度必须同时填写或同时留空')
@@ -278,6 +357,7 @@ async function submit() {
 
   const payload: ActivityCreateRequest = {
     ...form,
+    maxVolunteers,
     locationLng: location.value.lng,
     locationLat: location.value.lat,
   }
@@ -344,5 +424,18 @@ async function submit() {
   font-family: var(--font-code);
   font-size: 11px;
   color: var(--ink-2);
+}
+
+.review-switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.review-hint {
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.6;
+  max-width: 480px;
 }
 </style>

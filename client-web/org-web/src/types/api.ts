@@ -57,7 +57,7 @@ export interface RecoveryStatusResponse {
   methods: RecoveryMethod[]
 }
 
-// 公益活动创建请求（报名窗口 + 高德经纬度）
+// 公益活动创建请求（报名窗口 + 高德经纬度 + 是否需审核）
 export interface ActivityCreateRequest {
   title: string
   description: string
@@ -69,6 +69,7 @@ export interface ActivityCreateRequest {
   registrationStartsAt: string
   registrationEndsAt: string
   maxVolunteers: number
+  reviewRequired?: boolean
 }
 
 // 公益活动
@@ -86,7 +87,94 @@ export interface ActivityResponse {
   endsAt: string
   registrationStartsAt: string
   registrationEndsAt: string
+  reviewRequired: boolean
   maxVolunteers: number
   approvedCount: number
+  createdAt: string
+}
+
+// 活动报名（机构视角）
+export interface EnrollmentSummary {
+  total: number
+  pending: number
+  approved: number
+  rejected: number
+  cancelled: number
+}
+
+export interface EnrollmentResponse {
+  id: string
+  activityId: string
+  activityTitle?: string
+  organizationPublicName?: string
+  volunteerUid: string
+  volunteerLoginName?: string
+  volunteerDisplayName?: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+  decisionReason?: string
+  decidedAt?: string
+  createdAt: string
+}
+
+// 机构端报名分页（附统计）
+export interface EnrollmentPage {
+  records: EnrollmentResponse[]
+  total: number
+  page: number
+  size: number
+  summary: EnrollmentSummary
+}
+
+// 活动群聊
+export interface ActivityGroupResponse {
+  id: string
+  activityId: string
+  activityTitle?: string
+  organizationId: string
+  organizationPublicName?: string
+  status: 'OPEN' | 'CLOSED' | 'SUSPENDED'
+  startsAt?: string
+  endsAt?: string
+  memberCount: number
+  createdAt: string
+}
+
+export interface GroupMessageResponse {
+  id: string
+  groupId: string
+  senderUid: string
+  senderType: 'VOLUNTEER' | 'ORGANIZATION'
+  senderName?: string
+  /** 已撤回的消息为空串（墓碑，不下发原文）。 */
+  content: string
+  createdAt: string
+  /** 是否已撤回；true 时前端显示「xx 撤回了一条消息」。 */
+  withdrawn: boolean
+}
+
+export interface GroupMessagePage {
+  records: GroupMessageResponse[]
+  hasMore: boolean
+}
+
+export interface GroupMemberResponse {
+  id: string
+  volunteerUid: string
+  loginName?: string
+  displayName?: string
+  joinedAt: string
+}
+
+export interface GroupReportResponse {
+  id: string
+  messageId: string
+  groupId: string
+  reporterUid: string
+  reporterName?: string
+  messageContent?: string
+  reason: string
+  status: 'PENDING' | 'RESOLVED' | 'DISMISSED'
+  decisionNote?: string
+  handledAt?: string
   createdAt: string
 }

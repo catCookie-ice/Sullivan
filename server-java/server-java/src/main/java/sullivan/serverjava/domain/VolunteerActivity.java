@@ -27,6 +27,8 @@ public class VolunteerActivity {
     private LocalDateTime endsAt;
     private LocalDateTime registrationStartsAt;
     private LocalDateTime registrationEndsAt;
+    /** 报名是否需机构审核；FALSE 时报名即通过并直接入群。 */
+    private Boolean reviewRequired;
     private Integer maxVolunteers;
     private Integer approvedCount;
     private Boolean isFree;

@@ -9,10 +9,12 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import sullivan.serverjava.common.ApiException;
+import sullivan.serverjava.domain.RealtimeSession;
 import sullivan.serverjava.domain.UserAccount;
 import sullivan.serverjava.domain.UserProfile;
 import sullivan.serverjava.domain.VoiceMessage;
 import sullivan.serverjava.mapper.NotificationMapper;
+import sullivan.serverjava.mapper.RealtimeSessionMapper;
 import sullivan.serverjava.mapper.UserAccountMapper;
 import sullivan.serverjava.mapper.UserProfileMapper;
 import sullivan.serverjava.mapper.VoiceMessageMapper;
@@ -46,6 +48,7 @@ class VoiceMessageServiceTests {
     private NotificationMapper notificationMapper;
     private UserAccountMapper userAccountMapper;
     private UserProfileMapper userProfileMapper;
+    private RealtimeSessionMapper realtimeSessionMapper;
     private BindingService bindingService;
     private RecordingMediaStore mediaStore;
     private VoiceMessageService service;
@@ -94,10 +97,11 @@ class VoiceMessageServiceTests {
         notificationMapper = mock(NotificationMapper.class);
         userAccountMapper = mock(UserAccountMapper.class);
         userProfileMapper = mock(UserProfileMapper.class);
+        realtimeSessionMapper = mock(RealtimeSessionMapper.class);
         bindingService = mock(BindingService.class);
         mediaStore = new RecordingMediaStore();
         service = new VoiceMessageService(voiceMessageMapper, notificationMapper, userAccountMapper,
-                userProfileMapper, bindingService, mediaStore, 60_000, 1_048_576L, 50);
+                userProfileMapper, realtimeSessionMapper, bindingService, mediaStore, 60_000, 1_048_576L, 50);
 
         when(userAccountMapper.selectById(RECEIVER)).thenReturn(account(RECEIVER, "guardian_li"));
         when(userAccountMapper.selectBatchIds(anyCollection())).thenReturn(List.of());
@@ -126,6 +130,32 @@ class VoiceMessageServiceTests {
         assertThat(saved.getObjectKey()).isEqualTo(mediaStore.lastPutKey);
         assertThat(result.status()).isEqualTo("SENT");
         assertThat(result.myRole()).isEqualTo("SENDER");
+    }
+
+    @Test
+    void createRejectsBogusSourceSession() {
+        when(bindingService.hasActiveBinding(SENDER, RECEIVER)).thenReturn(true);
+        // mock 默认 selectById 返回 null：不存在的会话必须在落库前被拦下（404），
+        // 而不是撞上 fk_voice_message_session 变成 500。
+        assertThatThrownBy(() -> service.create(SENDER,
+                requestWithSession(RECEIVER, "no-such-session", 12_000, 96_000L, "audio/mp4"), audio()))
+                .isInstanceOf(ApiException.class)
+                .extracting("status").isEqualTo(HttpStatus.NOT_FOUND);
+        verify(voiceMessageMapper, never()).insert(any(VoiceMessage.class));
+    }
+
+    @Test
+    void createAcceptsSessionBetweenSamePair() {
+        when(bindingService.hasActiveBinding(SENDER, RECEIVER)).thenReturn(true);
+        when(realtimeSessionMapper.selectById("session-1")).thenReturn(session("session-1"));
+
+        VoiceMessageResponse result = service.create(SENDER,
+                requestWithSession(RECEIVER, "session-1", 12_000, 96_000L, "audio/mp4"), audio());
+
+        ArgumentCaptor<VoiceMessage> captor = ArgumentCaptor.forClass(VoiceMessage.class);
+        verify(voiceMessageMapper).insert(captor.capture());
+        assertThat(captor.getValue().getSessionId()).isEqualTo("session-1");
+        assertThat(result.status()).isEqualTo("SENT");
     }
 
     /**
@@ -352,6 +382,21 @@ class VoiceMessageServiceTests {
     private VoiceMessageCreateRequest request(String receiver, int durationMs, long sizeBytes,
                                               String contentType) {
         return new VoiceMessageCreateRequest(receiver, null, durationMs, sizeBytes, contentType);
+    }
+
+    private VoiceMessageCreateRequest requestWithSession(String receiver, String sessionId,
+                                                         int durationMs, long sizeBytes, String contentType) {
+        return new VoiceMessageCreateRequest(receiver, sessionId, durationMs, sizeBytes, contentType);
+    }
+
+    /** 来源会话：双方正是留言双方（方向不限）。 */
+    private RealtimeSession session(String id) {
+        RealtimeSession session = new RealtimeSession();
+        session.setId(id);
+        session.setInitiatorUid(RECEIVER);
+        session.setTargetUid(SENDER);
+        session.setStatus("ENDED");
+        return session;
     }
 
     private InputStream audio() {

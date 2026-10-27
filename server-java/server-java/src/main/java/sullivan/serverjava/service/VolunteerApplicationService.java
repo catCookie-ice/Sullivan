@@ -102,7 +102,7 @@ public class VolunteerApplicationService {
         if (!applicantUid.equals(application.getApplicantUid())) {
             throw new ApiException(HttpStatus.FORBIDDEN, "只能撤销自己的申请");
         }
-        int updated = conditionalUpdate(application, "CANCELLED", null);
+        int updated = conditionalUpdate(application, "CANCELLED", null, null);
         if (updated == 0) {
             throw new ApiException(HttpStatus.CONFLICT, "申请已处理，无法撤销");
         }
@@ -157,7 +157,7 @@ public class VolunteerApplicationService {
         if (account == null || !"ENABLED".equals(account.getStatus())) {
             throw new ApiException(HttpStatus.FORBIDDEN, "申请人账号不可用");
         }
-        int updated = conditionalUpdate(application, "APPROVED", null);
+        int updated = conditionalUpdate(application, "APPROVED", adminId, null);
         if (updated == 0) {
             throw new ApiException(HttpStatus.CONFLICT, "申请已处理");
         }
@@ -178,7 +178,7 @@ public class VolunteerApplicationService {
         if (!"PENDING".equals(application.getStatus())) {
             throw new ApiException(HttpStatus.CONFLICT, "申请已处理");
         }
-        int updated = conditionalUpdate(application, "REJECTED", reason.trim());
+        int updated = conditionalUpdate(application, "REJECTED", adminId, reason.trim());
         if (updated == 0) {
             throw new ApiException(HttpStatus.CONFLICT, "申请已处理");
         }
@@ -222,13 +222,19 @@ public class VolunteerApplicationService {
         }
     }
 
-    private int conditionalUpdate(VolunteerApplication application, String status, String note) {
+    private int conditionalUpdate(VolunteerApplication application, String status,
+                                  String decidedByAdminId, String note) {
         var update = Wrappers.<VolunteerApplication>lambdaUpdate()
                 .set(VolunteerApplication::getStatus, status)
                 .set(VolunteerApplication::getDecidedAt, LocalDateTime.now())
                 .setSql("version = version + 1")
                 .eq(VolunteerApplication::getId, application.getId())
                 .eq(VolunteerApplication::getStatus, "PENDING");
+        // 审核人必须随状态一起落库：ck_vol_app_decided 要求 APPROVED/REJECTED 行
+        // 同时有 decided_at 与 decided_by_admin_id；此前只改内存对象，库里这列恒为 NULL。
+        if (decidedByAdminId != null) {
+            update.set(VolunteerApplication::getDecidedByAdminId, decidedByAdminId);
+        }
         if (note != null && !note.isBlank()) {
             update.set(VolunteerApplication::getDecisionNote, note);
         }

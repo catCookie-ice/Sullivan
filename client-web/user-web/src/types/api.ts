@@ -43,8 +43,78 @@ export interface ActivityResponse {
   endsAt: string
   registrationStartsAt: string
   registrationEndsAt: string
+  reviewRequired: boolean
   maxVolunteers: number
   approvedCount: number
+  createdAt: string
+}
+
+// 活动报名（志愿者视角）
+export interface EnrollmentResponse {
+  id: string
+  activityId: string
+  activityTitle?: string
+  organizationPublicName?: string
+  volunteerUid: string
+  volunteerLoginName?: string
+  volunteerDisplayName?: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+  decisionReason?: string
+  decidedAt?: string
+  createdAt: string
+}
+
+// 活动群聊
+export interface ActivityGroupResponse {
+  id: string
+  activityId: string
+  activityTitle?: string
+  organizationId: string
+  organizationPublicName?: string
+  status: 'OPEN' | 'CLOSED' | 'SUSPENDED'
+  startsAt?: string
+  endsAt?: string
+  memberCount: number
+  createdAt: string
+}
+
+export interface GroupMessageResponse {
+  id: string
+  groupId: string
+  senderUid: string
+  senderType: 'VOLUNTEER' | 'ORGANIZATION'
+  senderName?: string
+  /** 已撤回的消息为空串（墓碑，不下发原文）。 */
+  content: string
+  createdAt: string
+  /** 是否已撤回；true 时前端显示「xx 撤回了一条消息」。 */
+  withdrawn: boolean
+}
+
+export interface GroupMessagePage {
+  records: GroupMessageResponse[]
+  hasMore: boolean
+}
+
+export interface GroupMemberResponse {
+  id: string
+  volunteerUid: string
+  loginName?: string
+  displayName?: string
+  joinedAt: string
+}
+
+export interface GroupReportResponse {
+  id: string
+  messageId: string
+  groupId: string
+  reporterUid: string
+  reporterName?: string
+  messageContent?: string
+  reason: string
+  status: 'PENDING' | 'RESOLVED' | 'DISMISSED'
+  decisionNote?: string
+  handledAt?: string
   createdAt: string
 }
 

@@ -36,6 +36,21 @@ public final class TimeUtil {
         return LocalDateTime.now();
     }
 
+    // ---------- 活动创建的最早开始时刻（12:00 规则） ----------
+
+    /**
+     * 创建志愿活动时，「开始时间」（活动开始时间与报名开始时间都算）允许的最早时刻：
+     * 12:00 之前创建不早于今天零点；12:00 及之后创建不早于明天零点。
+     *
+     * <p>正好 12:00 整按「之后」处理（取更严格一侧），让边界没有歧义。
+     * 服务端校验与前端选择器禁用日期共用同一条规则，两端口径必须一致。</p>
+     */
+    public static LocalDateTime earliestAllowedStart(LocalDateTime now) {
+        LocalDate base = now.toLocalDate();
+        boolean beforeNoon = now.toLocalTime().isBefore(LocalTime.NOON);
+        return (beforeNoon ? base : base.plusDays(1)).atStartOfDay();
+    }
+
     // ---------- 格式化（null 安全） ----------
 
     /** 格式化为 yyyy-MM-dd HH:mm:ss。 */

@@ -57,4 +57,31 @@ class TimeUtilTests {
         assertThat(TimeUtil.parseDateTimeLenient("2026-08-08 16:25:08.123"))
                 .isEqualTo(LocalDateTime.of(2026, 8, 8, 16, 25, 8, 123_000_000));
     }
+
+    /** 12:00 规则：中午前创建的活动，开始时间最早为今天零点。 */
+    @Test
+    void earliestAllowedStartBeforeNoonIsToday() {
+        assertThat(TimeUtil.earliestAllowedStart(LocalDateTime.of(2026, 10, 27, 0, 0, 0)))
+                .isEqualTo(LocalDateTime.of(2026, 10, 27, 0, 0));
+        assertThat(TimeUtil.earliestAllowedStart(LocalDateTime.of(2026, 10, 27, 11, 59, 59, 999_000_000)))
+                .isEqualTo(LocalDateTime.of(2026, 10, 27, 0, 0));
+    }
+
+    /** 正好 12:00 整按「之后」处理（取更严格一侧），之后创建的最早为明天零点。 */
+    @Test
+    void earliestAllowedStartAtOrAfterNoonIsTomorrow() {
+        assertThat(TimeUtil.earliestAllowedStart(LocalDateTime.of(2026, 10, 27, 12, 0, 0)))
+                .isEqualTo(LocalDateTime.of(2026, 10, 28, 0, 0));
+        assertThat(TimeUtil.earliestAllowedStart(LocalDateTime.of(2026, 10, 27, 23, 59, 59)))
+                .isEqualTo(LocalDateTime.of(2026, 10, 28, 0, 0));
+    }
+
+    /** 跨月、跨年的明天要算对。 */
+    @Test
+    void earliestAllowedStartRollsOverMonthAndYear() {
+        assertThat(TimeUtil.earliestAllowedStart(LocalDateTime.of(2026, 10, 31, 12, 0, 1)))
+                .isEqualTo(LocalDateTime.of(2026, 11, 1, 0, 0));
+        assertThat(TimeUtil.earliestAllowedStart(LocalDateTime.of(2026, 12, 31, 18, 0, 0)))
+                .isEqualTo(LocalDateTime.of(2027, 1, 1, 0, 0));
+    }
 }

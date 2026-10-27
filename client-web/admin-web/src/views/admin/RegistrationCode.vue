@@ -6,9 +6,12 @@
       <KeepAutoForm ref="keepFormRef" keep-auto :model="form" label-width="120px">
         <el-form-item label="初始角色" required>
           <el-select v-model="form.initialRoleCode" style="width: 100%" placeholder="选择注册码对应角色">
-            <el-option label="SUPER_ADMIN（最高管理员）" value="SUPER_ADMIN" />
-            <el-option label="HR_ADMIN（HR 管理员）" value="HR_ADMIN" />
-            <el-option label="OPERATIONS（运营管理员）" value="OPERATIONS" />
+            <el-option
+              v-for="role in roles"
+              :key="role.roleCode"
+              :label="`${role.roleCode}（${role.roleName}）`"
+              :value="role.roleCode"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="过期时间" required>
@@ -41,11 +44,11 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { createRegistrationCode } from '@/api/admin'
+import { createRegistrationCode, listRoles } from '@/api/admin'
 import KeepAutoForm from '@shared/keep-auto/KeepAutoForm.vue'
-import type { AdminCodeResponse } from '@/types/api'
+import type { AdminCodeResponse, RoleResponse } from '@/types/api'
 
 import { errorMessage } from '@/utils/error'
 const form = reactive<{ initialRoleCode: string; expiresAt: string }>({
@@ -54,7 +57,17 @@ const form = reactive<{ initialRoleCode: string; expiresAt: string }>({
 })
 const loading = ref(false)
 const result = ref<AdminCodeResponse | null>(null)
+const roles = ref<RoleResponse[]>([])
 const keepFormRef = ref<{ clearCache: () => void } | null>(null)
+
+// 角色清单从服务端取（含自定义角色），不再前端硬编码 —— 新建角色后无需改本页。
+onMounted(async () => {
+  try {
+    roles.value = await listRoles()
+  } catch (e: any) {
+    ElMessage.error(errorMessage(e, '角色清单加载失败'))
+  }
+})
 
 async function handleCreate() {
   if (!form.initialRoleCode || !form.expiresAt) {

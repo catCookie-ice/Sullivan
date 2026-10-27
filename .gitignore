@@ -16,23 +16,9 @@ build/
 HELP.md
 server-java/server-java/.mvn/wrapper/maven-wrapper.jar
 
-# Python
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-*.egg-info/
-
-# 模型产物（体积大，不入库；用 MinIO 或 Release 分发）
+# 模型产物（体积大，不入库）。受护人端（client-android/client-protectee）
+# 在 assets/ 本地放置 yolo26n.onnx / yolo26n-depth.onnx 供端侧 ONNX Runtime 使用
 *.onnx
-*.engine
-*.pt
-*.pth
-model-training/runs/
-model-training/datasets/
 
 # Node
 node_modules/
@@ -44,6 +30,8 @@ client-web/tools/*.run.json
 client-web/tools/*.i18n.json
 # e2e-admin.json 含真实 superadmin 密码，与 .env 同级敏感，永不入库
 client-web/tools/e2e-admin.json
+# 名字带 PASS 的本地便签（疑似口令记录位），一律不入库
+0PASS.txt
 client-web/.shots/
 
 # Android（两个独立工程：监护人端 client-guardian，受护人端 client-protectee）

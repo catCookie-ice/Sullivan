@@ -32,6 +32,11 @@
           </el-menu-item>
         </el-menu>
       </nav>
+
+      <!-- 右上角动作区（通知铃铛等）：宽窄屏都渲染，宿主布局通过插槽注入。 -->
+      <div class="app-nav__actions">
+        <slot name="actions" />
+      </div>
     </div>
 
     <!-- 抽屉：用 router-link 列表而不是 el-menu，窄屏下点击区域更大、语义也更直接。 -->
@@ -204,6 +209,14 @@ function onLogout() {
 /* 退出登录靠右，与业务入口分开，避免误点。 */
 .app-nav__logout {
   margin-left: auto !important;
+}
+/* 右上角动作区：宽屏时菜单已撑满，窄屏时靠 margin-left:auto 顶到最右。 */
+.app-nav__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding-left: 8px;
 }
 
 /* —— 窄屏汉堡按钮：44px 触控目标，符合无障碍最小点击区域 —— */

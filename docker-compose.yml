@@ -1,4 +1,4 @@
-# 本地开发依赖。Java/Python 应用进程可在 IDE 中运行，这里只起基础设施。
+# 本地开发依赖。Java 应用进程可在 IDE 中运行，这里只起基础设施。
 # 生产编排另见 docs/final/10（按新架构补齐）。
 
 services:
@@ -62,20 +62,7 @@ services:
       retries: 10
 
 # ---------------------------------------------------------------------------
-# Python 导航应用需要 GPU（性能目标见 docs/final/13 §6）。
-# 骨架阶段建议在宿主机直接跑 uvicorn，容器化在 M7 验收前完成。
-# 若要容器化，取消注释并确认已装 NVIDIA Container Toolkit：
-#
-#   server-python:
-#     build: ./server-python
-#     runtime: nvidia          # 或用下面的 deploy.resources
-#     environment:
-#       NAV_DEVICE: cuda
-#     deploy:
-#       resources:
-#         reservations:
-#           devices:
-#             - driver: nvidia
-#               count: 1
-#               capabilities: [gpu]
+# 说明：Python 导航端（server-python）已于 v1.0.0 移除（破坏性变更），
+# 受护人端导航/障碍检测改由 client-android/client-protectee 端侧 ONNX Runtime 承担，
+# 服务端不再有推理进程，也不再有导航容器的编排需求。
 # ---------------------------------------------------------------------------

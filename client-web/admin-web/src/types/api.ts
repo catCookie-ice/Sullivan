@@ -75,6 +75,38 @@ export interface AdminCodeResponse {
   expiresAt: string
 }
 
+// 管理员账号治理（GET /admin/admins 列表与详情）
+export interface AdminAccountResponse {
+  id: string
+  status: 'ENABLED' | 'DISABLED'
+  loginName: string
+  displayName: string
+  roles: string[]
+  permissions: string[]
+}
+
+// 授予角色请求（expiresAt 空 = 永久）
+export interface RoleGrantRequest {
+  roleCode: string
+  expiresAt?: string
+}
+
+// 管理员角色（权限集的具名打包）
+export interface RoleResponse {
+  id: string
+  roleCode: string
+  roleName: string
+  system: boolean
+  permissions: string[]
+  memberCount: number
+}
+
+// 权限代码字典项
+export interface PermissionResponse {
+  code: string
+  name: string
+}
+
 // 志愿者兼任申请（管理端审核）
 export interface VolunteerApplicationAdminResponse {
   id: string

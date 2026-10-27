@@ -113,6 +113,8 @@ class RegistrationServiceTests {
         assertThat(binding.getPermanentFlag()).isTrue();
         assertThat(binding.getIsPrimary()).isTrue();
         assertThat(binding.getRequestedBy()).isEqualTo("guardian-1");
+        // ck_guardian_binding_confirmed：ACTIVE 行必须带确认时间，否则插入会被数据库拒绝。
+        assertThat(binding.getConfirmedAt()).isNotNull();
         assertThat(result.roles()).containsExactly("PROTECTEE");
     }
 }

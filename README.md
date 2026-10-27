@@ -2,6 +2,8 @@
 
 视障人士出行辅助与公益服务平台（毕业设计 MINI 版）。
 
+**当前版本：v1.0.0**（自 0.x 起的首个破坏性大版本：移除 Python 导航端、重构数据库基线，详见 `docs/final/17-开发日记-2026-10-26-数据库重构与Python端移除.md`）
+
 规格文档见 [`docs/final`](./docs/final/README.md)。**开发前先读 `00-范围基线与演进路线.md`**，它定义了 `[MINI]` / `[FULL]` 边界与发布门槛。
 
 ## 仓库结构
@@ -10,8 +12,6 @@
 |---|---|---|
 | `docs/` | 规格文档（权威） | Markdown |
 | `server-java/` | 统一业务后端：账号、权限、公益、报警、管理 | Java 21 + Spring Boot 3 |
-| `server-python/` | 导航推理与空间分析 | Python 3.11 + FastAPI |
-| `sullivan-vision/` | 离线模型评测与 ONNX 导出 | PyTorch + Ultralytics |
 | `client-android/client-guardian/` | 监护人 / 志愿者 App（应用名「Sullivan」，`com.sullivan.android`） | Java + CameraX（仅扫码）+ Retrofit/OkHttp |
 | `client-android/client-protectee/` | 受护人 App（应用名「Sullivan 守护」，`com.sullivan.protectee`；端侧障碍检测 + 扫码登录 + 绑定） | Java + CameraX + ONNX Runtime |
 | `client-web/` | 三个前端项目：机构端 / 监护与志愿者端 / 管理端 | Vue 3 + TypeScript |
@@ -24,12 +24,11 @@
 | 应用 | 端口 | 数据库 |
 |---|---|---|
 | server-java | 8080 | `sullivan` |
-| server-python | 8000 | `sullivan` |
 | client-web/org-web (机构端, dev) | 5174 | — |
 | client-web/user-web (监护/志愿者端, dev) | 5175 | — |
 | client-web/admin-web (管理端, dev) | 5176 | — |
 
-Java 是业务数据唯一写入方，Python 只读写导航域数据；两端使用同一 `sullivan` 数据库，不再拆分服务 schema。
+Java 是业务数据唯一写入方；受护人端的导航与障碍检测全部在端侧 ONNX Runtime 完成，服务端不再有 Python 推理进程。全系统使用同一 `sullivan` 数据库，不拆分服务 schema。
 
 ## 本地启动
 

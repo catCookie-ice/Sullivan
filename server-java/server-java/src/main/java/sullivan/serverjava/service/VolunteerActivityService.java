@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sullivan.serverjava.common.ApiException;
 import sullivan.serverjava.common.IdGenerator;
+import sullivan.serverjava.common.TimeUtil;
 import sullivan.serverjava.domain.Organization;
 import sullivan.serverjava.domain.VolunteerActivity;
 import sullivan.serverjava.mapper.OrganizationMapper;
@@ -35,33 +36,53 @@ public class VolunteerActivityService {
 
     private final VolunteerActivityMapper activityMapper;
     private final OrganizationMapper organizationMapper;
+    private final AbuseGuardService abuseGuardService;
 
-    public VolunteerActivityService(VolunteerActivityMapper activityMapper, OrganizationMapper organizationMapper) {
+    public VolunteerActivityService(VolunteerActivityMapper activityMapper, OrganizationMapper organizationMapper,
+                                    AbuseGuardService abuseGuardService) {
         this.activityMapper = activityMapper;
         this.organizationMapper = organizationMapper;
+        this.abuseGuardService = abuseGuardService;
     }
 
-    /** 机构发布活动：机构须 APPROVED；时间与经纬度校验；状态由服务端固定为 RECRUITING。 */
+    /**
+     * 机构发布活动：机构须 APPROVED；时间/人数/经纬度校验；状态由服务端固定为 RECRUITING。
+     *
+     * <p>时间规则（org-web 创建表单保持同口径，前后端双向校验）：
+     * ① 活动开始、报名开始两个「开始时间」都不得早于 12:00 规则的下限
+     *    （{@link TimeUtil#earliestAllowedStart}：12:00 前创建 → 今天零点；12:00 及之后 → 明天零点）；
+     * ② 活动结束不得早于活动开始，报名结束不得早于报名开始（「不能早于」允许相等）；
+     * ③ 报名开始、报名截止都不得晚于活动开始；
+     * ④ 活动开始仍须晚于当前时间（留 60 秒时钟余量）。</p>
+     */
     @Transactional
     public ActivityResponse create(String organizationId, ActivityCreateRequest request) {
         Organization organization = organizationMapper.selectById(organizationId);
         if (organization == null || !"APPROVED".equals(organization.getStatus())) {
             throw new ApiException(HttpStatus.FORBIDDEN, "机构未认证，不能发布活动");
         }
+        // 治理守卫：被封禁的机构禁止发布新活动（机构封禁同时已附带下架其全部未结束活动）。
+        abuseGuardService.assertOrgCanPublish(organizationId);
+        if (request.maxVolunteers() == null || request.maxVolunteers() < 1) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "需要的志愿者人数必须大于 0");
+        }
         LocalDateTime now = LocalDateTime.now();
+        requireNotBeforeEarliestStart(request.startsAt(), now, "活动开始时间");
+        requireNotBeforeEarliestStart(request.registrationStartsAt(), now, "报名开始时间");
         if (!request.startsAt().isAfter(now.plusSeconds(60))) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "活动开始时间必须晚于当前时间");
         }
-        if (!request.startsAt().isBefore(request.endsAt())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "活动结束时间必须晚于开始时间");
+        if (request.endsAt().isBefore(request.startsAt())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "活动结束时间不能早于开始时间");
         }
-        if (request.registrationStartsAt().isAfter(request.registrationEndsAt())
-                || request.registrationEndsAt().isAfter(request.startsAt())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST,
-                    "报名窗口必须满足：报名开始 <= 报名结束 <= 活动开始");
+        if (request.registrationStartsAt().isAfter(request.startsAt())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "报名开始时间不能晚于活动开始时间");
         }
-        if (request.maxVolunteers() == null || request.maxVolunteers() < 1) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "需要的志愿者人数必须大于 0");
+        if (request.registrationEndsAt().isBefore(request.registrationStartsAt())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "报名结束时间不能早于报名开始时间");
+        }
+        if (request.registrationEndsAt().isAfter(request.startsAt())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "报名截止时间不能晚于活动开始时间");
         }
         validateCoordinates(request.locationLng(), request.locationLat());
 
@@ -79,6 +100,7 @@ public class VolunteerActivityService {
         activity.setRegistrationStartsAt(request.registrationStartsAt());
         activity.setRegistrationEndsAt(request.registrationEndsAt());
         activity.setMaxVolunteers(request.maxVolunteers());
+        activity.setReviewRequired(Boolean.TRUE.equals(request.reviewRequired()));
         activity.setApprovedCount(0);
         activity.setIsFree(true);
         activity.setCreatedAt(LocalDateTime.now());
@@ -120,6 +142,16 @@ public class VolunteerActivityService {
         return out;
     }
 
+    /** 12:00 规则（{@link TimeUtil#earliestAllowedStart}）：开始时间不得早于今天/明天零点，报错里带上具体下限。 */
+    private void requireNotBeforeEarliestStart(LocalDateTime start, LocalDateTime now, String label) {
+        LocalDateTime floor = TimeUtil.earliestAllowedStart(now);
+        if (start.isBefore(floor)) {
+            String earliest = floor.toLocalDate().equals(now.toLocalDate()) ? "今天" : "明天";
+            throw new ApiException(HttpStatus.BAD_REQUEST,
+                    label + "不能早于" + earliest + "（" + TimeUtil.format(floor) + "）");
+        }
+    }
+
     private void validateCoordinates(BigDecimal lng, BigDecimal lat) {
         boolean lngEmpty = lng == null;
         boolean latEmpty = lat == null;
@@ -152,6 +184,7 @@ public class VolunteerActivityService {
                 orgPublicName, activity.getTitle(), activity.getDescription(), activity.getLocationText(),
                 activity.getLocationLng(), activity.getLocationLat(), activity.getStartsAt(), activity.getEndsAt(),
                 activity.getRegistrationStartsAt(), activity.getRegistrationEndsAt(),
-                activity.getMaxVolunteers(), activity.getApprovedCount(), activity.getCreatedAt());
+                activity.getMaxVolunteers(), activity.getReviewRequired(), activity.getApprovedCount(),
+                activity.getCreatedAt());
     }
 }

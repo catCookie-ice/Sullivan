@@ -43,8 +43,8 @@ android {
         applicationId = "com.sullivan.android"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "1.0.0"
 
         // 高德定位 API Key。受护人端侧检测用不到高德，但 Manifest 里声明了该 meta-data，
         // 占位符不满足会让 manifest merger 直接失败。从 local.properties / gradle 属性读，缺省空串。
