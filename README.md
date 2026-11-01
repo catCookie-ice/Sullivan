@@ -53,7 +53,7 @@ CameraX 帧 → Yolo26Detector（640×640，end2end NMS-free）
            → AnnouncementPolicy（节流/去重/插话）→ PromptAnnouncer（TTS + 振动）
 ```
 
-当前阈值（**注意：这三个数是工程估计，尚未真机标定**，见 11-01 日记 §7.3 与 §8 OB-01）：
+下表中的**时间与步速**是工程估计，尚未真机标定（见 11-01 日记 §7.3 与 §8 OB-01）：
 
 | 参数 | 值 | 含义 |
 |---|---|---|
@@ -81,9 +81,10 @@ docker compose up -d          # MySQL / Redis / MinIO
 
 **服务端（JDK 21）**：
 
-```bash
-cd server-java/server-java
-./mvnw spring-boot:run        # 默认 8642；改端口用 SERVER_PORT=xxxx
+```powershell
+cd server-java\server-java
+.\mvnw.cmd spring-boot:run     # 默认 8642；改端口用 SERVER_PORT=xxxx
+                               # macOS/Linux 用 ./mvnw spring-boot:run
 ```
 
 **前端（Node 18+，每个项目各自安装）**：
@@ -111,9 +112,9 @@ cd client-android\client-protectee
 
 | 范围 | 命令 | 现状 |
 |---|---|---|
-| 服务端 | `cd server-java/server-java && ./mvnw test` | 305 例通过（[`17-开发日记-2026-10-27.md`](./docs/final/17-开发日记-2026-10-27.md)） |
-| 受护人端（纯 JVM 决策层） | `cd client-android/client-protectee && ./gradlew.bat :app:testDebugUnitTest` | **268 例通过**（2026-11-01 实测） |
-| 前端 | `cd <project> && npm run type-check && npm run build` | 见 [`client-web/README.md`](./client-web/README.md) |
+| 服务端 | `cd server-java\server-java` → `.\mvnw.cmd test` | 305 例通过（截至 [`17-开发日记-2026-10-27.md`](./docs/final/17-开发日记-2026-10-27.md)） |
+| 受护人端（纯 JVM 决策层） | `cd client-android\client-protectee` → `.\gradlew.bat :app:testDebugUnitTest` | **268 例通过**（2026-11-01 实测） |
+| 前端 | 在任一前端目录 → `npm run type-check` 与 `npm run build` | 见 [`client-web/README.md`](./client-web/README.md) |
 | 模型契约 | `python tools/vision-training/check_export.py <model.onnx>` | 两份资产 `[OK]` |
 
 `track/` 与 `scene/` 只产出测量值，**所有阈值都在 `assist/`**——所以决策逻辑能脱离 Android
