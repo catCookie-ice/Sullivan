@@ -89,6 +89,15 @@ public final class PromptAnnouncer {
 
     private volatile boolean speechEnabled = true;
     private volatile boolean hapticsEnabled = true;
+    /**
+     * 用户选的语速档位。
+     *
+     * <p>{@code volatile}：界面线程写、推理线程不读、主线程读。真正生效的时机是
+     * {@code speak()} 里那次 {@code setSpeechRate}——引擎的语速是**下一句**的属性，
+     * 改设置不会让正在念的这句突然变速（那听起来像卡带）。
+     */
+    @NonNull
+    private volatile SpeechPace pace = SpeechPace.STANDARD;
     /** 只允许主线程访问。 */
     private boolean speechReady;
     private boolean shuttingDown;
@@ -132,6 +141,16 @@ public final class PromptAnnouncer {
     /** 用户的播报频率档位。见 {@link AnnounceRate}。 */
     public void setRate(@NonNull AnnounceRate rate) {
         mainHandler.post(() -> policy.setRate(rate));
+    }
+
+    /** 用户的语速档位。见 {@link SpeechPace}。下一句起生效。 */
+    public void setPace(@NonNull SpeechPace pace) {
+        this.pace = pace;
+    }
+
+    @NonNull
+    public SpeechPace pace() {
+        return pace;
     }
 
     /**
@@ -252,7 +271,7 @@ public final class PromptAnnouncer {
                 // 引擎连着失败好几次了：别再喂它。振动还在，用户至少知道出事了。
                 return;
             }
-            speak(message, true, now);
+            speak(message, true, now, null);
         });
     }
 
@@ -312,7 +331,7 @@ public final class PromptAnnouncer {
         if (speechEnabled && canSpeak(now)) {
             AnnouncementPolicy.Decision decision = policy.decide(message, level, key, now, hysteretic);
             if (decision.action == AnnouncementPolicy.Action.SPEAK) {
-                speak(message, decision.preempt, now);
+                speak(message, decision.preempt, now, level);
             }
         }
 
@@ -339,11 +358,24 @@ public final class PromptAnnouncer {
         policy.onUtteranceFinished(SystemClock.elapsedRealtime());
     }
 
-    private void speak(@NonNull String message, boolean preempt, long now) {
+    /**
+     * 真正调用引擎。
+     *
+     * @param level 这句话的紧急等级。{@link ObstacleAdvisor.Level#DANGER} 会在用户选的档位
+     *              之上再加速（{@link SpeechPace#urgentRate()}）；{@code null} 表示这条不是
+     *              障碍提示（报警、设置确认音），只按用户的档位念。
+     */
+    private void speak(@NonNull String message, boolean preempt, long now,
+                       @Nullable ObstacleAdvisor.Level level) {
         TextToSpeech engine = textToSpeech;
         if (engine == null) {
             return;
         }
+        float rate = level == ObstacleAdvisor.Level.DANGER ? pace.urgentRate() : pace.rate();
+        // 语速是引擎的全局设置，必须在 speak 之前设。返回 ERROR 也照常念：宁可慢一点，
+        // 也不要因为"设不上语速"而把提示吞掉。
+        engine.setSpeechRate(rate);
+
         // 先递增代号再 speak：这样新句的 onStart 与旧句的 onStop 用的不是同一代，
         // 陈旧回调会被 isCurrent 丢掉。
         generation++;
@@ -363,17 +395,20 @@ public final class PromptAnnouncer {
         }
         consecutiveSpeechFailures = 0;
         // speak() 返回 SUCCESS 只代表成功入队，真正开始出声要等 onStart。
-        armWatchdog(currentGeneration, message);
+        armWatchdog(currentGeneration, message, rate);
     }
 
     /**
      * 看门狗：部分第三方引擎不会回调 {@code onStop}，引擎进程被杀时 {@code onDone} 也会丢，
      * 一旦卡在"正在播报"就再也不会播下一句。把 generation 捕获进任务里，过期的任务
      * 自然失效，不需要额外做取消。
+     *
+     * <p>时长按**实际语速**折算：快档下同一句话念完得早，看门狗却按 1.0× 等满，
+     * 会在"已经念完"之后过好几秒才把状态复位，那几秒里所有提示都被当成"正在播报"挡掉。
      */
-    private void armWatchdog(long expectedGeneration, @NonNull String message) {
-        long delay = Math.max(WATCHDOG_MIN_MS,
-                400L + message.length() * WATCHDOG_PER_CHAR_MS);
+    private void armWatchdog(long expectedGeneration, @NonNull String message, float rate) {
+        long perChar = Math.max(80L, Math.round(WATCHDOG_PER_CHAR_MS / rate));
+        long delay = Math.max(WATCHDOG_MIN_MS, 400L + message.length() * perChar);
         mainHandler.postDelayed(() -> {
             if (shuttingDown || generation != expectedGeneration) {
                 return;

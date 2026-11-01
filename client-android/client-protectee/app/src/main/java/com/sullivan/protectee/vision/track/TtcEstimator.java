@@ -43,8 +43,16 @@ public final class TtcEstimator {
      */
     public static final float MIN_SIGNIFICANCE = 1.5f;
 
-    /** 高度小于此值（约 19 px）就不估 TTC：框太小时一个像素的抖动就能翻转斜率的符号。 */
-    public static final float MIN_HEIGHT = 0.03f;
+    /**
+     * 高度小于此值（约 15 px）就不估 TTC：框太小时一个像素的抖动就能翻转斜率的符号。
+     *
+     * <p>从改造前的 0.03（约 19 px）降到 0.024，是为了让**矮而薄**的障碍（路缘石、
+     * 减速带、躺倒的共享单车）也能进入测速通道：这类目标在 3 米处往往只有十几像素高，
+     * 按旧门槛会永远得到"没有时间结论"，只能靠距离播报。代价是噪声变大——由
+     * {@link #MAX_RESIDUAL_RMS_LOG} 与 {@link #MIN_SIGNIFICANCE} 两道门拦着，
+     * 拟合不干净的样本不会变成一句"两秒后撞上"。
+     */
+    public static final float MIN_HEIGHT = 0.024f;
 
     /** 置信度低于此值的观测不参与拟合。 */
     public static final float MIN_SCORE = 0.50f;

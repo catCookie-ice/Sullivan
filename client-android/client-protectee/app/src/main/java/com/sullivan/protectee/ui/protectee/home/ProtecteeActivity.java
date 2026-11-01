@@ -43,6 +43,7 @@ import com.sullivan.protectee.vision.assist.AssistSettings;
 import com.sullivan.protectee.vision.assist.ObstacleAdvisor;
 import com.sullivan.protectee.vision.assist.PromptAnnouncer;
 import com.sullivan.protectee.vision.assist.SceneAnalyzer;
+import com.sullivan.protectee.vision.assist.SpeechPace;
 import com.sullivan.protectee.service.alert.AlertClient;
 import com.sullivan.protectee.service.alert.CollisionAlertGate;
 import com.sullivan.protectee.service.location.LocationReporter;
@@ -82,10 +83,18 @@ public class ProtecteeActivity extends AppCompatActivity {
      * 置信度阈值，低于此值的检测框直接丢弃。
      *
      * <p>作用在 **sigmoid 之后**的概率上（YOLO26 的 end2end 输出是原始 logits）。
-     * 0.35 比模型内部的 0.25 略高：end2end 已经按低阈值筛过一遍，这里再抬一点
-     * 可以把"有框但很虚"的那些挡在播报之外 —— 受护人听到的每一条提示都会有代价。
+     * 取 0.28 而不是改造前的 0.35：小障碍（路锥、台阶、共享单车桩）在画面里本来就只有
+     * 几十个像素，置信度天然偏低，0.35 会把它们整批挡掉——而它们恰恰是最容易绊倒人的
+     * 东西。漏掉的代价是摔倒，多报一句的代价只是多听一句。
+     *
+     * <p>放低阈值带来的噪声由后面两道闸接住，不是"什么都不管"：
+     * <ul>
+     *   <li>{@code ObjectTracker.MIN_HITS}：只出现一帧的框不确认，不参与播报；</li>
+     *   <li>{@code ObstacleAdvisor} 的 {@code LOW_SCORE}/{@code LOW_SCORE_BOTTOM}：低于 0.45
+     *       的框只有落在画面下部（真的贴近地面）才留下，远处低分框仍然丢掉。</li>
+     * </ul>
      */
-    private static final float CONFIDENCE_THRESHOLD = 0.35f;
+    private static final float CONFIDENCE_THRESHOLD = 0.28f;
 
     /**
      * 深度模型每隔几帧跑一次。
@@ -131,6 +140,8 @@ public class ProtecteeActivity extends AppCompatActivity {
     /** 报警面板上的状态行（「正在发出求助…」「已通知监护人」）。 */
     private TextView alarmStatusText;
     private Button rateButton;
+    /** 语速档位按钮。与频率档位分开，因为它们回答的是两个不同的问题。 */
+    private Button paceButton;
 
     /** 相机回调线程：只做数据拷贝，不做重活。 */
     private final ExecutorService analysisExecutor = Executors.newSingleThreadExecutor();
@@ -175,6 +186,8 @@ public class ProtecteeActivity extends AppCompatActivity {
     /** 当前的播报频率档位；界面与两个下游都要跟着它走，所以只留一份在界面里。 */
     @NonNull
     private AnnounceRate rate = AnnounceRate.STANDARD;
+    /** 当前语速档位；只在主线程读写。 */
+    private SpeechPace pace = SpeechPace.STANDARD;
 
     /** 上一次打印场景 JSON 的帧时刻；只在推理线程访问。 */
     private long lastSceneLogAt;
@@ -237,6 +250,7 @@ public class ProtecteeActivity extends AppCompatActivity {
         bindAccountLabel();
         Button pickModelButton = findViewById(R.id.pick_model_button);
         rateButton = findViewById(R.id.rate_button);
+        paceButton = findViewById(R.id.pace_button);
         SwitchMaterial speechSwitch = findViewById(R.id.speech_switch);
         SwitchMaterial hapticsSwitch = findViewById(R.id.haptics_switch);
 
@@ -251,6 +265,7 @@ public class ProtecteeActivity extends AppCompatActivity {
         announcer.setSpeechEnabled(settings.isSpeechEnabled());
         announcer.setHapticsEnabled(settings.isHapticsEnabled());
         applyRate(settings.rate());
+        applyPace(settings.pace());
 
         modelPickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.OpenDocument(), uri -> {
@@ -298,6 +313,13 @@ public class ProtecteeActivity extends AppCompatActivity {
             // 看不见屏幕的人只能靠耳朵确认按对了没有。走 speakNow：频率档位管的是日常
             // 提示的间隔，用户正在改的就是它，这条确认音不该被它自己压住。
             announcer.speakNow(getString(R.string.action_rate, getString(labelOf(next))));
+        });
+        paceButton.setOnClickListener(view -> {
+            SpeechPace next = pace.next();
+            applyPace(next);
+            // 与频率档位同理：确认音不能被它自己正在改的那条规则压住。这句话同时也是
+            // 用户**试听**新语速的唯一机会——看不见屏幕，按钮文字帮不上忙。
+            announcer.speakNow(getString(R.string.action_pace, getString(labelOf(next))));
         });
         findViewById(R.id.alarm_dismiss_button).setOnClickListener(
                 view -> dismissAlarm());
@@ -467,6 +489,29 @@ public class ProtecteeActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * 换语速档位。与 {@link #applyRate} 同样的约束：界面、播报器、存档只在这里一起改。
+     *
+     * <p>语速与频率是两件事，所以分成两个入口而不是一个"多/少"旋钮：用户可能想要
+     * **说得勤但每句都短**（频率高、语速快），也可能想**说得稀但每句听得清**。
+     */
+    private void applyPace(@NonNull SpeechPace next) {
+        pace = next;
+        announcer.setPace(next);
+        settings.setPace(next);
+        paceButton.setText(getString(R.string.action_pace, getString(labelOf(next))));
+    }
+
+    private static int labelOf(@NonNull SpeechPace pace) {
+        switch (pace) {
+            case SLOW:
+                return R.string.pace_slow;
+            case FAST:
+                return R.string.pace_fast;
+            default:
+                return R.string.pace_standard;
+        }
+    }
     // ------------------------------------------------------------------
     // 剧烈晃动报警
     // ------------------------------------------------------------------

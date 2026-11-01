@@ -83,10 +83,25 @@ public final class DynamicAdvisor {
         public final String dedupKey;
         /** 剩余碰撞时间（秒）；兜底通道触发时为 NaN。 */
         public final float ttc;
+        /**
+         * 预计多久之后会碰上（秒）。与 {@link #ttc} 的区别只在横穿通道：那里没有尺度变化，
+         * TTC 恒为 NaN，但"还有多久进入我的行进线"是可以算的，见
+         * {@link #timeToEnterCorridor}。
+         *
+         * <p>{@code SceneAnalyzer} 拿这个量与静态提示的 {@code timeToImpact} 比较，
+         * 决定哪一句更该先说。NaN 表示这条通道给不出时间（由优先级兜底）。
+         */
+        public final float timeToImpact;
 
         Alert(@NonNull Motion motion, @NonNull ObstacleAdvisor.Level level, int trackId,
               @NonNull String label, @NonNull String message, @NonNull String dedupKey,
               float ttc) {
+            this(motion, level, trackId, label, message, dedupKey, ttc, ttc);
+        }
+
+        Alert(@NonNull Motion motion, @NonNull ObstacleAdvisor.Level level, int trackId,
+              @NonNull String label, @NonNull String message, @NonNull String dedupKey,
+              float ttc, float timeToImpact) {
             this.motion = motion;
             this.level = level;
             this.trackId = trackId;
@@ -94,6 +109,7 @@ public final class DynamicAdvisor {
             this.message = message;
             this.dedupKey = dedupKey;
             this.ttc = ttc;
+            this.timeToImpact = timeToImpact;
         }
 
         @NonNull
@@ -108,6 +124,8 @@ public final class DynamicAdvisor {
         /** 靠近档位：0 = 无，1 = CAUTION，2 = DANGER。 */
         int approachLevel;
         boolean crossing;
+        /** 横穿目标进入行进线还要多久（秒）；NaN = 已在走廊里或算不出。 */
+        float crossingTime = Float.NaN;
         /** 上一帧是否已经在"近处"。兜底通道判的是它的**跳变**。 */
         boolean wasNear;
         long firstSeenMs;
@@ -144,7 +162,7 @@ public final class DynamicAdvisor {
                 alert = approachAlert(track, approachLevel, compensated);
             } else if (crossing) {
                 priority = 1;
-                alert = crossingAlert(track);
+                alert = crossingAlert(track, state.crossingTime);
             } else if (fallback) {
                 priority = 1;
                 alert = fallbackAlert(track);
@@ -227,7 +245,29 @@ public final class DynamicAdvisor {
                     && CorridorCoverage.isInCorridor(futureCenterX, track.bottom);
         }
         state.crossing = crossing;
+        state.crossingTime = crossing
+                ? timeToEnterCorridor(track.centerX(), rate)
+                : Float.NaN;
         return crossing;
+    }
+
+    /**
+     * 横穿目标还有多久进入前方走廊（秒）。已在走廊里返回 0。
+     *
+     * <p>这是横穿通道唯一能给出的时间量：目标面积与高度都不变，尺度通道的 TTC 恒为
+     * NaN。用匀速外推求它穿过走廊边界的那一刻——与 {@link CollisionModel} 的扫掠判据
+     * 用的是同一个假设（一秒到几秒的尺度上，横向速度当作常量是够用的）。
+     */
+    static float timeToEnterCorridor(float centerX, float rate) {
+        if (Float.isNaN(rate) || rate == 0f) {
+            return Float.NaN;
+        }
+        if (centerX >= CorridorCoverage.CORRIDOR_LEFT && centerX <= CorridorCoverage.CORRIDOR_RIGHT) {
+            return 0f;
+        }
+        float edge = rate > 0f ? CorridorCoverage.CORRIDOR_LEFT : CorridorCoverage.CORRIDOR_RIGHT;
+        float seconds = (edge - centerX) / rate;
+        return seconds < 0f ? 0f : seconds;
     }
 
     /**
@@ -265,10 +305,12 @@ public final class DynamicAdvisor {
     }
 
     @NonNull
-    private static Alert crossingAlert(@NonNull SceneSnapshot.TrackSnapshot track) {
+    private static Alert crossingAlert(@NonNull SceneSnapshot.TrackSnapshot track,
+                                       float enterSeconds) {
         String label = CocoLabels.translate(track.label);
         return new Alert(Motion.CROSSING, ObstacleAdvisor.Level.CAUTION, track.id,
-                track.label, label + "横穿", "dyn:" + track.id + ":cross", Float.NaN);
+                track.label, label + "横穿", "dyn:" + track.id + ":cross", Float.NaN,
+                enterSeconds);
     }
 
     @NonNull

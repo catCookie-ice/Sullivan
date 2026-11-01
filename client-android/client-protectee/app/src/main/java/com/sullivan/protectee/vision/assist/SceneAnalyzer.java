@@ -61,7 +61,7 @@ public final class SceneAnalyzer {
             this.snapshot = snapshot;
             this.advice = advice;
             this.dynamic = dynamic;
-            if (dynamic != null) {
+            if (dynamic != null && prefersDynamic(advice, dynamic)) {
                 // 有动态结论时只说那一句，**不附带静态清单**：紧急时刻需要一句能听清的话，
                 // 而不是一串"中央行人，请注意；右侧自行车，请注意"。
                 this.message = dynamic.message;
@@ -75,6 +75,32 @@ public final class SceneAnalyzer {
                 this.hysteretic = false;
             }
         }
+
+        /**
+         * 两条通道都有结论时，谁先说。
+         *
+         * <p>规则是**比时间，不比等级**：一条 1.2 秒后必定撞上的静态障碍，比一条 3 秒后
+         * 才靠近的行人更该先说；反过来，动态通道算出 0.8 秒而静态只有"较近"，也该动态先说。
+         * 早先在实现上这里是"有动态结论就压掉静态"，那等于假设动态永远更急——而静态通道
+         * 现在也能给出预计相遇时间，这个假设不再成立。
+         *
+         * <p>时间都算不出时退回旧行为（动态优先）：动态通道带滞回，本来就是为"会动的东西"
+         * 专门做的判据。
+         *
+         * <p>0.2 秒的宽容带防止两条通道时间接近时每帧来回切换——那会让文案抖动。
+         */
+        private static boolean prefersDynamic(@NonNull ObstacleAdvisor.Advice advice,
+                                              @NonNull DynamicAdvisor.Alert dynamic) {
+            float staticTime = advice.timeToImpact;
+            float dynamicTime = dynamic.timeToImpact;
+            if (Float.isNaN(dynamicTime)) {
+                return Float.isNaN(staticTime);
+            }
+            if (Float.isNaN(staticTime)) {
+                return true;
+            }
+            return dynamicTime <= staticTime + 0.2f;
+        }
     }
 
     private final ObjectTracker tracker = new ObjectTracker();
@@ -82,7 +108,9 @@ public final class SceneAnalyzer {
     private final DynamicAdvisor dynamicAdvisor = new DynamicAdvisor();
 
     /** 复用的框列表，避免每帧重建。只装引用，目标框本身归轨迹所有。 */
-    private final List<Detection> boxBuffer = new ArrayList<>();
+    private final List<ObstacleAdvisor.Obstacle> obstacles = new ArrayList<>();
+    /** 复用的步速样本列表，同上。 */
+    private final List<CollisionModel.EgoSample> egoSamples = new ArrayList<>();
 
     /**
      * 用户的播报频率档位。
@@ -140,7 +168,8 @@ public final class SceneAnalyzer {
         List<Track> confirmed = tracker.update(detections, capturedAtMs, epoch);
 
         List<SceneSnapshot.TrackSnapshot> tracks = new ArrayList<>(confirmed.size());
-        boxBuffer.clear();
+        obstacles.clear();
+        egoSamples.clear();
         for (Track track : confirmed) {
             // 非障碍类别不进决策层：街景里模型偶尔把什么认成"书""电视"，那不该变成一句
             // "电视正在靠近"。它们仍然参与自运动估计（那是追踪器内部的事）。
@@ -154,12 +183,23 @@ public final class SceneAnalyzer {
                     track.relativeRate, track.rawRate, track.ttcSeconds,
                     box.height(), track.lateralRate, track.samples, track.hits, track.clipped,
                     meters));
-            boxBuffer.add(box);
+            obstacles.add(new ObstacleAdvisor.Obstacle(box, meters, track.ttcSeconds,
+                    track.relativeRate, track.lateralRate, track.id));
+            // 步速样本只收"没被裁切、距离有效、拟合成功"的轨迹：贴底目标的框高停止增长，
+            // 用它会系统性低估步速；没有距离就乘不出米/秒。
+            if (!track.clipped && DepthMap.isValid(meters) && !Float.isNaN(track.rawRate)) {
+                egoSamples.add(new CollisionModel.EgoSample(meters, track.rawRate));
+            }
         }
 
+        // 用户自己的步速：有深度时可以从静止目标反推（λ·Z = v_ego），拿不到就交给
+        // CollisionModel 退回默认步速。**不传 NaN 给下游**——那会和"没有深度"混在一起。
+        float egoSpeed = CollisionModel.estimateEgoSpeed(egoSamples);
+
         // 静态提示走"已确认的轨迹"而不是本帧原始检测：只露一帧就消失的多半是误检。
+        // 新版入口额外带上测速通道，于是"报不报"和"先报谁"都由预计相遇时间决定。
         ObstacleAdvisor.Advice advice =
-                advisor.advise(boxBuffer, rate.maxReported(), depth, letterbox);
+                advisor.adviseTracked(obstacles, rate.maxReported(), egoSpeed);
 
         SceneSnapshot snapshot = new SceneSnapshot(capturedAtMs, epoch.width, epoch.height,
                 epoch.rotationDegrees, tracker.egoVelocityProxy(), advice.freeRatio, tracks);

@@ -24,6 +24,14 @@ public final class AssistSettings {
     private static final String FILE_NAME = "assist_settings";
     /** 存**名字**而不是序号：以后往中间插一档，序号会整体错位，名字不会。 */
     private static final String KEY_RATE = "announce_rate";
+    /**
+     * 语速档位。
+     *
+     * <p>**没有存档时默认 {@link SpeechPace#STANDARD}，它比平台默认快 15%** —— 这是
+     * 用户明确要的改动（"加快障碍播报的语速"），不是可选项的副作用。旧版本升级上来的用户
+     * 在这一项上会立刻听出差别，这正是预期的。
+     */
+    private static final String KEY_PACE = "speech_pace";
     private static final String KEY_SPEECH = "speech_enabled";
     private static final String KEY_HAPTICS = "haptics_enabled";
     /**
@@ -50,6 +58,16 @@ public final class AssistSettings {
 
     public void setRate(@NonNull AnnounceRate rate) {
         preferences.edit().putString(KEY_RATE, rate.name()).apply();
+    }
+
+    /** 用户选的语速档位；没设置过就是「标准」（已比平台默认快 15%）。 */
+    @NonNull
+    public SpeechPace pace() {
+        return SpeechPace.fromName(preferences.getString(KEY_PACE, null), SpeechPace.STANDARD);
+    }
+
+    public void setPace(@NonNull SpeechPace pace) {
+        preferences.edit().putString(KEY_PACE, pace.name()).apply();
     }
 
     public boolean isSpeechEnabled() {

@@ -167,6 +167,18 @@
             android:text="@string/rate_standard" />
 
         <!--
+            语速档位：与频率分开的一行。两者都是"听感"设置，但一个是说得多勤、一个是说得多快，
+            合并成一个旋钮会让"想说得勤一点"变成"每句都变快"。
+        -->
+        <Button
+            android:id="@+id/pace_button"
+            style="@style/Widget.Sullivan.Button.CameraOutline"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/an_touch_min"
+            android:layout_marginTop="4dp"
+            android:text="@string/pace_standard" />
+
+        <!--
             手动求助：整行、最高的一档按钮。
             看不见屏幕的人靠语音确认按下去了没有，所以位置必须在拇指自然落点
             （屏幕底边往上第一排），而不是右上角那种"看得见的人才找得到"的位置。

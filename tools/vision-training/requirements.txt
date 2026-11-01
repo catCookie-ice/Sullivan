@@ -1,0 +1,9 @@
+# 训练侧依赖（与 App 运行无关，App 只需要导出的 .onnx）
+#
+# 版本说明：yolo26 需要 ultralytics 8.4 及以上；onnx/onnxruntime 只用于
+# check_export.py 的契约校验，不参与训练；pyyaml 读 dataset.yaml。
+ultralytics>=8.4.0
+onnx>=1.16.0
+onnxruntime>=1.18.0
+onnxsim>=0.4.36
+pyyaml>=6.0

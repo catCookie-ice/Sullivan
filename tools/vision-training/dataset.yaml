@@ -1,0 +1,47 @@
+# Sullivan 人行道障碍数据集配置（ultralytics 格式）
+#
+# 目录结构（path 下的相对路径）：
+#   images/train/*.jpg   labels/train/*.txt
+#   images/val/*.jpg     labels/val/*.txt
+#   images/test/*.jpg    labels/test/*.txt
+#
+# 标签是 YOLO 的归一化格式，每行：`class cx cy w h`（全部 0–1）。
+#
+# 类别表的设计原则：**只保留真的会绊倒人或挡住路的类别**，不是 COCO 的子集照搬。
+# COCO 的 80 类里，`person`/`bicycle`/`car`/`bench` 等是关键；而 `cup`/`book`/
+# `remote` 这类端侧偶尔误检出来的类别**不放进训练集**——不放进来，模型就没有机会
+# 把它们当成"障碍"（这也是 `CocoLabels.isObstacle` 白名单的训练侧对应物）。
+#
+# 第 19/20 类（step / curb）是自建数据才有的：台阶与路缘石在 COCO 里没有类别，
+# 却是失明用户最高频的摔倒原因。这两类必须靠实拍补，不能靠 COCO。
+
+path: ./datasets/sullivan-hazard
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: person            # 行人（迎面、侧向、静止）
+  1: bicycle           # 自行车（含倒地）
+  2: motorcycle
+  3: car
+  4: bus
+  5: truck
+  6: electric_scooter  # 电动滑板车——人行道上最典型的"突然出现"障碍
+  7: shared_bike       # 共享单车（成排停放，占住半条路）
+  8: traffic_cone      # 路锥
+  9: barrier           # 施工围挡 / 护栏
+  10: bollard          # 隔离柱（细、贴地、极易漏检）
+  11: trash_bin
+  12: bench
+  13: planter          # 花箱 / 树池
+  14: pole             # 电线杆 / 路灯杆
+  15: tree             # 树干（低垂树枝）
+  16: pothole          # 坑洼
+  17: puddle           # 积水
+  18: stairs           # 楼梯 / 下行台阶
+  19: step             # 单级台阶 / 门槛
+  20: curb             # 路缘石（高差）
+  21: animal           # 遛狗绳上的狗、流浪猫
+  22: construction     # 施工材料堆
+  23: signboard        # 落地广告牌 / A 字牌

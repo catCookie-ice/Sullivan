@@ -28,6 +28,12 @@
     <string name="rate_standard">标准</string>
     <string name="rate_chatty">多</string>
 
+    <!-- 语速档位：按钮上显示当前档位，点一下换下一档。默认档已比系统默认快 15%。 -->
+    <string name="action_pace">语速：%1$s</string>
+    <string name="pace_slow">慢</string>
+    <string name="pace_standard">标准</string>
+    <string name="pace_fast">快</string>
+
     <!-- 剧烈晃动报警 -->
     <string name="alarm_shake">检测到剧烈晃动</string>
     <string name="action_im_fine">我没事</string>

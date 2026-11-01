@@ -169,7 +169,7 @@ public class SceneAnalyzerTest {
     public void theDedupKeyChangesWhenASecondPedestrianJoins() {
         SceneAnalyzer.Decision one = feed(
                 Collections.singletonList(person(0.42f, 0.70f, 0.35f)), 3);
-        assertEquals("static:中央:person:1:true", one.dedupKey);
+        assertEquals("static:中央:person:1:true:d", one.dedupKey);
 
         List<Detection> both = new ArrayList<>();
         both.add(person(0.42f, 0.70f, 0.35f));
@@ -177,10 +177,10 @@ public class SceneAnalyzerTest {
 
         // 只出现一帧的新目标还不算数——那是"宁可不报，也不报错"的那道门。
         SceneAnalyzer.Decision firstFrame = feed(both, 3 * STEP_MS, 1);
-        assertEquals("static:中央:person:1:true", firstFrame.dedupKey);
+        assertEquals("static:中央:person:1:true:d", firstFrame.dedupKey);
 
         SceneAnalyzer.Decision settled = feed(both, 4 * STEP_MS, 1);
-        assertEquals("static:中央:person:2:true", settled.dedupKey);
+        assertEquals("static:中央:person:2:true:d", settled.dedupKey);
         assertEquals("中央两名行人，注意", settled.message);
     }
 
@@ -207,7 +207,7 @@ public class SceneAnalyzerTest {
         analyzer.setRate(AnnounceRate.QUIET);
         SceneAnalyzer.Decision quiet = feed(detections, 4 * STEP_MS, 1);
         assertEquals("中央行人较近，注意", quiet.message);
-        assertEquals("static:中央:person:1:true", quiet.dedupKey);
+        assertEquals("static:中央:person:1:true:d", quiet.dedupKey);
         assertEquals("只压缩了措辞，障碍物清单仍然完整", 2, quiet.advice.obstacles.size());
     }
 
